@@ -1,58 +1,19 @@
-import { createClient } from '@supabase/supabase-js'
+export type AskResponse = {
+  id: string;
+  answer: string;
+  confidence?: number;
+  factors?: Array<{ label: string; weight?: number }>;
+};
 
-const supabase = createClient(
-  import.meta.env.VITE_SUPABASE_URL,
-  import.meta.env.VITE_SUPABASE_ANON_KEY
-)
+export async function askPhD(question: string): Promise<AskResponse> {
+  const base = import.meta.env.VITE_INTEL_API_URL as string | undefined;
+  if (!base) throw new Error('Missing VITE_INTEL_API_URL');
 
-interface Insight {
-  id: string
-  question: string
-  answer: string
-  confidence: number
-  factors: Array<{
-    label: string
-    weight: number
-  }>
-  created_at: string
-}
-
-/**
- * Ask the PhD collective a question
- * This is the ENTIRE product
- */
-export async function askPhDs(question: string): Promise<Insight> {
-  // Call the backend (EC2 through ALB)
-  const response = await fetch(`${import.meta.env.VITE_INTEL_API_URL}/api/ask`, {
+  const r = await fetch(`${base}/ask`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ question })
-  })
-  
-  if (!response.ok) {
-    throw new Error('PhDs are thinking...')
-  }
-  
-  const insight = await response.json() as Insight
-  
-  // Store in Supabase for history
-  await supabase
-    .from('insights')
-    .insert(insight)
-  
-  return insight
-}
-
-/**
- * Get recent insights
- */
-export async function getRecentInsights(limit = 10): Promise<Insight[]> {
-  const { data, error } = await supabase
-    .from('insights')
-    .select('*')
-    .order('created_at', { ascending: false })
-    .limit(limit)
-  
-  if (error) throw error
-  return data || []
+    body: JSON.stringify({ question }),
+  });
+  if (!r.ok) throw new Error(`Ask failed: ${r.status}`);
+  return r.json();
 }
