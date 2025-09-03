@@ -25,4 +25,7 @@ yarn-error.log*
 .DS_Store
 
 # Testing
-coverage/
+coverage/.env
+.env.local
+.env.*.local
+/sentientiq-core/

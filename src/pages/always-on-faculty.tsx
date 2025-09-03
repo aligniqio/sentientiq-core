@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Brain, Mic, MicOff, Volume2, VolumeX, Zap, AlertCircle, Trophy, Coffee } from 'lucide-react';
-import { io, Socket } from 'socket.io-client';
-import { API_CONFIG } from '@/config/api.config';
+import { Brain, Mic, MicOff, Zap } from 'lucide-react';
+
+const API_BASE = import.meta.env.VITE_INTEL_API_URL as string | undefined;
+
+type Factor = { label: string; weight?: number };
 
 // The 12 PhD Faculty - Each with REAL credentials
 const PHD_FACULTY = [
@@ -162,68 +164,43 @@ const PHD_FACULTY = [
     debateStyle: 'contextual',
     position: { x: 50, y: 85 }
   }
-];
+] as const;
+
+type PhdId = typeof PHD_FACULTY[number]['id'];
 
 interface Dialogue {
-  speaker: string;
+  speaker: PhdId;
   message: string;
   timestamp: Date;
   type: 'statement' | 'question' | 'disagreement' | 'agreement' | 'insight';
   intensity: number;
 }
 
+function getPhDById(id: PhdId) {
+  return PHD_FACULTY.find(p => p.id === id)!;
+}
+
+function pickSpeakerForFactor(label: string): PhdId {
+  const l = label.toLowerCase();
+  if (l.includes('competitor') || l.includes('share') || l.includes('market')) return 'competitive';
+  if (l.includes('anticip') || l.includes('emotion') || l.includes('resonat')) return 'psychology';
+  if (l.includes('pattern') || l.includes('tuesday') || l.includes('model')) return 'data';
+  if (l.includes('budget') || l.includes('roi') || l.includes('cost')) return 'budget';
+  if (l.includes('onboard') || l.includes('activation')) return 'onboarding';
+  if (l.includes('channel') || l.includes('media')) return 'channel';
+  return 'business';
+}
+
 const AlwaysOnFaculty: React.FC = () => {
-  const [socket, setSocket] = useState<Socket | null>(null);
   const [dialogues, setDialogues] = useState<Dialogue[]>([]);
-  const [activeSpeaker, setActiveSpeaker] = useState<string | null>(null);
+  const [activeSpeaker, setActiveSpeaker] = useState<PhdId | null>(null);
   const [debateTopic, setDebateTopic] = useState<string>('');
   const [isLive, setIsLive] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [consensus, setConsensus] = useState<number>(0);
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
   const dialogueRef = useRef<HTMLDivElement>(null);
-
-  // Connect to backend for real PhD debates
-  useEffect(() => {
-    const socketInstance = io(API_CONFIG.WS_URL || 'ws://localhost:3001', {
-      transports: ['websocket'],
-      path: '/phd-collective'
-    });
-
-    socketInstance.on('connect', () => {
-      console.log('PhD Collective: Faculty assembled');
-      setIsLive(true);
-    });
-
-    socketInstance.on('debate', (data: any) => {
-      const newDialogue: Dialogue = {
-        speaker: data.agent,
-        message: data.message,
-        timestamp: new Date(),
-        type: data.type || 'statement',
-        intensity: data.intensity || 0.5
-      };
-      
-      setDialogues(prev => [...prev.slice(-50), newDialogue]);
-      setActiveSpeaker(data.agent);
-      
-      // Clear active speaker after speaking
-      setTimeout(() => setActiveSpeaker(null), 2000);
-    });
-
-    socketInstance.on('consensus', (data: any) => {
-      setConsensus(data.level);
-    });
-
-    socketInstance.on('topic', (data: any) => {
-      setDebateTopic(data.topic);
-    });
-
-    setSocket(socketInstance);
-
-    return () => {
-      socketInstance.disconnect();
-    };
-  }, []);
 
   // Auto-scroll dialogue
   useEffect(() => {
@@ -232,13 +209,65 @@ const AlwaysOnFaculty: React.FC = () => {
     }
   }, [dialogues]);
 
-  const startDebate = (topic: string) => {
-    if (socket) {
-      socket.emit('start_debate', { topic });
-    }
-  };
+  async function startDebate(topic: string) {
+    setDebateTopic(topic);
+    setIsLive(true);
+    setError(null);
+    setLoading(true);
+    setDialogues([]);
 
-  const getPhDById = (id: string) => PHD_FACULTY.find(phd => phd.id === id);
+    try {
+      if (!API_BASE) throw new Error('Missing VITE_INTEL_API_URL');
+
+      const res = await fetch(`${API_BASE}/ask`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ question: topic })
+      });
+
+      if (!res.ok) throw new Error(`Ask failed: ${res.status}`);
+      const data: {
+        id: string;
+        answer: string;
+        confidence?: number;
+        factors?: Factor[];
+      } = await res.json();
+
+      setConsensus(Math.round(data.confidence ?? 0));
+
+      // Convert factors to short “statements” from appropriate faculty
+      const factorLines: Dialogue[] = (data.factors ?? []).slice(0, 4).map((f) => {
+        const sp = pickSpeakerForFactor(f.label);
+        return {
+          speaker: sp,
+          message: `${f.label}${typeof f.weight === 'number' ? ` (${Math.round(f.weight * 100)}%)` : ''}`,
+          timestamp: new Date(),
+          type: 'statement',
+          intensity: 0.6
+        };
+      });
+
+      const finalInsight: Dialogue = {
+        speaker: 'sage',
+        message: data.answer,
+        timestamp: new Date(),
+        type: 'insight',
+        intensity: 1
+      };
+
+      const stream = [...factorLines, finalInsight];
+      setDialogues(stream.slice(-50));
+      if (stream.length) {
+        setActiveSpeaker(stream[stream.length - 1].speaker);
+        setTimeout(() => setActiveSpeaker(null), 2000);
+      }
+    } catch (e: any) {
+      setError(e?.message ?? 'Unknown error');
+      setIsLive(false);
+    } finally {
+      setLoading(false);
+    }
+  }
 
   return (
     <div className="min-h-screen bg-black text-white overflow-hidden">
@@ -260,8 +289,9 @@ const AlwaysOnFaculty: React.FC = () => {
               <button
                 onClick={() => setIsMuted(!isMuted)}
                 className="p-3 bg-gray-900 rounded-lg hover:bg-gray-800 transition-colors"
+                aria-label={isMuted ? 'Unmute' : 'Mute'}
               >
-                {isMuted ? <VolumeX className="w-6 h-6" /> : <Volume2 className="w-6 h-6" />}
+                {isMuted ? <MicOff className="w-6 h-6" /> : <Mic className="w-6 h-6" />}
               </button>
               <div className="flex items-center gap-2">
                 <div className={`w-3 h-3 rounded-full ${isLive ? 'bg-green-500' : 'bg-red-500'} animate-pulse`} />
@@ -271,7 +301,7 @@ const AlwaysOnFaculty: React.FC = () => {
           </div>
 
           {/* Current Debate Topic */}
-          {debateTopic && (
+          {(debateTopic || loading) && (
             <motion.div
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
@@ -280,8 +310,11 @@ const AlwaysOnFaculty: React.FC = () => {
               <div className="flex items-center gap-3">
                 <Zap className="w-5 h-5 text-yellow-500" />
                 <span className="text-sm text-gray-400">CURRENT DEBATE:</span>
-                <span className="font-bold">{debateTopic}</span>
+                <span className="font-bold">
+                  {loading ? 'Analyzing…' : debateTopic}
+                </span>
               </div>
+              {error && <p className="mt-2 text-sm text-red-400">Error: {error}</p>}
             </motion.div>
           )}
         </motion.div>
@@ -296,39 +329,43 @@ const AlwaysOnFaculty: React.FC = () => {
               <motion.div
                 key={phd.id}
                 initial={{ opacity: 0, scale: 0 }}
-                animate={{ 
-                  opacity: 1, 
-                  scale: activeSpeaker === phd.id ? 1.2 : 1,
-                  filter: activeSpeaker === phd.id ? 'brightness(1.5)' : 'brightness(1)'
+                animate={{
+                  opacity: 1,
+                  scale: activeSpeaker === (phd.id as PhdId) ? 1.2 : 1,
+                  filter: activeSpeaker === (phd.id as PhdId) ? 'brightness(1.5)' : 'brightness(1)'
                 }}
                 transition={{ duration: 0.3 }}
                 className="absolute transform -translate-x-1/2 -translate-y-1/2"
-                style={{ 
-                  left: `${phd.position.x}%`, 
-                  top: `${phd.position.y}%` 
+                style={{
+                  left: `${phd.position.x}%`,
+                  top: `${phd.position.y}%`
                 }}
               >
                 <div className="relative group cursor-pointer">
-                  <div className={`
+                  <div
+                    className={`
                     w-24 h-24 rounded-full bg-gradient-to-br ${phd.color}
                     flex items-center justify-center text-4xl
                     ${activeSpeaker === phd.id ? 'ring-4 ring-white animate-pulse' : ''}
                     transition-all duration-300 hover:scale-110
-                  `}>
+                  `}
+                  >
                     {phd.icon}
                   </div>
-                  
+
                   {/* Hover Card */}
-                  <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 
+                  <div
+                    className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 
                                   opacity-0 group-hover:opacity-100 transition-opacity duration-200
-                                  bg-gray-900 rounded-lg p-3 w-64 pointer-events-none z-50">
+                                  bg-gray-900 rounded-lg p-3 w-64 pointer-events-none z-50"
+                  >
                     <div className="text-sm">
                       <div className="font-bold">{phd.name}</div>
                       <div className="text-gray-400">{phd.degree}</div>
                       <div className="text-xs text-purple-400 mt-1">"{phd.catchphrase}"</div>
                     </div>
                   </div>
-                  
+
                   <div className="text-center mt-2">
                     <div className="text-xs font-bold">{phd.name}</div>
                     <div className="text-xs text-gray-500">{phd.title}</div>
@@ -336,11 +373,11 @@ const AlwaysOnFaculty: React.FC = () => {
                 </div>
               </motion.div>
             ))}
-            
+
             {/* Connection Lines */}
             <svg className="absolute inset-0 w-full h-full pointer-events-none opacity-20">
-              {PHD_FACULTY.map((phd1, i) => 
-                PHD_FACULTY.slice(i + 1).map(phd2 => (
+              {PHD_FACULTY.map((phd1, i) =>
+                PHD_FACULTY.slice(i + 1).map((phd2) => (
                   <line
                     key={`${phd1.id}-${phd2.id}`}
                     x1={`${phd1.position.x}%`}
@@ -374,13 +411,11 @@ const AlwaysOnFaculty: React.FC = () => {
               </div>
             </div>
           </div>
-          
+
           <div ref={dialogueRef} className="flex-1 overflow-y-auto p-4 space-y-3">
             <AnimatePresence>
               {dialogues.map((dialogue, index) => {
                 const phd = getPhDById(dialogue.speaker);
-                if (!phd) return null;
-                
                 return (
                   <motion.div
                     key={index}
@@ -405,12 +440,18 @@ const AlwaysOnFaculty: React.FC = () => {
                 );
               })}
             </AnimatePresence>
-            
-            {dialogues.length === 0 && (
+
+            {dialogues.length === 0 && !loading && !error && (
               <div className="text-center text-gray-600 py-12">
                 <Brain className="w-16 h-16 mx-auto mb-4 opacity-50" />
                 <p>The faculty is thinking...</p>
                 <p className="text-xs mt-2">Debates begin when you present a challenge</p>
+              </div>
+            )}
+
+            {error && (
+              <div className="p-3 rounded-lg bg-red-900/30 border border-red-700 text-sm">
+                {error}
               </div>
             )}
           </div>
@@ -420,20 +461,23 @@ const AlwaysOnFaculty: React.FC = () => {
             <p className="text-xs text-gray-500 mb-3">START A DEBATE:</p>
             <div className="space-y-2">
               <button
-                onClick={() => startDebate("Our CAC is too high")}
+                onClick={() => startDebate('Our CAC is too high')}
                 className="w-full text-left p-2 bg-gray-900 rounded hover:bg-gray-800 text-sm"
+                disabled={loading}
               >
                 "Our CAC is too high"
               </button>
               <button
-                onClick={() => startDebate("Competitors are eating our lunch")}
+                onClick={() => startDebate('Competitors are eating our lunch')}
                 className="w-full text-left p-2 bg-gray-900 rounded hover:bg-gray-800 text-sm"
+                disabled={loading}
               >
                 "Competitors are eating our lunch"
               </button>
               <button
                 onClick={() => startDebate("Our messaging isn't resonating")}
                 className="w-full text-left p-2 bg-gray-900 rounded hover:bg-gray-800 text-sm"
+                disabled={loading}
               >
                 "Our messaging isn't resonating"
               </button>
