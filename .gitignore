@@ -29,3 +29,6 @@ coverage/.env
 .env.local
 .env.*.local
 /sentientiq-core/
+
+# Local Netlify folder
+.netlify
