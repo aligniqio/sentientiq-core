@@ -355,31 +355,6 @@ function generateIntentScore(companyName) {
     return `${calculation}\n\nTheir actual algorithm:\n${scam}\n\nCoinFlip-as-a-Service™: More honest, infinitely cheaper.`;
   }
 
-  // Generate a completely bullshit marketing insight (for demonstration)
-  generateBullshitInsight(): string {
-    const metrics = [
-      "engagement velocity", "conversion momentum", "funnel synergy",
-      "attribution delta", "omnichannel coefficient", "viral quotient"
-    ];
-    const directions = ["up", "down", "volatile", "stabilizing", "accelerating"];
-    const percentages = [23, 34, 47, 52, 68, 73, 81, 92];
-    const timeframes = ["this quarter", "last month", "this week", "YTD"];
-    const implications = [
-      "indicating strong market fit",
-      "suggesting optimization opportunities",
-      "revealing untapped potential",
-      "confirming our hypothesis",
-      "requiring immediate attention"
-    ];
-
-    const metric = metrics[Math.floor(Math.random() * metrics.length)];
-    const direction = directions[Math.floor(Math.random() * directions.length)];
-    const percentage = percentages[Math.floor(Math.random() * percentages.length)];
-    const timeframe = timeframes[Math.floor(Math.random() * timeframes.length)];
-    const implication = implications[Math.floor(Math.random() * implications.length)];
-
-    return `Your ${metric} is ${direction} ${percentage}% ${timeframe}, ${implication}.`;
-  }
 }
 
 export const brutalAnalyzer = new BrutalAnalyzer();

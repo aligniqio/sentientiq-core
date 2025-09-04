@@ -8,9 +8,9 @@ import {
   X, 
   LogOut, 
   Home,
-  Shield,
-  Zap
+  Shield
 } from 'lucide-react';
+import DrBrutalFloating from './DrBrutalFloating';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -36,7 +36,6 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const menuItems = [
     { path: '/', icon: Home, label: 'Home', public: true },
     { path: '/ask', icon: Brain, label: 'Ask the PhDs', public: false },
-    { path: '/brutal', icon: Zap, label: 'Dr. Brutal', public: false },
     { path: '/billing', icon: Shield, label: 'Billing', public: false },
   ];
 
@@ -167,6 +166,9 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           {children}
         </div>
       </main>
+
+      {/* Dr. Brutal - Omnipresent */}
+      {user && <DrBrutalFloating />}
 
       {/* Overlay for mobile */}
       {sidebarOpen && isMobile && (

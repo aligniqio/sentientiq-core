@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Brain, AlertTriangle, Copy, Send, Zap } from 'lucide-react';
+import { Brain, AlertTriangle, Copy, Send } from 'lucide-react';
 import { brutalMemory } from '../lib/brutalMemoryService';
-import { brutalAnalyzer } from '../lib/brutalAnalysis';
 
 const BrutalAnalysisPage: React.FC = () => {
   const [inputText, setInputText] = useState('');
@@ -47,10 +46,6 @@ const BrutalAnalysisPage: React.FC = () => {
     setTimeout(() => setCopiedResponse(null), 2000);
   };
 
-  const generateBullshit = () => {
-    const bs = brutalAnalyzer.generateBullshitInsight();
-    setInputText(`Subject: Exclusive Opportunity for Forward-Thinking Leaders\n\nDear Decision Maker,\n\n${bs}\n\nOur proprietary AI-powered solution leverages cutting-edge blockchain synergies to deliver 10x ROI in just 30 days. We've helped companies like yours achieve:\n\n• 847% increase in conversion velocity\n• 92% reduction in customer acquisition costs\n• 100% success rate (guaranteed!)\n\nThis exclusive opportunity is only available to 3 companies this quarter. Reply "INTERESTED" within 24 hours to secure your spot.\n\nBest regards,\nChad Thunderstone\nCEO & Thought Leader\nDisruptive Innovations Inc.`);
-  };
 
   return (
     <div className="min-h-screen bg-black text-white p-8">
@@ -102,15 +97,9 @@ const BrutalAnalysisPage: React.FC = () => {
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
           >
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold">Spam Input</h2>
-              <button
-                onClick={generateBullshit}
-                className="px-4 py-2 bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/30 rounded-lg text-sm font-medium text-purple-300 transition-colors flex items-center gap-2"
-              >
-                <Zap className="w-4 h-4" />
-                Generate Sample BS
-              </button>
+            <div className="mb-4">
+              <h2 className="text-xl font-bold">Paste Real Spam</h2>
+              <p className="text-xs text-white/50 mt-1">Only real manipulation gets analyzed. No generated bullshit.</p>
             </div>
             <textarea
               value={inputText}
