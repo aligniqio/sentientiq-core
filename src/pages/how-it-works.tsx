@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Brain, Eye, Zap, ArrowRight, X, Check } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { Brain, Eye, Zap, X, Check } from 'lucide-react';
 
 // The Anti-Feature Page
 const HowItWorks: React.FC = () => {
   const [activePhD, setActivePhD] = useState(0);
-  const [showTraditional, setShowTraditional] = useState(false);
+
   
   // What we DON'T do
   const thingsWeDontDo = [

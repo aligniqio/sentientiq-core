@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Shield, Award, Brain, Database, Cpu, Activity, CheckCircle, TrendingUp, Lock } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { Shield, Brain, Database, Cpu, Activity, CheckCircle, Lock } from 'lucide-react';
 
 interface Credential {
   id: string;
@@ -27,7 +27,6 @@ const TrainingDashboard: React.FC = () => {
     etlThroughput: '10.2K/sec',
     lastTraining: new Date().toISOString()
   });
-  const [selectedAgent, setSelectedAgent] = useState<string | null>(null);
   const [showVerification, setShowVerification] = useState<string | null>(null);
 
   const handleVerifyCredential = (credId: string) => {
