@@ -12,6 +12,7 @@ import Pricing from './pages/pricing'
 import Billing from './pages/billing'
 import Landing from './pages/landing'
 import Brutal from './pages/brutal'
+import IntelligenceMonitor from './pages/intelligence-monitor'
 
 // Candy Kit UI enhancements
 import { SenseiCandyProvider } from './components/ui/SenseiCandy'
@@ -22,11 +23,11 @@ function App() {
       <Router>
         <Layout>
         <Routes>
-          {/* Root - THE ONE TRUE ROUTE - Ask the PhDs! */}
+          {/* Root - Intelligence Monitor showing the moat accumulating */}
           <Route path="/" element={
             <>
               <SignedIn>
-                <Ask />
+                <IntelligenceMonitor />
               </SignedIn>
               <SignedOut>
                 <Auth />

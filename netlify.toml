@@ -6,7 +6,7 @@
 
 [build.environment]
   # FastAPI backend origin (update with your EC2 or Load Balancer URL)
-  API_ORIGIN = "http://3.15.29.138:8000"
+  API_ORIGIN = "http://3.15.29.138:8001"
 
 # Edge Functions - route /api/* to the proxy
 [[edge_functions]]
