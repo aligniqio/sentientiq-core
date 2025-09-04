@@ -243,6 +243,42 @@ const Ask: React.FC = () => {
   const [consensusMode, setConsensusMode] = useState(false);
   const [ans, setAns] = useState<any>(null);
   const [loading, setLoading] = useState(false);
+  
+  // Auto-capture context from URL and environment
+  const autoContext = useMemo(() => {
+    const url = window.location.href;
+    const domain = window.location.hostname;
+    const path = window.location.pathname;
+    const referrer = document.referrer;
+    const params = new URLSearchParams(window.location.search);
+    
+    // Extract any UTM params or context hints
+    const contextParams: Record<string, string> = {};
+    params.forEach((value, key) => {
+      if (key.startsWith('utm_') || key.includes('context') || key.includes('org') || key.includes('company')) {
+        contextParams[key] = value;
+      }
+    });
+    
+    // Infer org from domain (e.g., app.company.com -> company)
+    const orgFromDomain = domain.split('.')[0] === 'app' ? domain.split('.')[1] : null;
+    
+    // Scan for context clues
+    return {
+      url,
+      domain,
+      path,
+      referrer,
+      params: contextParams,
+      org: orgFromDomain,
+      timestamp: new Date().toISOString(),
+      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      locale: navigator.language,
+      viewport: `${window.innerWidth}x${window.innerHeight}`,
+      // Previous questions from session
+      history: JSON.parse(sessionStorage.getItem('ask_history') || '[]')
+    };
+  }, []);
   const { push: showToast } = useCandyToast();
   const chime = useChime();
 
@@ -264,7 +300,21 @@ const Ask: React.FC = () => {
       // Consensus mode: send "Collective" as agent name
       // Individual mode: send selected agents (for now just the first one)
       const agentName = consensusMode ? "Collective" : (selectedAgents[0]?.name || "Strategy");
-      const result = await askAgent(q, agentName);
+      
+      // Auto-enrich context from URL and session
+      const enrichedContext = {
+        ...autoContext,
+        mode: consensusMode ? "consensus" : "individual",
+        agents: consensusMode ? "all" : selectedAgents.map(a => a.name),
+        question: q
+      };
+      
+      // Store question in session history
+      const history = JSON.parse(sessionStorage.getItem('ask_history') || '[]');
+      history.push({ q, timestamp: Date.now() });
+      sessionStorage.setItem('ask_history', JSON.stringify(history.slice(-10))); // Keep last 10
+      
+      const result = await askAgent(q, agentName, enrichedContext);
       setAns(result);
       
       // Check decision string for toast/chime
@@ -346,9 +396,11 @@ const Ask: React.FC = () => {
                   <div className="flex items-center justify-center space-x-4">
                     <Users className="h-12 w-12 text-purple-400" />
                     <div>
-                      <h3 className="text-xl font-bold text-white">PhD Collective</h3>
-                      <p className="text-sm text-white/70">All 12 experts debate and reach consensus</p>
-                      <p className="mt-2 text-xs text-purple-300">Comprehensive analysis from multiple perspectives</p>
+                      <h3 className="text-xl font-bold text-white">PhD Collective Debate</h3>
+                      <p className="text-sm text-white/70">All 12 experts engage in structured debate</p>
+                      <p className="mt-2 text-xs text-purple-300">• Each expert presents their perspective</p>
+                      <p className="text-xs text-purple-300">• Counterarguments are considered</p>
+                      <p className="text-xs text-purple-300">• Consensus emerges from deliberation</p>
                     </div>
                   </div>
                 </div>
