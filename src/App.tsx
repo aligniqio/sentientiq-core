@@ -4,7 +4,6 @@ import { SignedIn, SignedOut } from '@clerk/clerk-react'
 // The ONLY pages that matter
 import Layout from './components/Layout'
 import Auth from './pages/auth'
-import Home from './pages/home'
 import HowItWorks from './pages/how-it-works'
 import AlwaysOnFaculty from './pages/always-on-faculty'
 import Ask from './pages/ask'
@@ -12,6 +11,7 @@ import Settings from './pages/settings'
 import Pricing from './pages/pricing'
 import Billing from './pages/billing'
 import Landing from './pages/landing'
+import Brutal from './pages/brutal'
 
 // Candy Kit UI enhancements
 import { SenseiCandyProvider } from './components/ui/SenseiCandy'
@@ -65,6 +65,21 @@ function App() {
               <>
                 <SignedIn>
                   <Ask />
+                </SignedIn>
+                <SignedOut>
+                  <Auth />
+                </SignedOut>
+              </>
+            }
+          />
+          
+          {/* Dr. Brutal - The LinkedIn Spam Destroyer */}
+          <Route
+            path="/brutal"
+            element={
+              <>
+                <SignedIn>
+                  <Brutal />
                 </SignedIn>
                 <SignedOut>
                   <Auth />

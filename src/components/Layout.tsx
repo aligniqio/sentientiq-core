@@ -8,7 +8,8 @@ import {
   X, 
   LogOut, 
   Home,
-  Shield
+  Shield,
+  Zap
 } from 'lucide-react';
 
 interface LayoutProps {
@@ -35,6 +36,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const menuItems = [
     { path: '/', icon: Home, label: 'Home', public: true },
     { path: '/ask', icon: Brain, label: 'Ask the PhDs', public: false },
+    { path: '/brutal', icon: Zap, label: 'Dr. Brutal', public: false },
     { path: '/billing', icon: Shield, label: 'Billing', public: false },
   ];
 
