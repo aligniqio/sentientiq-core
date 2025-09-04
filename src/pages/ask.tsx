@@ -174,8 +174,19 @@ async function askCollective(question: string, context?: any) {
 }
 
 // PhD Card Component with full credentials and blockchain verification
-const PhDCard: React.FC<{ phd: typeof PHDS[0] }> = ({ phd }) => {
+const PhDCard: React.FC<{ phd: typeof PHDS[0]; index: number }> = ({ phd, index }) => {
   const [isFlipped, setIsFlipped] = useState(false);
+  
+  // Auto-spin some cards on mount for effect
+  React.useEffect(() => {
+    if (index % 3 === 0) {
+      const timer = setTimeout(() => {
+        setIsFlipped(true);
+        setTimeout(() => setIsFlipped(false), 1500);
+      }, 1000 + index * 200);
+      return () => clearTimeout(timer);
+    }
+  }, [index]);
   
   return (
     <div 
@@ -378,14 +389,19 @@ const Ask: React.FC = () => {
       <div className="neural-bg" />
       
       <div className="relative z-10 min-h-screen flex flex-col">
-        {/* Header */}
-        <div className="px-8 pt-8 pb-4">
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-violet-400 to-purple-400 bg-clip-text text-transparent">
-            Ask the Collective
-          </h1>
-          <p className="text-sm text-white/60 mt-1">
-            Twelve PhDs. One answer with a Why.
-          </p>
+        {/* Glass Header */}
+        <div className="px-8 pt-8 pb-6">
+          <div className="backdrop-blur-xl bg-white/5 border border-white/10 rounded-2xl p-6 relative overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-br from-violet-600/10 to-purple-600/10 opacity-50" />
+            <div className="relative z-10">
+              <h1 className="text-4xl font-bold bg-gradient-to-r from-violet-400 to-purple-400 bg-clip-text text-transparent">
+                Ask the Collective
+              </h1>
+              <p className="text-sm text-white/80 mt-2">
+                Twelve PhDs. One answer with a Why.
+              </p>
+            </div>
+          </div>
         </div>
 
         {/* Main Content - Flex container */}
@@ -400,7 +416,7 @@ const Ask: React.FC = () => {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.03 }}
                 >
-                  <PhDCard phd={phd} />
+                  <PhDCard phd={phd} index={index} />
                 </motion.div>
               ))}
             </div>
