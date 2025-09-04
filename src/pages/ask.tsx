@@ -228,9 +228,9 @@ const ConfidenceRing: React.FC<{ value: number; decision: boolean }> = ({ value,
         </defs>
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <div className="text-2xl font-bold text-white">{value}%</div>
-        <div className={`text-xs font-medium ${decision ? 'text-emerald-400' : 'text-red-400'}`}>
-          {decision ? 'YES' : 'NO'}
+        <div className="text-2xl font-bold text-white">{value.toFixed(2)}%</div>
+        <div className={`text-xs font-medium ${decision ? 'text-emerald-400' : 'text-amber-400'}`}>
+          {decision ? 'GO' : 'WAIT'}
         </div>
       </div>
     </div>
@@ -261,14 +261,16 @@ const Ask: React.FC = () => {
 
     try {
       const result = await askAgent(q, agent.name);
-      setAns(result);
+      // Convert decision string to boolean (GO = true, WAIT = false)
+      const decision = result.decision === "GO";
+      setAns({ ...result, decision });
       
-      if (result.decision) {
+      if (decision) {
         chime.go();
-        showToast({ kind: "success", msg: `${agent.name} says YES with ${result.confidence}% confidence` });
+        showToast({ kind: "success", msg: `${agent.name} says GO with ${(result.confidence * 100).toFixed(2)}% confidence` });
       } else {
         chime.nope();
-        showToast({ kind: "info", msg: `${agent.name} says NO with ${result.confidence}% confidence` });
+        showToast({ kind: "info", msg: `${agent.name} says WAIT with ${(result.confidence * 100).toFixed(2)}% confidence` });
       }
     } catch (error: any) {
       console.error("Ask error:", error);
@@ -350,7 +352,7 @@ const Ask: React.FC = () => {
                     >
                       {/* Decision header */}
                       <div className="flex items-center gap-4">
-                        <ConfidenceRing value={ans.confidence} decision={ans.decision} />
+                        <ConfidenceRing value={ans.confidence * 100} decision={ans.decision} />
                         <div className="min-w-0">
                           <div className="text-sm text-white/60">Agent</div>
                           <div className="text-xl font-bold">{ans.agent}</div>
