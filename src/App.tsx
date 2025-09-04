@@ -7,8 +7,6 @@ import Auth from './pages/auth'
 import Home from './pages/home'
 import HowItWorks from './pages/how-it-works'
 import AlwaysOnFaculty from './pages/always-on-faculty'
-import TrainingDashboard from './pages/training-dashboard'
-import EviDashboard from './pages/evi-dashboard'
 import Ask from './pages/ask'
 import Settings from './pages/settings'
 import Pricing from './pages/pricing'
@@ -49,37 +47,11 @@ function App() {
           } />
           
           <Route
-            path="/evi"
-            element={
-              <>
-                <SignedIn>
-                  <EviDashboard />
-                </SignedIn>
-                <SignedOut>
-                  <Auth />
-                </SignedOut>
-              </>
-            }
-          />
-          <Route
             path="/faculty"
             element={
               <>
                 <SignedIn>
                   <AlwaysOnFaculty />
-                </SignedIn>
-                <SignedOut>
-                  <Auth />
-                </SignedOut>
-              </>
-            }
-          />
-          <Route
-            path="/training"
-            element={
-              <>
-                <SignedIn>
-                  <TrainingDashboard />
                 </SignedIn>
                 <SignedOut>
                   <Auth />

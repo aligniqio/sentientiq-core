@@ -4,13 +4,10 @@ import { useClerk, useUser } from '@clerk/clerk-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Brain, 
-  Activity, 
   Menu, 
   X, 
   LogOut, 
   Home,
-  Zap,
-  Eye,
   Shield
 } from 'lucide-react';
 
@@ -38,8 +35,6 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const menuItems = [
     { path: '/', icon: Home, label: 'Home', public: true },
     { path: '/ask', icon: Brain, label: 'Ask the PhDs', public: false },
-    { path: '/evi', icon: Activity, label: 'EVI™ Dashboard', public: false },
-    { path: '/training', icon: Zap, label: 'Training Lab', public: false },
     { path: '/billing', icon: Shield, label: 'Billing', public: false },
   ];
 
