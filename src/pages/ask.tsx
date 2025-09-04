@@ -141,7 +141,7 @@ async function askAgent(question: string, agent: string, context?: any) {
   }
   
   return (await res.json()) as {
-    decision: boolean;
+    decision: string;  // "GO" or "WAIT" from backend
     confidence: number;
     agent: string;
     why: any;
@@ -190,7 +190,7 @@ const PhDCard: React.FC<{
 };
 
 // Confidence Ring Component
-const ConfidenceRing: React.FC<{ value: number; decision: boolean }> = ({ value, decision }) => {
+const ConfidenceRing: React.FC<{ value: number; decision: string }> = ({ value, decision }) => {
   const radius = 45;
   const circumference = 2 * Math.PI * radius;
   const offset = circumference - (value / 100) * circumference;
@@ -222,15 +222,15 @@ const ConfidenceRing: React.FC<{ value: number; decision: boolean }> = ({ value,
         />
         <defs>
           <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor={decision ? "#10b981" : "#ef4444"} />
-            <stop offset="100%" stopColor={decision ? "#06b6d4" : "#f97316"} />
+            <stop offset="0%" stopColor={decision === 'GO' ? "#10b981" : "#ef4444"} />
+            <stop offset="100%" stopColor={decision === 'GO' ? "#06b6d4" : "#f97316"} />
           </linearGradient>
         </defs>
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
         <div className="text-2xl font-bold text-white">{value.toFixed(2)}%</div>
-        <div className={`text-xs font-medium ${decision ? 'text-emerald-400' : 'text-amber-400'}`}>
-          {decision ? 'GO' : 'WAIT'}
+        <div className={`text-xs font-medium ${decision === 'GO' ? 'text-emerald-400' : 'text-amber-400'}`}>
+          {decision === 'GO' ? 'GO' : 'WAIT'}
         </div>
       </div>
     </div>
@@ -261,11 +261,12 @@ const Ask: React.FC = () => {
 
     try {
       const result = await askAgent(q, agent.name);
-      // Convert decision string to boolean (GO = true, WAIT = false)
-      const decision = result.decision === "GO";
-      setAns({ ...result, decision });
+      setAns(result);
       
-      if (decision) {
+      // Check decision string for toast/chime
+      const isGo = result.decision === "GO";
+      
+      if (isGo) {
         chime.go();
         showToast({ kind: "success", msg: `${agent.name} says GO with ${(result.confidence * 100).toFixed(2)}% confidence` });
       } else {
@@ -357,8 +358,8 @@ const Ask: React.FC = () => {
                           <div className="text-sm text-white/60">Agent</div>
                           <div className="text-xl font-bold">{ans.agent}</div>
                           <div className="text-sm text-white/70">
-                            Decision: <span className={ans.decision ? "text-emerald-400" : "text-red-400"}>
-                              {ans.decision ? "YES" : "NO"}
+                            Decision: <span className={ans.decision === "GO" ? "text-emerald-400" : "text-amber-400"}>
+                              {ans.decision === "GO" ? "GO" : "WAIT"}
                             </span>
                           </div>
                         </div>
