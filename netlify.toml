@@ -1,28 +1,17 @@
-# SentientIQ Netlify Configuration
-[build]
-  command = "npm run build"
-  functions = "netlify/functions"
-  publish = "dist"
+[[redirects]]
+  from = "/api/posts/*"
+  to = "http://3.15.29.138:8002/api/posts/:splat"
+  status = 200
+  force = true
 
-[build.environment]
-  # FastAPI backend origin (update with your EC2 or Load Balancer URL)
-  API_ORIGIN = "http://3.15.29.138:8001"
+[[redirects]]
+  from = "/api/swarm/*"
+  to = "http://3.15.29.138:8003/api/swarm/:splat"
+  status = 200
+  force = true
 
-# Edge Functions - route /api/* to the proxy
-[[edge_functions]]
-  path = "/api/*"
-  function = "api-proxy"
-
-# Redirect for Single Page Applications
+# SPA fallback
 [[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200
-
-# Local development configuration  
-[dev]
-  command = "npm run dev"
-  port = 5173
-  targetPort = 3000
-  publish = "dist"
-  autoLaunch = false
