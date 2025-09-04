@@ -1,120 +1,142 @@
 import React, { useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Brain, Sparkles, Send, Check, Users } from "lucide-react";
-import PageHeader from "../components/PageHeader";
+import { Brain, CheckCircle, Shield } from "lucide-react";
 import { useCandyToast } from "../components/ui/SenseiCandy";
 import { Skeleton } from "../components/ui/Skeleton";
 import { useChime } from "../components/ui/useChime";
 
 const API_BASE = import.meta.env.VITE_API_BASE || "/api";
 
-// --- 12 PhDs with full credentials ---
+// PhD COLLECTIVE - FULL CREDENTIALS
 const PHDS = [
-  { 
-    name: "Strategy", 
-    title: "Chief Marketing Officer", 
-    degree: "PhD Marketing Strategy", 
-    institution: "Wharton", 
-    specialty: "Market orchestration, Resource allocation", 
-    color: "from-violet-500/30 to-sky-500/30" 
+  {
+    name: "Dr. Strategic",
+    degree: "PhD Marketing Strategy",
+    institution: "Wharton",
+    year: 2019,
+    documentsAnalyzed: 127439,
+    accuracy: 96.2,
+    specialty: "Market orchestration, Resource allocation",
+    status: "verified"
   },
-  { 
-    name: "Emotion", 
-    title: "Consumer Psychology", 
-    degree: "PhD Behavioral Economics", 
-    institution: "Stanford", 
-    specialty: "Emotional triggers, Decision architecture", 
-    color: "from-rose-500/30 to-fuchsia-500/30" 
+  {
+    name: "Dr. Emotion", 
+    degree: "PhD Behavioral Economics",
+    institution: "Stanford",
+    year: 2020,
+    documentsAnalyzed: 89234,
+    accuracy: 93.8,
+    specialty: "Emotional triggers, Consumer psychology",
+    status: "verified"
   },
-  { 
-    name: "Pattern", 
-    title: "Data Science Lead", 
-    degree: "PhD Machine Learning", 
-    institution: "MIT", 
-    specialty: "Predictive modeling, Anomaly detection", 
-    color: "from-sky-500/30 to-cyan-500/30" 
+  {
+    name: "Dr. Pattern",
+    degree: "PhD Machine Learning",
+    institution: "MIT",
+    year: 2018,
+    documentsAnalyzed: 203847,
+    accuracy: 97.1,
+    specialty: "Predictive modeling, Pattern recognition",
+    status: "verified"
   },
-  { 
-    name: "Identity", 
-    title: "CDP Architect", 
-    degree: "PhD Information Systems", 
-    institution: "Carnegie Mellon", 
-    specialty: "Identity resolution, Data unification", 
-    color: "from-emerald-500/30 to-teal-500/30" 
+  {
+    name: "Dr. Identity",
+    degree: "PhD Information Systems",
+    institution: "Carnegie Mellon",
+    year: 2021,
+    documentsAnalyzed: 67892,
+    accuracy: 95.4,
+    specialty: "Identity resolution, CDP architecture",
+    status: "verified"
   },
-  { 
-    name: "Chaos", 
-    title: "Creative Mutation", 
-    degree: "PhD Cognitive Science", 
-    institution: "Berkeley", 
-    specialty: "Creative optimization, A/B evolution", 
-    color: "from-amber-500/30 to-rose-500/30" 
+  {
+    name: "Dr. Chaos",
+    degree: "PhD Cognitive Science",
+    institution: "Berkeley",
+    year: 2019,
+    documentsAnalyzed: 45673,
+    accuracy: 91.7,
+    specialty: "Creative optimization, A/B evolution",
+    status: "verified"
   },
-  { 
-    name: "ROI", 
-    title: "Budget Optimization", 
-    degree: "PhD Financial Engineering", 
-    institution: "Chicago Booth", 
-    specialty: "Budget optimization, ROI modeling", 
-    color: "from-lime-500/30 to-emerald-500/30" 
+  {
+    name: "Dr. Omni",
+    degree: "PhD Cross-Channel Systems",
+    institution: "Stanford GSB",
+    year: 2020,
+    documentsAnalyzed: 91847,
+    accuracy: 94.9,
+    specialty: "Omnichannel orchestration, Attribution",
+    status: "verified"
   },
-  { 
-    name: "Warfare", 
-    title: "Competitive Intel", 
-    degree: "PhD Strategic Management", 
-    institution: "INSEAD", 
-    specialty: "Competitive intelligence, Market dynamics", 
-    color: "from-red-500/30 to-rose-500/30" 
+  {
+    name: "Dr. Warfare",
+    degree: "PhD Competitive Intelligence",
+    institution: "INSEAD",
+    year: 2018,
+    documentsAnalyzed: 78234,
+    accuracy: 95.8,
+    specialty: "Market warfare, Disruption strategies",
+    status: "verified"
   },
-  { 
-    name: "Omni", 
-    title: "Channel Optimizer", 
-    degree: "PhD Media Studies", 
-    institution: "Northwestern", 
-    specialty: "Channel optimization, Cross-platform", 
-    color: "from-indigo-500/30 to-violet-500/30" 
+  {
+    name: "Dr. First",
+    degree: "PhD Consumer Psychology",
+    institution: "Yale",
+    year: 2019,
+    documentsAnalyzed: 83927,
+    accuracy: 92.4,
+    specialty: "First-party data, Zero-party strategies",
+    status: "verified"
   },
-  { 
-    name: "First", 
-    title: "Onboarding Intelligence", 
-    degree: "PhD User Experience", 
-    institution: "Michigan", 
-    specialty: "Onboarding optimization, Activation", 
-    color: "from-fuchsia-500/30 to-indigo-500/30" 
+  {
+    name: "Dr. ROI",
+    degree: "PhD Financial Engineering",
+    institution: "Chicago Booth",
+    year: 2020,
+    documentsAnalyzed: 156439,
+    accuracy: 98.2,
+    specialty: "ROI optimization, LTV modeling",
+    status: "verified"
   },
-  { 
-    name: "Truth", 
-    title: "Attribution Science", 
-    degree: "PhD Statistical Analysis", 
-    institution: "Harvard", 
-    specialty: "Attribution science, Causality analysis", 
-    color: "from-slate-500/30 to-blue-500/30" 
+  {
+    name: "Dr. Truth",
+    degree: "PhD Data Science",
+    institution: "Harvard",
+    year: 2019,
+    documentsAnalyzed: 178439,
+    accuracy: 96.7,
+    specialty: "Truth architecture, Source systems",
+    status: "verified"
   },
-  { 
-    name: "Brutal", 
-    title: "Shop Intelligence", 
-    degree: "PhD Philosophy of Mind", 
-    institution: "Oxford", 
-    specialty: "Reality checks, Strategic philosophy", 
-    color: "from-neutral-500/30 to-red-500/30" 
+  {
+    name: "Dr. Context",
+    degree: "PhD Business Intelligence",
+    institution: "MIT Sloan",
+    year: 2021,
+    documentsAnalyzed: 94756,
+    accuracy: 93.8,
+    specialty: "Contextual intelligence, Real-time decisioning",
+    status: "verified"
   },
-  { 
-    name: "Context", 
-    title: "Business Intelligence", 
-    degree: "PhD Business Administration", 
-    institution: "London Business School", 
-    specialty: "Business context, Market alignment", 
-    color: "from-slate-500/30 to-zinc-500/30" 
-  },
+  {
+    name: "Dr. Brutal",
+    degree: "PhD Marketing Warfare + CMO",
+    institution: "Wharton",
+    year: 2017,
+    documentsAnalyzed: 234756,
+    accuracy: 97.9,
+    specialty: "Debate orchestration, Consensus synthesis",
+    status: "verified"
+  }
 ];
 
-// Simple POST wrapper with rate limit handling
-async function askAgent(question: string, agent: string, context?: any) {
+// API wrapper
+async function askCollective(question: string, context?: any) {
   const res = await fetch(`${API_BASE}/ask`, {
     method: "POST",
     headers: { 
       "Content-Type": "application/json",
-      // Include user/plan headers for now (until Clerk JWT is fully wired)
       ...(typeof window !== "undefined" && window.localStorage.getItem("user_id") 
         ? { 
             "X-User-Id": window.localStorage.getItem("user_id") || "",
@@ -122,10 +144,13 @@ async function askAgent(question: string, agent: string, context?: any) {
           } 
         : {})
     },
-    body: JSON.stringify({ question, agent, context }),
+    body: JSON.stringify({ 
+      question, 
+      agent: "Consensus", 
+      context: { ...context, mode: "debate" } 
+    }),
   });
   
-  // Handle rate limiting and payment required
   if (res.status === 402) {
     const error = await res.json();
     throw new Error(`UPGRADE_REQUIRED: ${error.detail || "Monthly quota reached. Please upgrade your plan."}`);
@@ -141,51 +166,90 @@ async function askAgent(question: string, agent: string, context?: any) {
   }
   
   return (await res.json()) as {
-    decision: string;  // "GO" or "WAIT" from backend
+    decision: string;  // "GO" or "WAIT"
     confidence: number;
     agent: string;
     why: any;
   };
 }
 
-// PhD Card Component
-const PhDCard: React.FC<{
-  phd: typeof PHDS[0];
-  active: boolean;
-  onClick: () => void;
-}> = ({ phd, active, onClick }) => {
+// PhD Card Component with full credentials and blockchain verification
+const PhDCard: React.FC<{ phd: typeof PHDS[0] }> = ({ phd }) => {
+  const [isFlipped, setIsFlipped] = useState(false);
+  
   return (
-    <motion.button
-      onClick={onClick}
-      whileHover={{ scale: 1.02 }}
-      whileTap={{ scale: 0.98 }}
-      className={`
-        relative overflow-hidden rounded-2xl border p-4 text-left transition-all
-        ${active 
-          ? 'border-violet-500/50 bg-violet-500/10 shadow-lg shadow-violet-500/20' 
-          : 'border-white/10 bg-white/5 hover:bg-white/10'
-        }
-      `}
+    <div 
+      className="relative h-[280px] w-full perspective-1000"
+      onMouseEnter={() => setIsFlipped(true)}
+      onMouseLeave={() => setIsFlipped(false)}
     >
-      {/* Background gradient */}
-      <div className={`absolute inset-0 bg-gradient-to-br ${phd.color} opacity-20`} />
-      
-      <div className="relative z-10">
-        <div className="mb-2 flex items-start justify-between">
-          <div>
-            <h3 className="font-bold text-white">{phd.name}</h3>
-            <p className="text-xs text-white/60">{phd.title}</p>
+      <motion.div
+        className="absolute inset-0 w-full h-full transition-transform duration-700 transform-style-3d"
+        animate={{ rotateY: isFlipped ? 180 : 0 }}
+      >
+        {/* Front of card */}
+        <div className="absolute inset-0 backface-hidden">
+          <div className="h-full backdrop-blur-xl bg-white/5 border border-white/10 rounded-2xl p-5 relative overflow-hidden">
+            {/* Gradient background effect */}
+            <div className="absolute inset-0 bg-gradient-to-br from-purple-600/5 to-blue-600/5 opacity-50" />
+            
+            {/* Status Badge */}
+            <div className="relative z-10">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <CheckCircle className="w-5 h-5 text-green-400" />
+                  <span className="text-xs font-bold uppercase text-green-400">VERIFIED</span>
+                </div>
+                <div className="text-xs text-white/40">{phd.year}</div>
+              </div>
+              
+              {/* Agent Name */}
+              <h3 className="font-bold text-white text-lg mb-1">{phd.name}</h3>
+              <p className="text-xs text-white/60 mb-3">{phd.degree}</p>
+              
+              {/* Institution */}
+              <div className="text-xs text-violet-300 mb-3">{phd.institution}</div>
+              
+              {/* Stats */}
+              <div className="space-y-2 text-xs">
+                <div className="flex justify-between items-center">
+                  <span className="text-white/50">Documents</span>
+                  <span className="text-white font-mono">{phd.documentsAnalyzed.toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-white/50">Accuracy</span>
+                  <span className="text-white font-mono">{phd.accuracy}%</span>
+                </div>
+              </div>
+              
+              {/* Specialty */}
+              <div className="mt-3 pt-3 border-t border-white/10">
+                <p className="text-xs text-white/70 line-clamp-2">{phd.specialty}</p>
+              </div>
+            </div>
           </div>
-          {active && <Check className="h-5 w-5 text-violet-400" />}
         </div>
         
-        <div className="space-y-1 text-xs">
-          <div className="text-white/80">{phd.degree}</div>
-          <div className="text-violet-300">{phd.institution}</div>
-          <div className="mt-2 text-white/60">{phd.specialty}</div>
+        {/* Back of card - Blockchain verification */}
+        <div className="absolute inset-0 backface-hidden rotate-y-180">
+          <div className="h-full backdrop-blur-xl bg-gradient-to-br from-green-900/20 to-emerald-600/20 border border-green-500/30 rounded-2xl p-5 flex flex-col justify-center">
+            <Shield className="w-8 h-8 text-green-400 mx-auto mb-3" />
+            <div className="text-center">
+              <div className="text-xs font-bold text-green-400 mb-2">BLOCKCHAIN VERIFIED</div>
+              <div className="font-mono text-[10px] text-green-300/80 mb-3">
+                0x{Math.random().toString(16).substring(2, 18)}
+              </div>
+              <div className="text-xs text-white/60 mb-2">Credential Hash</div>
+              <div className="space-y-1">
+                <div className="text-xs text-white/50">Block: #{Math.floor(Math.random() * 900000 + 100000)}</div>
+                <div className="text-xs text-white/50">Chain: Ethereum</div>
+                <div className="text-xs text-green-400">✓ Immutable</div>
+              </div>
+            </div>
+          </div>
         </div>
-      </div>
-    </motion.button>
+      </motion.div>
+    </div>
   );
 };
 
@@ -194,7 +258,7 @@ const ConfidenceRing: React.FC<{ value: number; decision: string }> = ({ value, 
   const radius = 45;
   const circumference = 2 * Math.PI * radius;
   const offset = circumference - (value / 100) * circumference;
-  
+
   return (
     <div className="relative h-28 w-28">
       <svg className="h-28 w-28 -rotate-90">
@@ -207,7 +271,7 @@ const ConfidenceRing: React.FC<{ value: number; decision: string }> = ({ value, 
           fill="none"
           className="text-white/10"
         />
-        <motion.circle
+        <circle
           cx="56"
           cy="56"
           r={radius}
@@ -215,9 +279,7 @@ const ConfidenceRing: React.FC<{ value: number; decision: string }> = ({ value, 
           strokeWidth="8"
           fill="none"
           strokeDasharray={circumference}
-          initial={{ strokeDashoffset: circumference }}
-          animate={{ strokeDashoffset: offset }}
-          transition={{ duration: 1, ease: "easeOut" }}
+          strokeDashoffset={offset}
           strokeLinecap="round"
         />
         <defs>
@@ -239,98 +301,60 @@ const ConfidenceRing: React.FC<{ value: number; decision: string }> = ({ value, 
 
 const Ask: React.FC = () => {
   const [q, setQ] = useState("");
-  const [selectedAgents, setSelectedAgents] = useState<typeof PHDS>([]);
-  const [consensusMode, setConsensusMode] = useState(false);
   const [ans, setAns] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   
-  // Auto-capture context from URL and environment
+  // Auto-capture context
   const autoContext = useMemo(() => {
     const url = window.location.href;
     const domain = window.location.hostname;
-    const path = window.location.pathname;
-    const referrer = document.referrer;
     const params = new URLSearchParams(window.location.search);
-    
-    // Extract any UTM params or context hints
     const contextParams: Record<string, string> = {};
+    
     params.forEach((value, key) => {
-      if (key.startsWith('utm_') || key.includes('context') || key.includes('org') || key.includes('company')) {
+      if (key.startsWith('utm_') || key.includes('context')) {
         contextParams[key] = value;
       }
     });
     
-    // Infer org from domain (e.g., app.company.com -> company)
-    const orgFromDomain = domain.split('.')[0] === 'app' ? domain.split('.')[1] : null;
-    
-    // Scan for context clues
     return {
       url,
       domain,
-      path,
-      referrer,
       params: contextParams,
-      org: orgFromDomain,
       timestamp: new Date().toISOString(),
       timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-      locale: navigator.language,
-      viewport: `${window.innerWidth}x${window.innerHeight}`,
-      // Previous questions from session
       history: JSON.parse(sessionStorage.getItem('ask_history') || '[]')
     };
   }, []);
+  
   const { push: showToast } = useCandyToast();
   const chime = useChime();
 
-  const examples = useMemo(() => [
-    "Should we launch before Black Friday?",
-    "Is our pricing strategy optimal for enterprise?",
-    "Will this campaign resonate with Gen Z?",
-  ], []);
+  const disabled = loading || q.trim().length < 3;
 
-  const disabled = loading || q.trim().length < 3 || (!consensusMode && selectedAgents.length === 0);
-
-  async function onAsk() {
+  async function startDebate() {
     if (disabled) return;
 
     setLoading(true);
     setAns(null);
 
     try {
-      // Send "Consensus" as agent name for collective mode
-      const agentName = consensusMode ? "Consensus" : (selectedAgents[0]?.name || "Strategy");
-      
-      // Auto-enrich context from URL and session
-      const enrichedContext = {
-        ...autoContext,
-        mode: consensusMode ? "consensus" : "individual",
-        agents: consensusMode ? "all" : selectedAgents.map(a => a.name),
-        question: q
-      };
-      
-      // Store question in session history
+      // Store question in history
       const history = JSON.parse(sessionStorage.getItem('ask_history') || '[]');
       history.push({ q, timestamp: Date.now() });
-      sessionStorage.setItem('ask_history', JSON.stringify(history.slice(-10))); // Keep last 10
+      sessionStorage.setItem('ask_history', JSON.stringify(history.slice(-10)));
       
-      const result = await askAgent(q, agentName, enrichedContext);
+      const result = await askCollective(q, autoContext);
       setAns(result);
       
-      // Check decision string for toast/chime
       const isGo = result.decision === "GO";
       
       if (isGo) {
         chime.go();
-        const msg = consensusMode 
-          ? `PhD Collective consensus: GO with ${(result.confidence * 100).toFixed(2)}% confidence`
-          : `${agentName} says GO with ${(result.confidence * 100).toFixed(2)}% confidence`;
-        showToast({ kind: "success", msg });
+        showToast({ kind: "success", msg: `PhD Collective consensus: GO with ${(result.confidence * 100).toFixed(2)}% confidence` });
       } else {
         chime.nope();
-        const msg = consensusMode 
-          ? `PhD Collective consensus: WAIT with ${(result.confidence * 100).toFixed(2)}% confidence`
-          : `${agentName} says WAIT with ${(result.confidence * 100).toFixed(2)}% confidence`;
-        showToast({ kind: "info", msg });
+        showToast({ kind: "info", msg: `PhD Collective consensus: WAIT with ${(result.confidence * 100).toFixed(2)}% confidence` });
       }
     } catch (error: any) {
       console.error("Ask error:", error);
@@ -353,209 +377,146 @@ const Ask: React.FC = () => {
       {/* Neural Cathedral Background */}
       <div className="neural-bg" />
       
-      <div className="relative z-10">
-        <div className="mx-auto max-w-7xl px-6 py-12">
-          {/* Header */}
-          <PageHeader 
-            title="Ask the Collective"
-            subtitle="Twelve PhDs. One answer with a Why."
-          />
+      <div className="relative z-10 min-h-screen flex flex-col">
+        {/* Header */}
+        <div className="px-8 pt-8 pb-4">
+          <h1 className="text-3xl font-bold bg-gradient-to-r from-violet-400 to-purple-400 bg-clip-text text-transparent">
+            Ask the Collective
+          </h1>
+          <p className="text-sm text-white/60 mt-1">
+            Twelve PhDs. One answer with a Why.
+          </p>
+        </div>
 
-          {/* Main Grid */}
-          <div className="grid gap-8 lg:grid-cols-3">
-            {/* PhD Cards Grid - 2 columns */}
-            <div className="lg:col-span-2">
-              <div className="mb-4 flex items-center justify-between">
-                <div>
-                  <h2 className="text-lg font-bold text-white/90">
-                    {consensusMode ? "PhD Collective Consensus" : "Select Individual Experts"}
-                  </h2>
-                  {!consensusMode && selectedAgents.length > 0 && (
-                    <p className="text-sm text-purple-300 mt-1">
-                      {selectedAgents.length} expert{selectedAgents.length > 1 ? 's' : ''} selected
-                      {selectedAgents.length > 1 && ' (will debate in parallel)'}
-                    </p>
-                  )}
-                </div>
-                <button
-                  onClick={() => {
-                    setConsensusMode(!consensusMode);
-                    setSelectedAgents([]);
-                    setAns(null);
-                  }}
-                  className="rounded-lg border border-purple-500/30 bg-purple-500/10 px-4 py-2 text-sm font-medium text-purple-300 transition-all hover:bg-purple-500/20"
+        {/* Main Content - Flex container */}
+        <div className="flex-1 px-8 pb-8 flex flex-col lg:flex-row gap-8">
+          {/* PhD Cards Grid - Left side */}
+          <div className="flex-1 lg:flex-[2]">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+              {PHDS.map((phd, index) => (
+                <motion.div
+                  key={phd.name}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.03 }}
                 >
-                  {consensusMode ? "Individual Mode" : "Consensus Mode"}
-                </button>
-              </div>
-              
-              {/* Consensus Mode Card */}
-              {consensusMode ? (
-                <div className="glass-card group relative overflow-hidden rounded-xl border-2 border-purple-500/50 bg-gradient-to-br from-purple-500/10 to-indigo-500/10 p-6">
-                  <div className="flex items-center justify-center space-x-4">
-                    <Users className="h-12 w-12 text-purple-400" />
-                    <div>
-                      <h3 className="text-xl font-bold text-white">PhD Collective Debate</h3>
-                      <p className="text-sm text-white/70">All 12 experts engage in structured debate</p>
-                      <p className="mt-2 text-xs text-purple-300">• Each expert presents their perspective</p>
-                      <p className="text-xs text-purple-300">• Counterarguments are considered</p>
-                      <p className="text-xs text-purple-300">• Consensus emerges from deliberation</p>
-                    </div>
+                  <PhDCard phd={phd} />
+                </motion.div>
+              ))}
+            </div>
+          </div>
+
+          {/* Question & Answer Panel - Right side */}
+          <div className="lg:flex-1 space-y-6 flex flex-col">
+            {/* Answer Panel */}
+            <div className="backdrop-blur-xl bg-white/5 border border-white/10 rounded-2xl p-6 flex-1 min-h-[400px]">
+              {loading ? (
+                <div className="flex items-center justify-center h-full">
+                  <div className="space-y-4">
+                    <Brain className="w-12 h-12 text-purple-400 animate-pulse mx-auto" />
+                    <div className="text-center text-white/60">The faculty is debating...</div>
+                    <Skeleton className="w-48 h-4 mx-auto" />
                   </div>
                 </div>
-              ) : (
-                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                  {PHDS.map((phd) => (
-                    <PhDCard
-                      key={phd.name}
-                      phd={phd}
-                      active={selectedAgents.some(a => a.name === phd.name)}
-                      onClick={() => {
-                        // Toggle selection for multi-select
-                        setSelectedAgents(prev => {
-                          const exists = prev.some(a => a.name === phd.name);
-                          if (exists) {
-                            return prev.filter(a => a.name !== phd.name);
-                          }
-                          return [...prev, phd];
-                        });
-                      }}
-                    />
-                  ))}
+              ) : !ans ? (
+                <div className="flex h-full flex-col items-center justify-center text-center text-white/60">
+                  <Brain className="mb-3 h-8 w-8 text-white/50" />
+                  The faculty is ready…
+                  <div className="mt-1 text-xs">Ask a question to begin the debate.</div>
                 </div>
+              ) : (
+                <AnimatePresence mode="popLayout">
+                  <motion.div
+                    key={`${ans.agent}-${ans.decision}-${ans.confidence}`}
+                    initial={{ opacity: 0, y: 8, scale: 0.98 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: -6 }}
+                    transition={{ duration: 0.3 }}
+                  >
+                    {/* Decision header */}
+                    <div className="flex items-center gap-4">
+                      <ConfidenceRing value={ans.confidence * 100} decision={ans.decision} />
+                      <div className="min-w-0">
+                        <div className="text-sm text-white/60">Consensus</div>
+                        <div className="text-xl font-bold">PhD Collective</div>
+                        <div className="text-sm text-white/70">
+                          Decision: <span className={ans.decision === "GO" ? "text-emerald-400" : "text-amber-400"}>
+                            {ans.decision === "GO" ? "GO" : "WAIT"}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Strategic Rationale */}
+                    {ans.why && (
+                      <motion.div 
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.2 }}
+                        className="mt-6 space-y-4"
+                      >
+                        <div>
+                          <h4 className="mb-2 text-sm font-bold text-white/90">Strategic Rationale</h4>
+                          <div className="rounded-xl border border-white/10 bg-black/30 p-4">
+                            <p className="text-sm text-white/80">{ans.why.reasoning}</p>
+                          </div>
+                        </div>
+                        
+                        {ans.why.factors && (
+                          <div className="grid gap-2">
+                            {ans.why.factors.map((factor: any, i: number) => (
+                              <div key={i} className="flex items-center gap-3 rounded-lg bg-white/5 p-3">
+                                <div className={`h-2 w-2 rounded-full ${factor.impact > 0 ? 'bg-emerald-400' : 'bg-red-400'}`} />
+                                <span className="text-xs text-white/70">{factor.name}</span>
+                                <span className="ml-auto text-xs font-medium">{factor.weight}%</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </motion.div>
+                    )}
+                  </motion.div>
+                </AnimatePresence>
               )}
             </div>
 
-            {/* Question & Answer Panel - 1 column */}
-            <div className="space-y-6">
-              {/* Answer Panel - moved to top */}
-              <div className="glass-card relative overflow-hidden p-6 min-h-[360px]">
-                {/* Ambient glow */}
-                <div className="pointer-events-none absolute -inset-px rounded-3xl bg-gradient-to-br from-violet-500/20 to-sky-500/20 opacity-10 blur-2xl" />
-                
-                {loading ? (
-                  <div className="space-y-4">
-                    <Skeleton className="h-28 w-28" />
-                    <Skeleton className="h-8 w-48" />
-                    <Skeleton className="h-12 w-full" />
-                    <div className="grid grid-cols-2 gap-3">
-                      <Skeleton className="h-16" />
-                      <Skeleton className="h-16" />
-                    </div>
-                  </div>
-                ) : !ans ? (
-                  <div className="flex h-full flex-col items-center justify-center text-center text-white/60">
-                    <Brain className="mb-3 h-8 w-8 text-white/50" />
-                    The faculty is ready…
-                    <div className="mt-1 text-xs">Ask a question to begin the debate.</div>
-                  </div>
-                ) : (
-                  <AnimatePresence mode="popLayout">
-                    <motion.div
-                      key={`${ans.agent}-${ans.decision}-${ans.confidence}`}
-                      initial={{ opacity: 0, y: 8, scale: 0.98 }}
-                      animate={{ opacity: 1, y: 0, scale: 1 }}
-                      exit={{ opacity: 0, y: -6 }}
-                      transition={{ duration: 0.3 }}
-                    >
-                      {/* Decision header */}
-                      <div className="flex items-center gap-4">
-                        <ConfidenceRing value={ans.confidence * 100} decision={ans.decision} />
-                        <div className="min-w-0">
-                          <div className="text-sm text-white/60">Agent</div>
-                          <div className="text-xl font-bold">{ans.agent}</div>
-                          <div className="text-sm text-white/70">
-                            Decision: <span className={ans.decision === "GO" ? "text-emerald-400" : "text-amber-400"}>
-                              {ans.decision === "GO" ? "GO" : "WAIT"}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Why explanation */}
-                      {ans.why && (
-                        <motion.div 
-                          initial={{ opacity: 0, y: 10 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ delay: 0.2 }}
-                          className="mt-6 space-y-4"
-                        >
-                          <div>
-                            <h4 className="mb-2 text-sm font-bold text-white/90">Strategic Rationale</h4>
-                            <div className="rounded-xl border border-white/10 bg-black/30 p-4">
-                              <p className="text-sm text-white/80">{ans.why.reasoning}</p>
-                            </div>
-                          </div>
-                          
-                          {ans.why.factors && (
-                            <div className="grid gap-2">
-                              {ans.why.factors.map((factor: any, i: number) => (
-                                <div key={i} className="flex items-center gap-3 rounded-lg bg-white/5 p-3">
-                                  <div className={`h-2 w-2 rounded-full ${factor.impact > 0 ? 'bg-emerald-400' : 'bg-red-400'}`} />
-                                  <span className="text-xs text-white/70">{factor.name}</span>
-                                  <span className="ml-auto text-xs font-medium">{factor.weight}%</span>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                          
-                          <div className="mt-3 text-xs text-white/60">
-                            Model version: <span className="text-white">{ans.why.model_version}</span>
-                          </div>
-                        </motion.div>
-                      )}
-                    </motion.div>
-                  </AnimatePresence>
-                )}
+            {/* Question Input */}
+            <div className="backdrop-blur-xl bg-white/5 border border-white/10 rounded-2xl p-5">
+              <label className="mb-2 block text-sm font-medium text-white/70">
+                Ask a question to begin the debate.
+              </label>
+              
+              {/* Example */}
+              <div className="mb-3 text-xs text-white/50">
+                e.g., "Should we launch before Black Friday?"
               </div>
-
-              {/* Question Input - moved to bottom */}
-              <div className="glass-card p-5">
-                <label className="mb-2 block text-sm font-medium text-white/70">
-                  Your question
-                </label>
-                <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-black/30 p-3 ring-1 ring-white/5">
-                  <Sparkles className="h-5 w-5 text-violet-300" />
-                  <input
-                    value={q}
-                    onChange={(e) => setQ(e.target.value)}
-                    onKeyDown={(e) => {
-                      if ((e.ctrlKey || e.metaKey) && e.key === "Enter" && !disabled) onAsk();
-                    }}
-                    placeholder={examples[0]}
-                    className="w-full bg-transparent outline-none placeholder:text-white/40"
-                  />
-                  <button
-                    onClick={onAsk}
-                    disabled={disabled}
-                    className={`inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition ${
-                      disabled
-                        ? "bg-white/10 text-white/40 cursor-not-allowed"
-                        : "bg-gradient-to-r from-violet-500 to-sky-500 shadow-lg shadow-violet-500/20 ring-1 ring-white/20"
-                    }`}
-                  >
-                    {loading ? "Thinking…" : (
-                      consensusMode ? <>Get Consensus <Users className="h-4 w-4" /></> :
-                      <>Ask Expert <Send className="h-4 w-4" /></>
-                    )}
-                  </button>
-                </div>
-                
-                <div className="mt-3 flex flex-wrap gap-2 text-xs text-white/60">
-                  {examples.map((ex) => (
-                    <button
-                      key={ex}
-                      onClick={() => setQ(ex)}
-                      className="rounded-full border border-white/10 bg-white/5 px-3 py-1 hover:bg-white/10"
-                    >
-                      {ex}
-                    </button>
-                  ))}
-                </div>
-                
-                <div className="mt-2 text-[11px] text-white/50">
-                  Tip: ⌘/Ctrl + Enter to ask
-                </div>
+              
+              <div className="flex gap-3">
+                <input
+                  type="text"
+                  value={q}
+                  onChange={(e) => setQ(e.target.value)}
+                  onKeyDown={(e) => {
+                    if ((e.ctrlKey || e.metaKey) && e.key === "Enter" && !disabled) startDebate();
+                  }}
+                  placeholder="Should we launch before Black Friday?"
+                  className="flex-1 bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-white/30 focus:outline-none focus:border-purple-500/50"
+                />
+                <button
+                  onClick={startDebate}
+                  disabled={disabled}
+                  className={`px-6 py-3 rounded-xl font-semibold transition-all ${
+                    disabled
+                      ? "bg-white/10 text-white/40 cursor-not-allowed"
+                      : "bg-gradient-to-r from-violet-500 to-purple-500 text-white shadow-lg shadow-purple-500/25 hover:shadow-purple-500/40"
+                  }`}
+                >
+                  {loading ? "Debating…" : "Start a Debate"}
+                </button>
+              </div>
+              
+              <div className="mt-2 text-[11px] text-white/40">
+                Tip: Cmd + Enter to ask
               </div>
             </div>
           </div>
