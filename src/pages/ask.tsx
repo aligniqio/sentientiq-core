@@ -297,9 +297,8 @@ const Ask: React.FC = () => {
     setAns(null);
 
     try {
-      // For now, always send a valid agent name - backend will check context.mode for consensus
-      // In consensus mode, use Strategy as the lead agent
-      const agentName = consensusMode ? "Strategy" : (selectedAgents[0]?.name || "Strategy");
+      // Send "Consensus" as agent name for collective mode
+      const agentName = consensusMode ? "Consensus" : (selectedAgents[0]?.name || "Strategy");
       
       // Auto-enrich context from URL and session
       const enrichedContext = {
