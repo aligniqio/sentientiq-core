@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
+import PageHeader from '../components/PageHeader';
 import { 
   Activity, 
   AlertTriangle, 
@@ -15,6 +16,7 @@ import {
 } from 'lucide-react';
 
 const API_BASE = import.meta.env.VITE_INTEL_API_URL as string | undefined;
+
 
 interface EmotionData {
   anticipation: number;
@@ -176,38 +178,47 @@ const EviDashboard: React.FC = () => {
   const status = getEviStatus(pulseData.evi);
 
   return (
-    <div className="min-h-screen bg-black text-white p-8">
+    <div className="min-h-screen bg-black text-white">
+      {/* Neural Cathedral Background */}
+      <div className="neural-bg" />
+      
+      <div className="relative z-10">
+        {/* Hero Section */}
+        <div className="mx-auto max-w-7xl px-8 pt-8">
+          <PageHeader 
+            title="EVI™ Dashboard"
+            subtitle="Emotional Volatility Index — know when to launch or wait, in real time."
+          />
+        </div>
+      
       {/* Header */}
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="mb-8"
-      >
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h1 className="text-5xl font-black mb-2">EMOTIONAL VOLATILITY INDEX</h1>
-            <p className="text-xl text-gray-400">
-              The Bloomberg Terminal for human emotion. One number. One decision.
-            </p>
-          </div>
-          <div className="flex items-center gap-4">
-            <div className={`flex items-center gap-2 ${isLive ? 'text-green-500' : 'text-red-500'}`}>
-              <div className={`w-3 h-3 rounded-full ${isLive ? 'bg-green-500' : 'bg-red-500'} animate-pulse`} />
-              <span className="text-sm font-bold">{isLive ? 'LIVE STREAM' : 'RECONNECTING'}</span>
+      <div className="mx-auto max-w-7xl px-8">
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-8"
+        >
+          <div className="flex items-center justify-end mb-4">
+            <div className="flex items-center gap-4">
+              <div className={`flex items-center gap-2 ${isLive ? 'text-green-500' : 'text-red-500'}`}>
+                <div className={`w-3 h-3 rounded-full ${isLive ? 'bg-green-500' : 'bg-red-500'} animate-pulse`} />
+                <span className="text-sm font-bold">{isLive ? 'LIVE STREAM' : 'RECONNECTING'}</span>
+              </div>
             </div>
           </div>
-        </div>
-      </motion.div>
+        </motion.div>
+      </div>
 
       {/* Main EVI Display - The Crystal Palace */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
+      <div className="mx-auto max-w-7xl px-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
         {/* Central EVI Meter */}
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
           className="lg:col-span-2"
         >
-          <div className="relative backdrop-blur-2xl bg-white/5 rounded-3xl border border-white/10 p-8">
+          <div className="relative glass-card p-8">
             {/* Glass effect overlay */}
             <div className="absolute inset-0 bg-gradient-to-br from-purple-600/5 to-blue-600/5 rounded-3xl" />
             
@@ -336,7 +347,7 @@ const EviDashboard: React.FC = () => {
           animate={{ opacity: 1, x: 0 }}
           className="space-y-4"
         >
-          <div className="backdrop-blur-2xl bg-white/5 rounded-3xl border border-white/10 p-6">
+          <div className="glass-card p-6">
             <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
               <Shield className="w-5 h-5" />
               DISASTERS AVOIDED
@@ -365,7 +376,7 @@ const EviDashboard: React.FC = () => {
           </div>
 
           {/* Money Saved Counter */}
-          <div className="backdrop-blur-2xl bg-white/5 rounded-3xl border border-white/10 p-6">
+          <div className="glass-card p-6">
             <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
               <DollarSign className="w-5 h-5" />
               TOTAL PROTECTED
@@ -379,7 +390,7 @@ const EviDashboard: React.FC = () => {
           </div>
 
           {/* Quick Actions */}
-          <div className="backdrop-blur-2xl bg-white/5 rounded-3xl border border-white/10 p-6">
+          <div className="glass-card p-6">
             <h3 className="text-lg font-bold mb-4">QUICK ACTIONS</h3>
             <div className="space-y-2">
               <button className="w-full p-3 rounded-lg bg-red-900/30 border border-red-900/50 text-left hover:bg-red-900/40 transition-colors">
@@ -399,11 +410,11 @@ const EviDashboard: React.FC = () => {
         </motion.div>
       </div>
 
-      {/* Bottom Insight */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="backdrop-blur-2xl bg-white/5 rounded-3xl border border-white/10 p-6"
+        {/* Bottom Insight */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="glass-card p-6"
       >
         <div className="flex items-center justify-between">
           <div>
@@ -419,6 +430,8 @@ const EviDashboard: React.FC = () => {
           </div>
         </div>
       </motion.div>
+      </div>
+      </div>
     </div>
   );
 };

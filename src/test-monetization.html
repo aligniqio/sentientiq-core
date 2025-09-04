@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>SentientIQ Monetization Stress Test</title>
+    <style>
+        body {
+            background: linear-gradient(180deg, #0a0a12 0%, #0b0b14 100%);
+            color: white;
+            font-family: monospace;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .test-section {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 12px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .status { margin: 5px 0; padding: 8px; border-radius: 4px; }
+        .success { background: rgba(34,197,94,0.2); }
+        .error { background: rgba(239,68,68,0.2); }
+        .warning { background: rgba(245,158,11,0.2); }
+        .info { background: rgba(59,130,246,0.2); }
+        button {
+            background: linear-gradient(to right, #8b5cf6, #3b82f6);
+            border: none;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            margin: 5px;
+            font-weight: bold;
+        }
+        button:hover { opacity: 0.9; }
+        button:disabled { opacity: 0.5; cursor: not-allowed; }
+        .metrics {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .metric {
+            background: rgba(255,255,255,0.05);
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .metric-value {
+            font-size: 2em;
+            font-weight: bold;
+            color: #8b5cf6;
+        }
+        .metric-label {
+            font-size: 0.9em;
+            color: rgba(255,255,255,0.6);
+            margin-top: 5px;
+        }
+        #console {
+            background: black;
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 15px;
+            height: 300px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+        }
+        .log-entry {
+            margin: 2px 0;
+            padding: 2px 5px;
+        }
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(to right, #8b5cf6, #3b82f6);
+            transition: width 0.3s;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔥 SentientIQ Monetization Stress Test 🔥</h1>
+        
+        <div class="test-section">
+            <h2>Test Controls</h2>
+            <button onclick="testRateLimit()">Test Rate Limiting (20 questions)</button>
+            <button onclick="testBurst()">Test Burst (50 rapid)</button>
+            <button onclick="testPaymentFlow()">Test Payment Flow</button>
+            <button onclick="testSSE()">Test SSE Streaming</button>
+            <button onclick="runAllTests()">🚀 RUN ALL TESTS</button>
+            <button onclick="clearConsole()">Clear Console</button>
+        </div>
+
+        <div class="test-section">
+            <h2>Live Metrics</h2>
+            <div class="metrics">
+                <div class="metric">
+                    <div class="metric-value" id="totalRequests">0</div>
+                    <div class="metric-label">Total Requests</div>
+                </div>
+                <div class="metric">
+                    <div class="metric-value" id="successRate">0%</div>
+                    <div class="metric-label">Success Rate</div>
+                </div>
+                <div class="metric">
+                    <div class="metric-value" id="avgLatency">0ms</div>
+                    <div class="metric-label">Avg Latency</div>
+                </div>
+                <div class="metric">
+                    <div class="metric-value" id="rateLimits">0</div>
+                    <div class="metric-label">Rate Limits Hit</div>
+                </div>
+                <div class="metric">
+                    <div class="metric-value" id="paymentRequired">0</div>
+                    <div class="metric-label">Payment Required</div>
+                </div>
+                <div class="metric">
+                    <div class="metric-value" id="errors">0</div>
+                    <div class="metric-label">Errors</div>
+                </div>
+            </div>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressBar" style="width: 0%"></div>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h2>Test Console</h2>
+            <div id="console"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = '/api';
+        let stats = {
+            total: 0,
+            success: 0,
+            rateLimited: 0,
+            paymentRequired: 0,
+            errors: 0,
+            latencies: []
+        };
+
+        function log(message, type = 'info') {
+            const console = document.getElementById('console');
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            const timestamp = new Date().toISOString().substr(11, 12);
+            
+            let prefix = '📝';
+            if (type === 'success') prefix = '✅';
+            if (type === 'error') prefix = '❌';
+            if (type === 'warning') prefix = '⚠️';
+            
+            entry.textContent = `[${timestamp}] ${prefix} ${message}`;
+            console.appendChild(entry);
+            console.scrollTop = console.scrollHeight;
+        }
+
+        function updateMetrics() {
+            document.getElementById('totalRequests').textContent = stats.total;
+            const successRate = stats.total > 0 ? Math.round((stats.success / stats.total) * 100) : 0;
+            document.getElementById('successRate').textContent = `${successRate}%`;
+            
+            const avgLatency = stats.latencies.length > 0 
+                ? Math.round(stats.latencies.reduce((a, b) => a + b, 0) / stats.latencies.length)
+                : 0;
+            document.getElementById('avgLatency').textContent = `${avgLatency}ms`;
+            
+            document.getElementById('rateLimits').textContent = stats.rateLimited;
+            document.getElementById('paymentRequired').textContent = stats.paymentRequired;
+            document.getElementById('errors').textContent = stats.errors;
+        }
+
+        function updateProgress(current, total) {
+            const percent = Math.round((current / total) * 100);
+            document.getElementById('progressBar').style.width = `${percent}%`;
+        }
+
+        async function makeRequest(question, agent = 'Strategy', userId = 'test_user', plan = 'free') {
+            const startTime = Date.now();
+            stats.total++;
+            
+            try {
+                const response = await fetch(`${API_BASE}/ask`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-User-Id': userId,
+                        'X-Plan': plan
+                    },
+                    body: JSON.stringify({ question, agent })
+                });
+                
+                const latency = Date.now() - startTime;
+                stats.latencies.push(latency);
+                
+                if (response.status === 200) {
+                    stats.success++;
+                    const data = await response.json();
+                    return { success: true, data, latency };
+                } else if (response.status === 402) {
+                    stats.paymentRequired++;
+                    return { success: false, status: 402, message: 'Payment required' };
+                } else if (response.status === 429) {
+                    stats.rateLimited++;
+                    return { success: false, status: 429, message: 'Rate limited' };
+                } else {
+                    stats.errors++;
+                    return { success: false, status: response.status };
+                }
+            } catch (error) {
+                stats.errors++;
+                return { success: false, error: error.message };
+            } finally {
+                updateMetrics();
+            }
+        }
+
+        async function testRateLimit() {
+            log('Starting rate limit test (20 questions for free user)...', 'info');
+            const userId = `free_user_${Date.now()}`;
+            
+            for (let i = 1; i <= 25; i++) {
+                updateProgress(i, 25);
+                const result = await makeRequest(
+                    `Rate limit test question ${i}`,
+                    'Strategy',
+                    userId,
+                    'free'
+                );
+                
+                if (result.status === 402) {
+                    log(`Hit payment wall at question ${i} ✓`, 'success');
+                    break;
+                } else if (result.success) {
+                    log(`Question ${i}: SUCCESS (${result.latency}ms)`, 'success');
+                } else {
+                    log(`Question ${i}: ${result.message || 'Error'}`, 'warning');
+                }
+                
+                await new Promise(r => setTimeout(r, 100)); // Small delay
+            }
+            
+            log('Rate limit test complete!', 'info');
+        }
+
+        async function testBurst() {
+            log('Starting burst test (50 rapid requests)...', 'info');
+            const promises = [];
+            
+            for (let i = 1; i <= 50; i++) {
+                promises.push(makeRequest(
+                    `Burst test ${i}`,
+                    'Emotion',
+                    `burst_user_${Date.now()}`,
+                    'pro'
+                ));
+            }
+            
+            const startTime = Date.now();
+            const results = await Promise.all(promises);
+            const totalTime = Date.now() - startTime;
+            
+            const successes = results.filter(r => r.success).length;
+            const rateLimited = results.filter(r => r.status === 429).length;
+            
+            log(`Burst complete: ${successes}/50 succeeded in ${totalTime}ms`, 'success');
+            log(`Rate limited: ${rateLimited} requests`, rateLimited > 0 ? 'warning' : 'info');
+            log(`Throughput: ${(50000 / totalTime).toFixed(2)} req/s`, 'info');
+        }
+
+        async function testPaymentFlow() {
+            log('Testing payment flow simulation...', 'info');
+            
+            // Simulate checkout completion
+            try {
+                const response = await fetch(`${API_BASE}/stripe/webhook`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Stripe-Signature': 'test_signature'
+                    },
+                    body: JSON.stringify({
+                        type: 'checkout.session.completed',
+                        data: {
+                            object: {
+                                subscription: 'sub_test',
+                                metadata: { clerk_user_id: 'test_upgrade' }
+                            }
+                        }
+                    })
+                });
+                
+                if (response.status === 400) {
+                    log('Webhook endpoint exists and validates signature ✓', 'success');
+                } else {
+                    log(`Webhook returned: ${response.status}`, 'warning');
+                }
+            } catch (error) {
+                log(`Webhook test error: ${error.message}`, 'error');
+            }
+        }
+
+        async function testSSE() {
+            log('Testing SSE streaming...', 'info');
+            
+            try {
+                const eventSource = new EventSource(`${API_BASE}/pulse`);
+                let messageCount = 0;
+                
+                eventSource.onmessage = (event) => {
+                    messageCount++;
+                    if (messageCount === 1) {
+                        log('SSE connection established ✓', 'success');
+                    }
+                    if (messageCount <= 3) {
+                        try {
+                            const data = JSON.parse(event.data);
+                            log(`SSE message ${messageCount}: EVI=${data.evi || 'N/A'}`, 'success');
+                        } catch {
+                            log(`SSE message ${messageCount} received`, 'info');
+                        }
+                    }
+                    if (messageCount >= 3) {
+                        eventSource.close();
+                        log('SSE test complete!', 'success');
+                    }
+                };
+                
+                eventSource.onerror = (error) => {
+                    log('SSE error (expected if backend not running)', 'warning');
+                    eventSource.close();
+                };
+                
+                // Close after 5 seconds if no messages
+                setTimeout(() => {
+                    if (messageCount === 0) {
+                        log('No SSE messages received (check backend)', 'warning');
+                        eventSource.close();
+                    }
+                }, 5000);
+                
+            } catch (error) {
+                log(`SSE test error: ${error.message}`, 'error');
+            }
+        }
+
+        async function runAllTests() {
+            log('🚀 RUNNING ALL TESTS...', 'info');
+            stats = { total: 0, success: 0, rateLimited: 0, paymentRequired: 0, errors: 0, latencies: [] };
+            
+            await testRateLimit();
+            await new Promise(r => setTimeout(r, 1000));
+            
+            await testBurst();
+            await new Promise(r => setTimeout(r, 1000));
+            
+            await testPaymentFlow();
+            await new Promise(r => setTimeout(r, 1000));
+            
+            await testSSE();
+            
+            log('', 'info');
+            log('='�'.repeat(50), 'info');
+            log('📊 FINAL RESULTS:', 'info');
+            log(`Total requests: ${stats.total}`, 'info');
+            log(`Success rate: ${Math.round((stats.success / stats.total) * 100)}%`, 'info');
+            log(`Payment blocks: ${stats.paymentRequired}`, 'info');
+            log(`Rate limits: ${stats.rateLimited}`, 'info');
+            log('='�'.repeat(50), 'info');
+        }
+
+        function clearConsole() {
+            document.getElementById('console').innerHTML = '';
+            log('Console cleared', 'info');
+        }
+
+        // Initial log
+        log('SentientIQ Monetization Test Suite Ready', 'success');
+        log('Click any test button to begin stress testing', 'info');
+    </script>
+</body>
+</html>

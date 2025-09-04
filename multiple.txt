@@ -1,0 +1,314 @@
+Batch runner for all 12: train/run_all.sh
+
+#!/usr/bin/env bash
+set -euo pipefail
+AGENTS=("Strategy" "Emotion" "Pattern" "Identity" "Chaos" "ROI" "Warfare" "Omni" "First" "Truth" "Brutal" "Context")
+for a in "${AGENTS[@]}"; do
+  AGENT="$a" CANARY=1 python -u train/train_agent.py
+done
+
+
+Eval harness + promotion rule (canary→prod)
+train/promote.py
+
+import s3fs, json, statistics
+S3_ART="s3://sentientiq-ml-artifacts"
+REG=f"{S3_ART}/registry/manifest.json"
+
+fs=s3fs.S3FileSystem()
+with fs.open(REG) as f:
+  m=json.load(f)
+changed=[]
+for agent, rec in m["agents"].items():
+  can = rec.get("canary_version")
+  prod = rec.get("prod_version")
+  if not can: continue
+  auc_can = rec["versions"][can]["auc"]
+  auc_prod = rec["versions"].get(prod,{}).get("auc",0.0) if prod else 0.0
+  if auc_can >= auc_prod + 0.01:
+    rec["prod_version"]=can
+    changed.append((agent, can, auc_can))
+with fs.open(REG,'wb') as f:
+  f.write(json.dumps(m, indent=2).encode())
+print({"promoted": changed})
+
+Serving: FastAPI modules
+api/pulse.py (snapshot + SSE; pluggable cache)
+
+# api/pulse.py
+from fastapi import APIRouter, Depends, Response
+from fastapi.responses import StreamingResponse, JSONResponse
+from typing import Dict, Any, Optional
+import asyncio, json, os, time
+import boto3
+from botocore.config import Config
+
+router = APIRouter(prefix="/pulse", tags=["pulse"])
+
+# ---- Pluggable cache ----
+class Cache:
+    async def get(self, key: str) -> Optional[str]: ...
+    async def set(self, key: str, val: str, ttl: int): ...
+
+class InMemory(Cache):
+    def __init__(self):
+        self.store: Dict[str, Any] = {}
+    async def get(self, key): 
+        v = self.store.get(key)
+        if v and v["exp"] > time.time(): return v["val"]
+        return None
+    async def set(self, key, val, ttl):
+        self.store[key] = {"val": val, "exp": time.time()+ttl}
+
+CACHE: Cache = InMemory()
+
+S3_BUCKET = os.getenv("MOAT_BUCKET", "sentientiq-data-moat")
+S3_KEY    = os.getenv("PULSE_SNAPSHOT_KEY", "evi_ts/latest_snapshot.json")
+TTL_SEC   = int(os.getenv("PULSE_TTL", "15"))
+REGION    = os.getenv("AWS_REGION","us-east-1")
+
+_s3 = boto3.client("s3", config=Config(region_name=REGION))
+
+async def load_snapshot() -> Dict[str, Any]:
+    cached = await CACHE.get("pulse_snapshot")
+    if cached:
+        return json.loads(cached)
+    obj = _s3.get_object(Bucket=S3_BUCKET, Key=S3_KEY)
+    data = json.loads(obj["Body"].read())
+    await CACHE.set("pulse_snapshot", json.dumps(data), TTL_SEC)
+    return data
+
+@router.get("/snapshot")
+async def snapshot():
+    data = await load_snapshot()
+    return JSONResponse(data)
+
+@router.get("/stream")
+async def stream():
+    async def eventgen():
+        last_payload = None
+        while True:
+            data = await load_snapshot()
+            payload = json.dumps(data, separators=(',',':'))
+            if payload != last_payload:
+                yield f"data: {payload}\n\n"
+                last_payload = payload
+            await asyncio.sleep(1.0)
+    headers = {"Cache-Control":"no-cache","Connection":"keep-alive","Content-Type":"text/event-stream"}
+    return StreamingResponse(eventgen(), headers=headers)
+
+Publisher: a separate job writes s3://sentientiq-data-moat/evi_ts/latest_snapshot.json every minute with the top N brands/topics per agent and the latest EVI/hour+minute.
+
+Publisher sketch (jobs/publish_pulse_snapshot.py)
+
+import s3fs, json, pandas as pd, pyarrow.dataset as ds
+from datetime import datetime, timedelta, timezone
+
+def run():
+    fs=s3fs.S3FileSystem()
+    ds_ = ds.dataset("s3://sentientiq-data-moat/evi_ts/", filesystem=fs, format="parquet")
+    df = ds_.to_table().to_pandas()
+    latest = df["ts"].max()
+    recent = df[df["ts"] >= latest - pd.Timedelta("2h")]
+    top = (recent.sort_values(["ts","evi"], ascending=[False,False])
+              .groupby(["agent","brand"]).head(3))
+    out = {
+      "generated_at": datetime.now(timezone.utc).isoformat(),
+      "items": top[["agent","brand","topic","ts","evi","window_seconds"]]
+                  .sort_values("evi", ascending=False).head(100).to_dict(orient="records")
+    }
+    with fs.open("s3://sentientiq-data-moat/evi_ts/latest_snapshot.json", 'wb') as f:
+        f.write(json.dumps(out).encode())
+    print("Published pulse snapshot")
+if __name__ == "__main__": run()
+
+api/ask.py (model router with hot-swap via MODEL_VERSION)
+
+# api/ask.py
+from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel
+import os, json, joblib, s3fs, threading
+
+router = APIRouter(prefix="/ask", tags=["ask"])
+
+S3_ART = os.getenv("ML_BUCKET", "sentientiq-ml-artifacts")  # bucket name only
+REG = f"s3://{S3_ART}/registry/manifest.json"
+MODEL_VERSION_OVERRIDE = os.getenv("MODEL_VERSION", "")  # optional "Emotion:1693600012,Strategy:1693607788"
+
+fs = s3fs.S3FileSystem()
+_lock = threading.Lock()
+_models = {}  # (agent, version) -> model
+
+class AskReq(BaseModel):
+    question: str
+    agent: str  # one of 12 agents
+    context: dict | None = None
+
+def parse_override():
+    m = {}
+    if not MODEL_VERSION_OVERRIDE: return m
+    for tok in MODEL_VERSION_OVERRIDE.split(","):
+        if ":" in tok:
+            a,v = tok.split(":",1); m[a]=v
+    return m
+
+def load_manifest():
+    with fs.open(REG) as f: return json.load(f)
+
+def get_model(agent: str):
+    manifest = load_manifest()
+    override = parse_override().get(agent)
+    rec = manifest["agents"].get(agent)
+    if not rec: raise HTTPException(404, f"No registry for agent {agent}")
+    version = override or rec.get("prod_version") or rec.get("canary_version")
+    key = rec["versions"][version]["s3_key"]
+    cache_key = (agent, version)
+    with _lock:
+        if cache_key in _models: return _models[cache_key]
+        with fs.open(f"s3://{S3_ART}/{key}", 'rb') as f:
+            bundle = joblib.load(f)
+        _models[cache_key] = bundle
+        return bundle
+
+@router.post("")
+def ask(req: AskReq):
+    if req.agent not in ["Strategy","Emotion","Pattern","Identity","Chaos","ROI","Warfare","Omni","First","Truth","Brutal","Context"]:
+        raise HTTPException(400, "Unknown agent")
+
+    bundle = get_model(req.agent)
+    model = bundle["model"]
+    feats = bundle["features"]
+
+    # minimal featurizer stub; in prod, derive from context + recent signals
+    import pandas as pd
+    x = pd.DataFrame([{
+        "intensity": req.context.get("intensity", 0.3) if req.context else 0.3,
+        "engagement_rate": req.context.get("engagement_rate", 0.1) if req.context else 0.1,
+        "authenticity_mean": req.context.get("authenticity_mean", 0.9) if req.context else 0.9,
+        "consensus": req.context.get("consensus", 0.2) if req.context else 0.2
+    }])
+    x = x[[c for c in feats]]  # align
+
+    proba = float(model.predict_proba(x)[:,1][0])
+    answer = {
+        "agent": req.agent,
+        "decision": "GO" if proba >= 0.65 else "WAIT",
+        "confidence": proba,
+        "why": {
+            "features": x.iloc[0].to_dict(),
+            "model_version": [k[1] for k in _models.keys() if k[0]==req.agent][-1]
+        }
+    }
+    return answer
+
+
+Feedback loop (Ask/Why/Outcome → reinforcement)
+
+API endpoint: api/feedback.py
+
+from fastapi import APIRouter
+from pydantic import BaseModel
+import s3fs, json, time, os
+
+router = APIRouter(prefix="/feedback", tags=["feedback"])
+S3_FEED = os.getenv("MOAT_BUCKET","sentientiq-data-moat")
+
+class Feedback(BaseModel):
+    ask_payload: dict
+    answer_payload: dict
+    outcome: dict  # {"converted": bool, "value": float, ...}
+
+@router.post("")
+def log_feedback(fb: Feedback):
+    fs=s3fs.S3FileSystem()
+    ts=int(time.time())
+    key=f"s3://{S3_FEED}/feedback/ts={ts}.json"
+    with fs.open(key,'wb') as f:
+        f.write(json.dumps(fb.dict()).encode())
+    return {"ok": True, "key": key}
+Reinforcement hook (nightly): join recent feedback/ with predictions to create new labels (e.g., converted→1) for the next training cycle.
+
+README (runbook + scheduler)
+
+# SentientIQ Agent Faculty: Phase-1 Pipeline
+
+## Buckets used
+- sentientiq-raw-data
+- sentientiq-processed-data
+- sentientiq-data-lake
+- sentientiq-data-moat
+- sentientiq-ml-artifacts
+
+## Daily rhythm
+1) Ingest + Enrich (hourly)
+   PLATFORM=linkedin INGEST_DATE=$(date -u +%F) python jobs/enrich_social.py
+   (repeat per platform)
+
+2) Features (hourly + nightly full)
+   python jobs/build_features.py
+
+3) Train/Canary (nightly)
+   ./train/run_all.sh
+
+4) Promote (after train)
+   python train/promote.py
+
+5) Publish pulse snapshot (every minute)
+   python jobs/publish_pulse_snapshot.py
+
+## Serving
+- FastAPI app mounts:
+  from api.pulse import router as pulse_router
+  from api.ask   import router as ask_router
+  from api.feedback import router as fb_router
+  app.include_router(pulse_router); app.include_router(ask_router); app.include_router(fb_router)
+
+- Env:
+  AWS_REGION=us-east-1
+  MOAT_BUCKET=sentientiq-data-moat
+  ML_BUCKET=sentientiq-ml-artifacts
+  PULSE_SNAPSHOT_KEY=evi_ts/latest_snapshot.json
+  MODEL_VERSION=""  # optional overrides e.g. "Emotion:16936,Strategy:16937"
+
+## CRON / EventBridge
+- Minute pulse (publisher):
+  * * * * * /usr/bin/python /app/jobs/publish_pulse_snapshot.py
+
+- Hourly enrich + features:
+  5 * * * * PLATFORM=linkedin INGEST_DATE=$(date -u +%F) python jobs/enrich_social.py
+  10 * * * * python jobs/build_features.py
+
+- Nightly train + promote:
+  0 2 * * * /app/train/run_all.sh
+  30 2 * * * python /app/train/promote.py
+
+(Alternative: use AWS EventBridge rules triggering ECS Fargate tasks with the same commands.)
+
+## Canary/Prod
+- By default new versions become `canary_version`.
+- `train/promote.py` promotes to `prod_version` if AUC ≥ incumbent + 0.01.
+- Hot-swap via env `MODEL_VERSION` at runtime to pin/override any agent.
+
+## Cost controls
+- Athena: create WorkGroup with bytes-scanned limit and require queries run in it.
+- S3 lifecycle: move to Intelligent Tiering after 30d; expire tmp after 7d.
+- Prefer Parquet everywhere; partition on dt/agent/window to minimize scan.
+
+## Security
+- All buckets: public access blocked, KMS SSE enabled (Terraform snippet included).
+- IAM role grants least-priv read/write by bucket/prefix as shown.
+- Pre-signed URLs optional for offline model pulls if you don't want runtime IAM.
+
+FastAPI pulse.py (pluggable cache) — bonus: memory or Redis
+
+If you decide to drop in Redis later, replace the InMemory with:
+
+# Optional Redis cache
+import aioredis
+class RedisCache(Cache):
+    def __init__(self, url: str):
+        self.r = aioredis.from_url(url, encoding="utf-8", decode_responses=True)
+    async def get(self, key): return await self.r.get(key)
+    async def set(self, key, val, ttl): await self.r.set(key, val, ex=ttl)
+# then: CACHE = RedisCache(os.getenv("REDIS_URL"))
+SSE remains pure HTTP.

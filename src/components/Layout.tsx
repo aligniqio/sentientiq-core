@@ -36,17 +36,22 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   }, []);
 
   const menuItems = [
-    { path: '/', icon: Home, label: 'How It Works', public: true },
-    { path: '/insurance', icon: Shield, label: 'Risk Insurance', public: false },
+    { path: '/', icon: Home, label: 'Home', public: true },
+    { path: '/ask', icon: Brain, label: 'Ask the PhDs', public: false },
     { path: '/evi', icon: Activity, label: 'EVI™ Dashboard', public: false },
-    { path: '/faculty', icon: Brain, label: 'PhD Collective', public: false },
     { path: '/training', icon: Zap, label: 'Training Lab', public: false },
+    { path: '/billing', icon: Shield, label: 'Billing', public: false },
   ];
 
   const handleSignOut = async () => {
     await signOut();
     navigate('/');
   };
+
+  // Don't show sidebar/layout on auth pages
+  if (!user) {
+    return <>{children}</>;
+  }
 
   return (
     <div className="min-h-screen bg-black text-white relative overflow-hidden">
@@ -155,18 +160,6 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
               </div>
             )}
 
-            {/* EVI Pulse Preview */}
-            <div className="absolute bottom-20 left-4 right-4 p-3 rounded-lg bg-gradient-to-r from-green-900/20 to-red-900/20 backdrop-blur-xl border border-white/10">
-              <div className="flex items-center justify-between mb-1">
-                <span className="text-xs text-gray-400">Market Emotion</span>
-                <div className="flex items-center gap-1">
-                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-                  <span className="text-xs text-green-500">LIVE</span>
-                </div>
-              </div>
-              <div className="text-2xl font-black">EVI: 64</div>
-              <div className="text-xs text-gray-400">Moderate volatility</div>
-            </div>
           </motion.aside>
         )}
       </AnimatePresence>

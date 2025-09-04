@@ -1,25 +1,53 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
-import { SignedIn, SignedOut, RedirectToSignIn } from '@clerk/clerk-react'
+import { SignedIn, SignedOut } from '@clerk/clerk-react'
 
 // The ONLY pages that matter
 import Layout from './components/Layout'
-import Landing from './pages/landing'
+import Auth from './pages/auth'
+import Home from './pages/home'
 import HowItWorks from './pages/how-it-works'
 import AlwaysOnFaculty from './pages/always-on-faculty'
 import TrainingDashboard from './pages/training-dashboard'
 import EviDashboard from './pages/evi-dashboard'
-import InsuranceCalculator from './pages/insurance-calculator'
+import Ask from './pages/ask'
+import Settings from './pages/settings'
+import Pricing from './pages/pricing'
+import Billing from './pages/billing'
+import Landing from './pages/landing'
+
+// Candy Kit UI enhancements
+import { SenseiCandyProvider } from './components/ui/SenseiCandy'
 
 function App() {
   return (
-    <Router>
-      <Layout>
+    <SenseiCandyProvider confetti cursor toasts>
+      <Router>
+        <Layout>
         <Routes>
-          {/* Public - The Truth */}
-          <Route path="/" element={<Landing />} />
-          <Route path="/how" element={<HowItWorks />} />
+          {/* Root - Show Home if signed in, Auth if not */}
+          <Route path="/" element={
+            <>
+              <SignedIn>
+                <Home />
+              </SignedIn>
+              <SignedOut>
+                <Auth />
+              </SignedOut>
+            </>
+          } />
           
-          {/* Protected - The Intelligence */}
+          {/* Everything requires auth - this is not a public domain */}
+          <Route path="/how" element={
+            <>
+              <SignedIn>
+                <HowItWorks />
+              </SignedIn>
+              <SignedOut>
+                <Auth />
+              </SignedOut>
+            </>
+          } />
+          
           <Route
             path="/evi"
             element={
@@ -28,20 +56,7 @@ function App() {
                   <EviDashboard />
                 </SignedIn>
                 <SignedOut>
-                  <RedirectToSignIn />
-                </SignedOut>
-              </>
-            }
-          />
-          <Route
-            path="/insurance"
-            element={
-              <>
-                <SignedIn>
-                  <InsuranceCalculator />
-                </SignedIn>
-                <SignedOut>
-                  <RedirectToSignIn />
+                  <Auth />
                 </SignedOut>
               </>
             }
@@ -54,7 +69,7 @@ function App() {
                   <AlwaysOnFaculty />
                 </SignedIn>
                 <SignedOut>
-                  <RedirectToSignIn />
+                  <Auth />
                 </SignedOut>
               </>
             }
@@ -67,14 +82,66 @@ function App() {
                   <TrainingDashboard />
                 </SignedIn>
                 <SignedOut>
-                  <RedirectToSignIn />
+                  <Auth />
                 </SignedOut>
               </>
             }
           />
+          <Route
+            path="/ask"
+            element={
+              <>
+                <SignedIn>
+                  <Ask />
+                </SignedIn>
+                <SignedOut>
+                  <Auth />
+                </SignedOut>
+              </>
+            }
+          />
+          
+          {/* Settings page */}
+          <Route
+            path="/settings/*"
+            element={
+              <>
+                <SignedIn>
+                  <Settings />
+                </SignedIn>
+                <SignedOut>
+                  <Auth />
+                </SignedOut>
+              </>
+            }
+          />
+          
+          {/* Pricing & Billing */}
+          <Route path="/pricing" element={<Pricing />} />
+          <Route
+            path="/billing"
+            element={
+              <>
+                <SignedIn>
+                  <Billing />
+                </SignedIn>
+                <SignedOut>
+                  <Auth />
+                </SignedOut>
+              </>
+            }
+          />
+          
+          {/* Auth page - explicit route */}
+          <Route path="/auth" element={<Auth />} />
+          
+          {/* Marketing landing page */}
+          <Route path="/landing" element={<Landing />} />
+          
         </Routes>
       </Layout>
     </Router>
+    </SenseiCandyProvider>
   )
 }
 

@@ -1,0 +1,64 @@
+Least-privilege IAM (service role used by API + jobs)
+
+data "aws_iam_policy_document" "sentientiq_policy" {
+  statement {
+    sid = "ModelRead"
+    actions = ["s3:GetObject","s3:ListBucket"]
+    resources = [
+      "arn:aws:s3:::sentientiq-ml-*",
+      "arn:aws:s3:::sentientiq-ml-*/*",
+    ]
+  }
+  statement {
+    sid = "MoatWrite"
+    actions = ["s3:PutObject","s3:AbortMultipartUpload","s3:ListBucket"]
+    resources = [
+      "arn:aws:s3:::sentientiq-data-moat",
+      "arn:aws:s3:::sentientiq-data-moat/*",
+    ]
+  }
+  statement {
+    sid = "ProcessedRead"
+    actions = ["s3:GetObject","s3:ListBucket"]
+    resources = [
+      "arn:aws:s3:::sentientiq-processed-data",
+      "arn:aws:s3:::sentientiq-processed-data/*",
+    ]
+  }
+  # Athena minimal
+  statement {
+    sid = "Athena"
+    actions = [
+      "athena:StartQueryExecution","athena:GetQueryExecution","athena:GetQueryResults"
+    ]
+    resources = ["*"]
+  }
+  statement {
+    sid = "GlueRead"
+    actions = ["glue:GetDatabase","glue:GetTable","glue:GetPartitions"]
+    resources = ["*"]
+  }
+  # Optional: S3 pre-signed URL generation requires no extra IAM beyond S3 GetObject
+}
+
+resource "aws_iam_role" "sentientiq_role" {
+  name               = "SentientIQServiceRole"
+  assume_role_policy = data.aws_iam_policy_document.assume.json
+}
+
+data "aws_iam_policy_document" "assume" {
+  statement {
+    actions = ["sts:AssumeRole"]
+    principals { type = "Service" identifiers = ["ec2.amazonaws.com","ecs-tasks.amazonaws.com","lambda.amazonaws.com"] }
+  }
+}
+
+resource "aws_iam_policy" "sentientiq_policy" {
+  name   = "SentientIQLeastPriv"
+  policy = data.aws_iam_policy_document.sentientiq_policy.json
+}
+
+resource "aws_iam_role_policy_attachment" "attach" {
+  role       = aws_iam_role.sentientiq_role.name
+  policy_arn = aws_iam_policy.sentientiq_policy.arn
+}

@@ -1,0 +1,32 @@
+Routes (redirect /risk → /evi)
+
+
+// AppRoutes.tsx
+import { Routes, Route, Navigate } from "react-router-dom";
+import HowItWorks from "./pages/HowItWorks";
+import EviDashboard from "./pages/EviDashboard";
+import Collective from "./pages/Collective";
+import Ask from "./pages/Ask";
+import Training from "./pages/Training";
+import Settings from "./pages/Settings";
+import Safeguards from "./pages/settings/Safeguards";
+
+export default function AppRoutes() {
+  return (
+    <Routes>
+      <Route path="/" element={<Navigate to="/evi" replace />} />
+      <Route path="/how-it-works" element={<HowItWorks />} />
+      <Route path="/evi" element={<EviDashboard />} />
+      <Route path="/collective" element={<Collective />} />
+      <Route path="/ask" element={<Ask />} />
+      <Route path="/training" element={<Training />} />
+      {/* legacy: keep /risk working but point to /evi */}
+      <Route path="/risk" element={<Navigate to="/settings/safeguards" replace />} />
+      {/* settings */}
+      <Route path="/settings" element={<Settings />}>
+        <Route path="safeguards" element={<Safeguards />} />
+      </Route>
+      <Route path="*" element={<Navigate to="/evi" replace />} />
+    </Routes>
+  );
+}

@@ -1,0 +1,267 @@
+// pages/EviDashboardLuxe.tsx
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { Activity, Zap, Users2 } from "lucide-react";
+import {
+  LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, ReferenceLine
+} from "recharts";
+
+const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:8000";
+
+type PulseItem = {
+  agent: string;
+  brand?: string;
+  topic?: string;
+  ts: string;           // ISO time
+  evi: number;          // 0..100
+  window_seconds: 60 | 3600;
+};
+
+type PulsePayload = { generated_at: string; items: PulseItem[] };
+
+const AGENTS = [
+  "All","Strategy","Emotion","Pattern","Identity","Chaos","ROI",
+  "Warfare","Omni","First","Truth","Brutal","Context"
+];
+
+function usePulse({ preferStream = true }: { preferStream?: boolean }) {
+  const [data, setData] = useState<PulsePayload | null>(null);
+  const esRef = useRef<EventSource | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadSnapshot() {
+      try {
+        const res = await fetch(`${API_BASE}/pulse/snapshot`);
+        if (!res.ok) throw new Error(String(res.status));
+        const json = (await res.json()) as PulsePayload;
+        if (!cancelled) setData(json);
+      } catch (e) {
+        console.warn("Snapshot load failed:", e);
+      }
+    }
+
+    if (preferStream) {
+      const es = new EventSource(`${API_BASE}/pulse`);
+      esRef.current = es;
+      es.onmessage = (ev) => {
+        try {
+          const j = JSON.parse(ev.data);
+          if (j?.items) setData(j);
+        } catch (_) {/* ignore */}
+      };
+      es.onerror = () => {
+        // fall back to polling on stream error
+        es.close();
+        const id = setInterval(loadSnapshot, 10_000);
+        loadSnapshot();
+        (esRef as any).pollId = id;
+      };
+      // also seed once in case stream is quiet
+      loadSnapshot();
+    } else {
+      const id = setInterval(loadSnapshot, 10_000);
+      loadSnapshot();
+      (esRef as any).pollId = id;
+    }
+
+    return () => {
+      cancelled = true;
+      if (esRef.current) esRef.current.close();
+      const id = (esRef as any).pollId;
+      if (id) clearInterval(id);
+    };
+  }, [preferStream]);
+
+  return data;
+}
+
+function LightField() {
+  return (
+    <div aria-hidden className="absolute inset-0 -z-10">
+      <div className="absolute inset-0 bg-[radial-gradient(900px_500px_at_18%_-10%,rgba(124,58,237,0.16),transparent_60%),radial-gradient(800px_500px_at_82%_110%,rgba(56,189,248,0.14),transparent_60%)]"/>
+      <div className="absolute inset-0 bg-[radial-gradient(1200px_700px_at_50%_40%,rgba(255,255,255,0.04),transparent)]"/>
+    </div>
+  );
+}
+
+export default function EviDashboardLuxe() {
+  const pulse = usePulse({ preferStream: true });
+  const [windowSel, setWindowSel] = useState<60 | 3600>(60);
+  const [agentSel, setAgentSel] = useState<string>("All");
+
+  const filtered = useMemo(() => {
+    if (!pulse?.items) return [];
+    return pulse.items
+      .filter(i => i.window_seconds === windowSel)
+      .filter(i => (agentSel === "All" ? true : i.agent === agentSel))
+      .sort((a,b) => new Date(a.ts).getTime() - new Date(b.ts).getTime());
+  }, [pulse, windowSel, agentSel]);
+
+  // group by agent for colored lines
+  const series = useMemo(() => {
+    const m = new Map<string, PulseItem[]>();
+    filtered.forEach(it => {
+      const k = it.agent || "Unknown";
+      if (!m.has(k)) m.set(k, []);
+      m.get(k)!.push(it);
+    });
+    return Array.from(m.entries()).map(([agent, arr]) => ({ agent, points: arr }));
+  }, [filtered]);
+
+  const latestEvi = useMemo(() => {
+    if (!filtered.length) return null;
+    const last = filtered[filtered.length-1];
+    return { evi: last.evi, ts: last.ts };
+  }, [filtered]);
+
+  const consensus = useMemo(() => {
+    if (!pulse?.items || !pulse.items.length) return 0;
+    // trivial consensus proxy: stddev of last-sample EVIs across agents
+    const lastByAgent = new Map<string, number>();
+    pulse.items
+      .filter(i => i.window_seconds === windowSel)
+      .forEach(i => lastByAgent.set(i.agent, i.evi));
+    const vals = Array.from(lastByAgent.values());
+    if (vals.length < 2) return 0;
+    const mean = vals.reduce((a,b)=>a+b,0)/vals.length;
+    const variance = vals.reduce((a,b)=>a+(b-mean)**2,0)/vals.length;
+    const stdev = Math.sqrt(variance);
+    // map stdev (0..50) → consensus (100..0)
+    const c = Math.max(0, 100 - Math.min(50, stdev) * 2);
+    return Math.round(c);
+  }, [pulse, windowSel]);
+
+  return (
+    <div className="relative min-h-dvh bg-[linear-gradient(180deg,#0a0a12_0%,#0b0b14_100%)] text-white">
+      <LightField />
+
+      {/* hero */}
+      <header className="mx-auto max-w-6xl px-6 pt-10">
+        <div className="rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur-xl">
+          <div className="flex flex-wrap items-center gap-4">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500/25 to-sky-500/25 ring-1 ring-white/15">
+                <Activity className="h-5 w-5 text-violet-300" />
+              </div>
+              <div>
+                <h1 className="text-2xl sm:text-3xl font-bold">EVI™ Dashboard</h1>
+                <p className="text-white/70 text-sm">Emotional Volatility Index — know when to launch or wait, in real time.</p>
+              </div>
+            </div>
+
+            <div className="ml-auto flex items-center gap-2">
+              <div className="hidden sm:flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 p-1">
+                {[60,3600].map(w => (
+                  <button
+                    key={w}
+                    onClick={()=>setWindowSel(w as 60|3600)}
+                    className={`px-3 py-1.5 rounded-lg text-sm ${windowSel===w ? "bg-white/10 text-white" : "text-white/70 hover:text-white"}`}
+                  >
+                    {w===60 ? "Minute" : "Hour"}
+                  </button>
+                ))}
+              </div>
+              <div className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 p-1">
+                <Users2 className="h-4 w-4 text-white/60 ml-2" />
+                <select
+                  value={agentSel}
+                  onChange={(e)=>setAgentSel(e.target.value)}
+                  className="bg-transparent text-sm outline-none px-1 pr-3 py-1.5"
+                >
+                  {AGENTS.map(a => <option key={a} value={a} className="bg-[#0b0b14]">{a}</option>)}
+                </select>
+              </div>
+              <span className="inline-flex items-center gap-2 rounded-full bg-white/5 px-3 py-1.5 text-xs font-medium ring-1 ring-white/10">
+                <span className="relative flex h-2.5 w-2.5">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400/60" />
+                  <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-400" />
+                </span>
+                LIVE
+              </span>
+            </div>
+          </div>
+
+          {/* ticker + consensus */}
+          <div className="mt-4 flex flex-wrap items-center gap-6">
+            <div className="text-sm text-white/60">
+              Consensus:
+              <span className="ml-2 inline-block h-2 w-28 rounded bg-white/10 align-middle">
+                <span
+                  className="block h-2 rounded bg-violet-400 transition-all"
+                  style={{ width: `${consensus}%` }}
+                />
+              </span>
+              <span className="ml-2 text-white">{consensus}%</span>
+            </div>
+            <div className="text-sm text-white/60">
+              Current EVI:
+              <span className="ml-2 rounded-lg bg-emerald-500/15 px-2 py-1 font-semibold text-emerald-300 ring-1 ring-emerald-400/30">
+                {latestEvi ? latestEvi.evi.toFixed(1) : "--"}
+              </span>
+              <span className="ml-2 text-white/50">{windowSel===60 ? "last minute" : "last hour"}</span>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {/* chart */}
+      <section className="mx-auto max-w-6xl px-6 pt-6 pb-24">
+        <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-white/5 p-4 sm:p-6 backdrop-blur-xl">
+          <div className="pointer-events-none absolute -inset-px rounded-2xl bg-gradient-to-r from-violet-500/20 via-sky-500/20 to-emerald-500/20 opacity-10 blur-2xl"/>
+          {series.length === 0 ? (
+            <div className="flex h-[360px] items-center justify-center text-white/60">
+              Waiting for signals…
+            </div>
+          ) : (
+            <div className="h-[360px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
+                  <XAxis
+                    dataKey="ts"
+                    type="category"
+                    allowDuplicatedCategory={false}
+                    tick={{ fill: "rgba(255,255,255,0.6)", fontSize: 12 }}
+                    tickFormatter={(t) => {
+                      const d = new Date(t);
+                      return windowSel===60
+                        ? d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+                        : d.toLocaleTimeString([], { hour: "2-digit" });
+                    }}
+                    interval="preserveEnd"
+                  />
+                  <YAxis
+                    domain={[0, 100]}
+                    tick={{ fill: "rgba(255,255,255,0.6)", fontSize: 12 }}
+                  />
+                  <Tooltip
+                    contentStyle={{ background: "rgba(12,12,18,0.9)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 12 }}
+                    labelStyle={{ color: "white" }}
+                    formatter={(val: any) => [`${Number(val).toFixed(1)}`, "EVI"]}
+                    labelFormatter={(t: any) => new Date(t).toLocaleString()}
+                  />
+                  <Legend wrapperStyle={{ color: "rgba(255,255,255,0.7)" }} />
+                  <ReferenceLine y={50} stroke="rgba(255,255,255,0.15)" strokeDasharray="3 3" />
+                  {series.map(({ agent, points }, idx) => (
+                    <Line
+                      key={agent}
+                      type="monotone"
+                      dataKey="evi"
+                      name={agent}
+                      data={points}
+                      dot={false}
+                      strokeWidth={2}
+                      // distinct but harmonious hues without specifying exact brand colors
+                      stroke={`hsl(${(idx*37)%360} 90% 70%)`}
+                      isAnimationActive={false}
+                    />
+                  ))}
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+        </div>
+      </section>
+    </div>
+  );
+}

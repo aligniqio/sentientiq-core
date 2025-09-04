@@ -1,0 +1,58 @@
+libs/evi.py
+
+
+
+import math
+import pandas as pd
+
+def sigmoid(x): return 1/(1+math.exp(-x))
+
+DEFAULT_WEIGHTS = {
+    "recency": 0.9,
+    "velocity": 0.8,
+    "intensity": 1.1,
+    "engagement": 0.9,
+    "authenticity": 0.8,
+    "consensus": 0.6,
+    "penalty": 1.0
+}
+
+def zscore(series: pd.Series):
+    m = series.mean() or 0.0
+    s = series.std() or 1.0
+    return (series - m) / s
+
+def compute_evi(df: pd.DataFrame, weights=DEFAULT_WEIGHTS):
+    """
+    df columns expected:
+      ts, intensity, engagement_rate, authenticity_mean, consensus
+    Must be sorted by ts.
+    """
+    df = df.sort_values("ts").copy()
+    # recency: exponential decay from latest ts
+    latest = df["ts"].max()
+    secs = (latest - df["ts"]).dt.total_seconds().fillna(0)
+    recency = (-secs/3600.0).apply(math.exp)  # 1.0 at latest, decays hourly
+
+    # velocity: first difference of intensity smoothed
+    df["intensity_shift"] = df["intensity"].shift(1).fillna(df["intensity"])
+    velocity = (df["intensity"] - df["intensity_shift"]).rolling(3, min_periods=1).mean()
+
+    # normalize
+    r = zscore(recency)
+    v = zscore(velocity)
+    i = zscore(df["intensity"].fillna(0))
+    e = zscore(df["engagement_rate"].fillna(0))
+    a = zscore(df["authenticity_mean"].fillna(0))
+    c = zscore(df.get("consensus", pd.Series([0]*len(df))))
+
+    # penalty: duplicates/low-auth; assume column 'dup_penalty' in 0..1 if present
+    p = df.get("dup_penalty", pd.Series([0]*len(df)))  # 0 no penalty
+
+    score = (weights["recency"]*r + weights["velocity"]*v + weights["intensity"]*i +
+             weights["engagement"]*e + weights["authenticity"]*a + weights["consensus"]*c
+             - weights["penalty"]*p)
+
+    evi_0_100 = (pd.Series([sigmoid(x) for x in score]) * 100).clip(0,100)
+    df["evi"] = evi_0_100
+    return df[["ts","evi","intensity","engagement_rate","authenticity_mean","consensus"]]

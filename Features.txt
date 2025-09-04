@@ -1,0 +1,57 @@
+jobs/build_features.py
+
+import os, s3fs, pandas as pd, pyarrow.parquet as pq, pyarrow as pa
+from datetime import timedelta
+
+S3_PROC = "s3://sentientiq-processed-data/social"
+S3_FEAT = "s3://sentientiq-data-lake/feature-store"
+
+AGENTS = ["Strategy","Emotion","Pattern","Identity","Chaos","ROI","Warfare","Omni","First","Truth","Brutal","Context"]
+
+def minute_floor(ts): return ts.dt.floor("T")
+def hour_floor(ts): return ts.dt.floor("H")
+
+def features_for_agent(df: pd.DataFrame, agent: str, window: str):
+    # generic, agent-specialization via column mix later
+    grp_cols = ["brand","topic", window]
+    df["ts_bucket"] = df["created_at"].pipe(minute_floor if window=="minute" else hour_floor)
+    # intensity = mean of top emotion score; engagement normalization could be per-brand
+    df["intensity"] = df["emotion_scores"].apply(lambda m: max(m.values()) if isinstance(m, dict) else 0.0)
+    out = (df
+      .groupby(["brand","ts_bucket"], dropna=False)
+      .agg(
+        intensity_mean=("intensity","mean"),
+        engagement_rate=("engagement_count","mean"),
+        authenticity_mean=("authenticity","mean"),
+        n=("post_id","count")
+      ).reset_index()
+      .rename(columns={"ts_bucket":"ts"})
+    )
+    out["agent"] = agent
+    out["window_seconds"] = 60 if window=="minute" else 3600
+    return out
+
+def write_features(df: pd.DataFrame, agent: str, window: str, dt_str: str):
+    fs = s3fs.S3FileSystem()
+    path = f"{S3_FEAT}/agent={agent}/window={window}/dt={dt_str}/features.parquet"
+    table = pa.Table.from_pandas(df, preserve_index=False)
+    with fs.open(path, 'wb') as f:
+        pq.write_table(table, f, compression="snappy")
+    print("Wrote", path)
+
+def run(dt_str: str):
+    fs = s3fs.S3FileSystem()
+    # read yesterday+today partitions (buffer)
+    # (Use Athena for production; here we read by prefix)
+    import pyarrow.dataset as ds
+    dataset = ds.dataset(f"{S3_PROC}/", format="parquet", filesystem=fs)
+    pdf = dataset.to_table().to_pandas()  # scope by date in production
+    pdf["created_at"] = pd.to_datetime(pdf["created_at"], utc=True, errors="coerce")
+    for agent in AGENTS:
+        for window in ["minute","hour"]:
+            feats = features_for_agent(pdf, agent, window)
+            write_features(feats, agent, window, dt_str)
+
+if __name__ == "__main__":
+    import datetime as dt
+    run(dt.date.today().isoformat())

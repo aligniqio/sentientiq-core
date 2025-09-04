@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Brain, Eye, Zap, X, Check } from 'lucide-react';
+import PageHeader from '../components/PageHeader';
 
 // The Anti-Feature Page
 const HowItWorks: React.FC = () => {
@@ -54,27 +55,19 @@ const HowItWorks: React.FC = () => {
   }, []);
 
   return (
-    <div className="min-h-screen bg-black text-white relative overflow-hidden">
-      {/* Glassmorphic Background Elements */}
-      <div className="absolute inset-0">
-        <div className="absolute top-20 left-20 w-96 h-96 bg-purple-600/20 rounded-full filter blur-3xl" />
-        <div className="absolute bottom-20 right-20 w-96 h-96 bg-blue-600/20 rounded-full filter blur-3xl" />
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-green-600/20 rounded-full filter blur-3xl" />
-      </div>
+    <div className="min-h-screen bg-black text-white">
+      {/* Neural Cathedral Background */}
+      <div className="neural-bg" />
 
       {/* Main Content */}
       <div className="relative z-10">
         {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-center py-20"
-        >
-          <h1 className="text-6xl font-black mb-4">HOW IT WORKS</h1>
-          <p className="text-2xl text-gray-400">
-            The only page that matters. No features. Just results.
-          </p>
-        </motion.div>
+        <div className="max-w-6xl mx-auto px-6 pt-12 pb-6">
+          <PageHeader
+            title="HOW IT WORKS"
+            subtitle="The only page that matters. No features. Just results."
+          />
+        </div>
 
         {/* The Truth Section */}
         <div className="max-w-6xl mx-auto px-8">
@@ -82,7 +75,7 @@ const HowItWorks: React.FC = () => {
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="backdrop-blur-xl bg-white/5 border border-white/10 rounded-2xl p-12 mb-16"
+            className="glass-card p-12 mb-16"
           >
             <h2 className="text-4xl font-bold mb-8 text-center">
               SOFTWARE SHOULD BEHAVE LIKE A TEAM, NOT A MANUAL
@@ -234,7 +227,7 @@ const HowItWorks: React.FC = () => {
             animate={{ opacity: 1, scale: 1 }}
             className="text-center py-20"
           >
-            <div className="backdrop-blur-xl bg-white/5 border border-white/10 rounded-2xl p-12 inline-block">
+            <div className="glass-card p-12 inline-block">
               <h2 className="text-5xl font-black mb-4">
                 EVERYTHING ELSE IS THEATER
               </h2>

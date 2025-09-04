@@ -1,9 +1,139 @@
-// Marketing Landing Page - sentientiq.ai
+here’s the marketing site sketch — same emotional charge, same maximal minimalism you just shipped into the app. think: crystal palace front-of-house.
+
+🌐 SentientIQ Marketing Site — Maximal Minimalism
+1. Hero (above the fold)
+
+Background: black glass, faint neural mesh. very little color except one violet/sky gradient pulse.
+
+Headline (big, bold, single line):
+“The First Brain Built for Marketing Truth.”
+
+Subline:
+12 PhDs. Real neural intelligence. Answers with a Why.
+
+CTA:
+[Ask the Collective] (primary, glowing)
+[See How It Works] (secondary, outline)
+
+2. Proof of Life (trust builder)
+
+A full-width glass card with LIVE pill pulsing.
+
+Copy:
+“The PhD Collective is online.
+Real agents. Real models. Real emotional signal.
+No Math.random() theater.”
+
+Micro-CTA: [View EVI Dashboard →]
+
+3. The Faculty (personality grid)
+
+12 minimal cards (2 columns on mobile, 3 on desktop).
+
+Each = agent name + one-liner personality.
+
+Strategy — Revenue is a lagging indicator of emotion
+
+Emotion — People buy feelings, not features
+
+Brutal — Hope is not a strategy. Data is
+
+Chaos — Volatility is opportunity disguised as risk
+…etc.
+
+Keep it clean, text-only with neon border glow on hover.
+
+4. EVI — Emotional Volatility Index
+
+Split panel: left = explanation, right = live embed (minute/hour chart).
+
+Headline: “Know when to Launch. Know when to Wait.”
+
+Body copy:
+EVI watches the market’s emotional pulse in real time.
+Timing isn’t luck — it’s signal.
+
+[View Dashboard] button
+
+5. Why It Matters (3 pillars)
+
+Truth: Exposes fraud + randomness.
+
+Speed: Answers live, not quarterly.
+
+Learning: Every ask/why/outcome strengthens the faculty.
+
+Minimal, icon + one sentence each.
+
+6. CTA Strip (call to action)
+
+Big line:
+“Stop guessing. Start listening to emotion.”
+
+Button: [Ask the Collective →]
+
+7. Footer
+
+Black glass, small type.
+
+Links: How it Works • Docs • Contact • Legal
+
+Tiny pulsing dot: System Status: LIVE
+
+🎨 Style Guide
+
+Palette: almost all black/slate. one gradient (violet→sky). accent emerald for GO, amber for WAIT.
+
+Typography: 2 weights only: heavy bold for headlines, light/60% opacity for body.
+
+Motion: subtle — fade up, slide 20px, 300ms. no gimmicks.
+
+Imagery: none. the words are the image.
+
+TL;DR site outline
+
+Hero — “The First Brain Built for Marketing Truth”
+
+Proof of Life — faculty is online, live pill
+
+The Faculty — 12 one-liners
+
+EVI Dashboard — launch/wait
+
+Why It Matters — 3 pillars
+
+CTA — “Stop guessing. Start listening to emotion.”
+
+Footer — minimal
+
+this way, the site doesn’t describe the cathedral, it feels like it. emotional energy carried, maximal minimalism held.
+
+
+
+
+
+
+yesss — here’s a maximal–minimal Next.js (App Router) page scaffold that matches the vibe we just built: black glass, neural pulse, zero fluff. It’s paste-ready.
+
+Single file: app/page.tsx
+
+Tailwind + framer-motion + lucide-react
+
+LIVE pill checks your API (/version + /pulse/snapshot)
+
+Sections: Hero → Proof of Life → Faculty one-liners → EVI section → 3 Pillars → CTA → Footer
+
+Buttons wire to your app routes (/ask, /evi, /how-it-works)
+
+
+// app/page.tsx
+"use client";
+
 import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { ArrowRight, Activity, Brain, Sparkles, CheckCircle2 } from "lucide-react";
 
-const API_BASE = import.meta.env.VITE_API_BASE || "/api";
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8000";
 
 type PulseItem = { agent: string; evi: number; ts: string; window_seconds: number };
 type PulsePayload = { generated_at: string; items: PulseItem[] } | null;
@@ -20,7 +150,7 @@ function LivePill({ live }: { live: boolean }) {
   );
 }
 
-export default function Landing() {
+export default function Page() {
   const [live, setLive] = useState(false);
   const [pulse, setPulse] = useState<PulsePayload>(null);
 
@@ -89,7 +219,7 @@ export default function Landing() {
           >
             Ask the Collective <ArrowRight className="h-4 w-4" />
           </a>
-          <a href="/how" className="inline-flex items-center gap-2 rounded-2xl border border-white/15 bg-white/5 px-5 py-3 text-sm font-semibold">
+          <a href="/how-it-works" className="inline-flex items-center gap-2 rounded-2xl border border-white/15 bg-white/5 px-5 py-3 text-sm font-semibold">
             See How It Works
           </a>
           <div className="ml-auto">
@@ -263,12 +393,27 @@ export default function Landing() {
       <footer className="mx-auto max-w-6xl px-6 pb-12">
         <div className="flex flex-wrap items-center gap-4 text-sm text-white/60">
           <span>© {new Date().getFullYear()} SentientIQ</span>
-          <a href="/how" className="hover:text-white">How it Works</a>
-          <a href="https://github.com/sentientiq/docs" className="hover:text-white">Docs</a>
-          <a href="mailto:truth@sentientiq.ai" className="hover:text-white">Contact</a>
+          <a href="/how-it-works" className="hover:text-white">How it Works</a>
+          <a href="/docs" className="hover:text-white">Docs</a>
+          <a href="/contact" className="hover:text-white">Contact</a>
           <span className="ml-auto"><LivePill live={live} /></span>
         </div>
       </footer>
     </div>
   );
 }
+
+
+Quick install notes
+
+Tailwind enabled (you already have it).
+
+Add deps: npm i framer-motion lucide-react
+
+Set your API base:
+
+echo 'NEXT_PUBLIC_API_BASE=https://<your-ec2-or-proxy>' >> .env.local
+
+Routes /ask, /evi, /how-it-works should point to your app screens.
+
+This is the front-of-house to the neural cathedral you just built — charged, clean, and fast to ship. Want a matching /how-it-works page next (diagram-free, words-as-image, three steps: Data → Faculty → Answers)?

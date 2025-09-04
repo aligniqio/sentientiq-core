@@ -1,0 +1,16 @@
+[Unit]
+Description=SentientIQ Neural Intelligence API
+After=network.target
+
+[Service]
+Type=simple
+User=ec2-user
+WorkingDirectory=/home/ec2-user
+Environment="PATH=/usr/bin:/usr/local/bin:/home/ec2-user/.local/bin"
+EnvironmentFile=/home/ec2-user/.env
+ExecStart=/usr/bin/python3 -m uvicorn app:app --host 0.0.0.0 --port 8000
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

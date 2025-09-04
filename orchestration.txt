@@ -1,0 +1,70 @@
+train/train_agent.py (templated per agent)
+
+
+
+#!/usr/bin/env python3
+import os, json, uuid, time
+import s3fs, pandas as pd, numpy as np
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import roc_auc_score
+from sklearn.ensemble import RandomForestClassifier
+import joblib
+
+S3_FEAT = "s3://sentientiq-data-lake/feature-store"
+S3_ART =  "s3://sentientiq-ml-artifacts"
+REG_PATH = f"{S3_ART}/registry/manifest.json"
+
+def load_manifest(fs):
+    try:
+        with fs.open(REG_PATH) as f: return json.load(f)
+    except FileNotFoundError:
+        return {"agents": {}}
+
+def save_manifest(fs, manifest):
+    with fs.open(REG_PATH, 'wb') as f:
+        f.write(json.dumps(manifest, indent=2).encode())
+
+def load_features(fs, agent: str):
+    import pyarrow.dataset as ds
+    ds_ = ds.dataset(f"{S3_FEAT}/agent={agent}/", filesystem=fs, format="parquet")
+    df = ds_.to_table().to_pandas()
+    # Simple label proxy for phase-1: high EVI next window (supervised target)
+    df = df.sort_values("ts")
+    df["y"] = (df["evi"].shift(-1).fillna(df["evi"]) > df["evi"]).astype(int)
+    # Features
+    X = df[["intensity","engagement_rate","authenticity_mean","consensus"]].fillna(0)
+    y = df["y"]
+    return X, y
+
+def train(agent: str, canary: bool):
+    fs = s3fs.S3FileSystem()
+    X, y = load_features(fs, agent)
+    Xtr, Xte, ytr, yte = train_test_split(X, y, test_size=0.2, random_state=42, stratify=y)
+
+    clf = RandomForestClassifier(n_estimators=200, max_depth=6, n_jobs=-1, random_state=42)
+    clf.fit(Xtr, ytr)
+
+    proba = clf.predict_proba(Xte)[:,1]
+    auc = roc_auc_score(yte, proba)
+
+    version = str(int(time.time()))
+    key = f"models/{agent}/{version}/model.joblib"
+    with fs.open(f"{S3_ART}/{key}", 'wb') as f:
+        joblib.dump({"model": clf, "features": list(X.columns)}, f)
+
+    # update registry
+    manifest = load_manifest(fs)
+    agent_rec = manifest["agents"].get(agent, {"versions":{}})
+    agent_rec["versions"][version] = {"auc": auc, "s3_key": key, "created_at": int(time.time())}
+    # promote canary by default; gate to prod if beats incumbent
+    if canary or "prod_version" not in agent_rec:
+        agent_rec["canary_version"] = version
+    manifest["agents"][agent] = agent_rec
+    save_manifest(fs, manifest)
+
+    print(json.dumps({"agent": agent, "version": version, "auc": auc, "s3_key": key}))
+
+if __name__ == "__main__":
+    agent = os.environ.get("AGENT", "Emotion")
+    canary = os.environ.get("CANARY", "1") == "1"
+    train(agent, canary)

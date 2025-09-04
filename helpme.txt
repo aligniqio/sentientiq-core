@@ -1,0 +1,206 @@
+1) drop this file in ui/SenseiCandy.tsx
+
+// ui/SenseiCandy.tsx
+import React, { createContext, useContext, useMemo, useRef, useEffect, useState } from "react";
+
+/* ---------- Toasts ---------- */
+type Toast = { id:number; kind:"success"|"error"|"info"; msg:string };
+const ToastCtx = createContext<{ push:(t:Omit<Toast,"id">)=>void }>({ push: () => {} });
+function Toaster() {
+  const [items, setItems] = useState<Toast[]>([]);
+  const push = (t: Omit<Toast,"id">) => {
+    const id = Date.now() + Math.random();
+    setItems(x => [...x, { id, ...t }]);
+    setTimeout(() => setItems(x => x.filter(i => i.id !== id)), 3500);
+  };
+  return (
+    <ToastCtx.Provider value={{ push }}>
+      <div className="fixed right-4 top-4 z-[9999] space-y-2">
+        {items.map(i=>(
+          <div key={i.id}
+            className={`rounded-xl px-4 py-3 text-sm shadow-lg backdrop-blur-xl ring-1
+            ${i.kind==="success"?"bg-emerald-500/15 ring-emerald-400/30 text-emerald-200":
+              i.kind==="error"?"bg-rose-500/15 ring-rose-400/30 text-rose-200":
+              "bg-white/10 ring-white/20 text-white/90"}`}>
+            {i.msg}
+          </div>
+        ))}
+      </div>
+    </ToastCtx.Provider>
+  );
+}
+export const useCandyToast = () => useContext(ToastCtx);
+
+/* ---------- Confetti (GO) ---------- */
+function Confetti({ fire, tone="go" }:{ fire:boolean; tone?:"go"|"wait" }) {
+  const ref = useRef<HTMLCanvasElement>(null);
+  useEffect(() => {
+    if (!fire || !ref.current) return;
+    const c = ref.current, ctx = c.getContext("2d")!;
+    let W = (c.width = window.innerWidth), H = (c.height = window.innerHeight);
+    const parts = Array.from({length:120}).map(()=>({
+      x: W/2, y: H/2, r: Math.random()*2+1,
+      vx:(Math.random()-0.5)*6, vy:(Math.random()-0.8)*-8,
+      a:1, h: tone==="go" ? 120+Math.random()*40 : 20+Math.random()*40
+    }));
+    const onR=()=>{W=c.width=window.innerWidth;H=c.height=window.innerHeight;};
+    window.addEventListener("resize", onR);
+    let raf:number;
+    const tick=()=>{ ctx.clearRect(0,0,W,H);
+      parts.forEach(p=>{ p.vy+=0.15; p.x+=p.vx; p.y+=p.vy; p.a-=0.01;
+        ctx.globalAlpha=Math.max(p.a,0);
+        ctx.fillStyle=`hsl(${p.h} 90% 60%)`;
+        ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2); ctx.fill();
+      });
+      if (parts.some(p=>p.a>0)) raf=requestAnimationFrame(tick);
+    };
+    tick();
+    return ()=>{ cancelAnimationFrame(raf); window.removeEventListener("resize", onR); };
+  }, [fire, tone]);
+  return <canvas ref={ref} className={`pointer-events-none fixed inset-0 z-[9998] ${fire?"":"hidden"}`} />;
+}
+
+/* ---------- Neuron cursor trail ---------- */
+function NeuronCursor() {
+  const ref = useRef<HTMLCanvasElement>(null);
+  useEffect(() => {
+    const c=ref.current!, ctx=c.getContext("2d")!;
+    let W=c.width=innerWidth, H=c.height=innerHeight;
+    const nodes:{x:number;y:number;vx:number;vy:number;life:number}[]=[];
+    const onMove=(e:MouseEvent)=>{for(let i=0;i<4;i++) nodes.push({x:e.clientX,y:e.clientY,vx:(Math.random()-0.5)*1.2,vy:(Math.random()-0.5)*1.2,life:1});};
+    const onR=()=>{W=c.width=innerWidth;H=c.height=innerHeight;};
+    window.addEventListener("mousemove", onMove); window.addEventListener("resize", onR);
+    let raf:number;
+    const loop=()=>{ ctx.clearRect(0,0,W,H);
+      nodes.forEach((n,i)=>{ n.x+=n.vx;n.y+=n.vy;n.life-=0.02;
+        ctx.fillStyle=`rgba(167,139,250,${n.life})`; ctx.beginPath(); ctx.arc(n.x,n.y,1.8,0,Math.PI*2); ctx.fill();
+        for(let j=i+1;j<nodes.length;j++){const m=nodes[j], dx=n.x-m.x, dy=n.y-m.y, d=dx*dx+dy*dy;
+          if(d<1200){ ctx.strokeStyle=`rgba(96,165,250,${0.12*(1-d/1200)})`; ctx.beginPath(); ctx.moveTo(n.x,n.y); ctx.lineTo(m.x,m.y); ctx.stroke(); }
+        }
+      });
+      for(let i=nodes.length-1;i>=0;i--) if(nodes[i].life<=0) nodes.splice(i,1);
+      raf=requestAnimationFrame(loop);
+    }; loop();
+    return ()=>{ cancelAnimationFrame(raf); window.removeEventListener("mousemove", onMove); window.removeEventListener("resize", onR); };
+  },[]);
+  return <canvas ref={ref} className="pointer-events-none fixed inset-0 -z-10" />;
+}
+
+/* ---------- Consensus bar ---------- */
+export function ConsensusBar({ value }:{ value:number }) {
+  return (
+    <div className="flex items-center gap-2">
+      <div className="relative h-3 w-40 overflow-hidden rounded-full bg-white/10">
+        <div className="absolute inset-y-0 left-0 w-0 animate-[pulse_2s_ease-in-out_infinite] bg-gradient-to-r from-violet-400 via-sky-400 to-emerald-400"
+             style={{ width: `${value}%` }}/>
+      </div>
+      <span className="text-sm font-semibold">{value}%</span>
+      <style>{`@keyframes pulse{0%,100%{filter:saturate(1)}50%{filter:saturate(1.3)}}`}</style>
+    </div>
+  );
+}
+
+/* ---------- PulseDot (LIVE/OFFLINE) ---------- */
+export function PulseDot({ live }:{ live:boolean }) {
+  return (
+    <span className="inline-flex items-center gap-2 rounded-full bg-white/5 px-3 py-1.5 text-xs font-medium ring-1 ring-white/10">
+      <span className="relative flex h-2.5 w-2.5">
+        {live && <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400/60" />}
+        <span className={`relative inline-flex h-2.5 w-2.5 rounded-full ${live?"bg-emerald-400":"bg-amber-400"}`} />
+      </span>
+      {live ? "LIVE" : "OFFLINE"}
+    </span>
+  );
+}
+
+/* ---------- Ticker ---------- */
+export function EviTicker({ items }:{ items:{agent:string; evi:number}[] }) {
+  return (
+    <div className="overflow-hidden whitespace-nowrap border-b border-white/10 bg-black/40 text-xs font-mono">
+      <div className="animate-marquee inline-block py-1">
+        {items.map((i,idx)=>(
+          <span key={idx} className="mx-6">{i.agent}: <span className="font-semibold text-emerald-300">{i.evi.toFixed(1)}</span></span>
+        ))}
+      </div>
+      <style>{`@keyframes marquee{0%{transform:translateX(100%)}100%{transform:translateX(-100%)}} .animate-marquee{animation:marquee 20s linear infinite}`}</style>
+    </div>
+  );
+}
+
+/* ---------- Loader ---------- */
+export function NeuronLoader(){
+  return (
+    <div className="relative h-16 w-16">
+      {[...Array(6)].map((_,i)=>(
+        <div key={i} className="absolute inset-0 animate-spin"
+             style={{animationDuration:`${2+i*0.3}s`, transform:`rotate(${i*60}deg)`}}>
+          <div className="absolute left-1/2 top-0 h-2 w-2 -translate-x-1/2 rounded-full bg-violet-400 shadow-[0_0_8px_2px_rgba(167,139,250,.7)]"/>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/* ---------- Provider ---------- */
+type Props = {
+  children: React.ReactNode;
+  confetti?: boolean;
+  cursor?: boolean;
+  toasts?: boolean;
+  // control confetti externally
+  fireGo?: boolean;     // set true to burst GO confetti
+  fireWait?: boolean;   // set true to burst WAIT (amber) confetti
+};
+export function SenseiCandyProvider({ children, confetti=true, cursor=true, toasts=true, fireGo=false, fireWait=false }: Props){
+  return (
+    <>
+      {cursor && <NeuronCursor />}
+      {confetti && <>
+        <Confetti fire={!!fireGo} tone="go" />
+        <Confetti fire={!!fireWait} tone="wait" />
+      </>}
+      {toasts ? <Toaster>{children}</Toaster> : <>{children}</>}
+    </>
+  );
+}
+
+
+2) usage (wrap your app once)
+
+In your root (e.g., App.tsx):
+
+import { SenseiCandyProvider } from "@/ui/SenseiCandy";
+
+export default function App() {
+  // optional: keep decision state here to trigger confetti globally
+  const [fireGo, setFireGo] = useState(false);
+  const [fireWait, setFireWait] = useState(false);
+
+  return (
+    <SenseiCandyProvider confetti cursor toasts fireGo={fireGo} fireWait={fireWait}>
+      {/* your routes */}
+    </SenseiCandyProvider>
+  );
+}
+
+In your Ask page, when a result arrives:
+
+import { useCandyToast } from "@/ui/SenseiCandy";
+// in component:
+const { push } = useCandyToast();
+// after /ask returns:
+if (res.decision === "GO") { push({kind:"success", msg:"GO — window is open"}); window.dispatchEvent(new CustomEvent("go!")); }
+else { push({kind:"info", msg:"WAIT — momentum not there yet"}); window.dispatchEvent(new CustomEvent("wait!")); }
+
+
+Or if you prefer not to use events, lift fireGo/fireWait state up and pass down setters.
+
+3) extras you can import ad-hoc
+
+ConsensusBar, PulseDot, EviTicker, NeuronLoader — import straight from "@/ui/SenseiCandy" and drop wherever.
+
+flip switches as you like:
+
+<SenseiCandyProvider confetti={true} cursor={false} toasts={true}>
+  {/* app */}
+</SenseiCandyProvider>

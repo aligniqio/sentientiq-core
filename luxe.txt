@@ -1,0 +1,244 @@
+// DashboardLuxe.tsx
+import React from "react";
+import { motion } from "framer-motion";
+import {
+  Brain, Zap, Activity, Beaker, LineChart, ShieldCheck, MessageSquare,
+  Users2, Sparkles, RefreshCw, Share2
+} from "lucide-react";
+import { Link } from "react-router-dom";
+
+/** --- Neural background (subtle, reusable) --- */
+function NeuronMesh() {
+  return (
+    <div aria-hidden className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
+      {/* radial vignette */}
+      <div className="absolute inset-0 bg-[radial-gradient(1000px_600px_at_50%_-10%,rgba(126,58,242,0.15),transparent_60%),radial-gradient(800px_500px_at_80%_120%,rgba(59,130,246,0.15),transparent_60%)]" />
+      {/* faint web */}
+      <svg className="absolute inset-0 h-full w-full opacity-[0.12]" viewBox="0 0 1200 800">
+        <defs>
+          <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stopColor="#a78bfa" />
+            <stop offset="100%" stopColor="#60a5fa" />
+          </linearGradient>
+        </defs>
+        {Array.from({ length: 28 }).map((_, i) => {
+          const x1 = Math.random() * 1200, y1 = Math.random() * 800;
+          const x2 = Math.random() * 1200, y2 = Math.random() * 800;
+          return <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} stroke="url(#g)" strokeOpacity="0.35" strokeWidth="0.6" />;
+        })}
+        {Array.from({ length: 60 }).map((_, i) => {
+          const cx = Math.random() * 1200, cy = Math.random() * 800;
+          return <circle key={i} cx={cx} cy={cy} r="2.1" fill="#a78bfa" opacity="0.5" />;
+        })}
+      </svg>
+    </div>
+  );
+}
+
+/** --- Glass card primitive --- */
+function GlassCard({
+  to, icon: Icon, title, desc, cta, accent = "from-violet-500/30 to-sky-500/30"
+}: {
+  to: string; icon: React.ComponentType<any>; title: string; desc: string; cta: string; accent?: string;
+}) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 12, scale: 0.98 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      transition={{ duration: 0.35, ease: "easeOut" }}
+      whileHover={{ translateY: -4 }}
+      className="group relative"
+    >
+      <Link
+        to={to}
+        className="block rounded-2xl p-5 sm:p-6 bg-white/5 dark:bg-white/5 backdrop-blur-xl ring-1 ring-white/10 hover:ring-white/20 transition border border-white/5"
+      >
+        {/* glowing accent */}
+        <div className={`pointer-events-none absolute -inset-px rounded-2xl bg-gradient-to-br ${accent} opacity-0 blur-2xl group-hover:opacity-20 transition`} />
+        <div className="flex items-start gap-4 relative">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500/20 to-sky-500/20 ring-1 ring-white/15">
+            <Icon className="h-5 w-5 text-violet-300" />
+          </div>
+          <div className="min-w-0">
+            <h3 className="text-lg font-semibold tracking-tight text-white">{title}</h3>
+            <p className="mt-1 text-sm text-white/60">{desc}</p>
+            <div className="mt-4 inline-flex items-center gap-2 text-sm font-medium text-violet-300">
+              {cta} <Share2 className="h-4 w-4" />
+            </div>
+          </div>
+        </div>
+      </Link>
+    </motion.div>
+  );
+}
+
+/** --- Live status pill --- */
+function LivePill({ label = "LIVE" }) {
+  return (
+    <span className="inline-flex items-center gap-2 rounded-full bg-white/5 px-3 py-1.5 text-xs font-medium ring-1 ring-white/10">
+      <span className="relative flex h-2.5 w-2.5">
+        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400/60" />
+        <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-400" />
+      </span>
+      {label}
+    </span>
+  );
+}
+
+/** --- Stat bar --- */
+function Stat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex flex-col">
+      <span className="text-xs text-white/50">{label}</span>
+      <span className="text-base font-semibold text-white">{value}</span>
+    </div>
+  );
+}
+
+/** --- Page --- */
+export default function DashboardLuxe() {
+  return (
+    <div className="relative min-h-dvh bg-[linear-gradient(180deg,rgba(8,8,12,1)_0%,rgba(10,10,16,1)_100%)] text-white">
+      <NeuronMesh />
+
+      {/* Sidebar */}
+      <aside className="fixed left-0 top-0 hidden h-full w-64 bg-white/5 backdrop-blur-xl ring-1 ring-white/10 md:flex flex-col">
+        <div className="px-5 pt-5 pb-4 flex items-center gap-3">
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500/25 to-sky-500/25 ring-1 ring-white/15">
+            <Brain className="h-5 w-5 text-violet-300" />
+          </div>
+          <div>
+            <div className="text-sm font-semibold leading-tight">SentientIQ</div>
+            <div className="text-[11px] uppercase tracking-wide text-white/50">Neural Intelligence</div>
+          </div>
+        </div>
+        <nav className="mt-2 space-y-1 px-3">
+          {[
+            { to: "/how-it-works", icon: Sparkles, label: "How It Works" },
+            { to: "/risk", icon: ShieldCheck, label: "Risk Insurance" },
+            { to: "/evi", icon: Activity, label: "EVI™ Dashboard" },
+            { to: "/collective", icon: Users2, label: "PhD Collective" },
+            { to: "/ask", icon: MessageSquare, label: "Ask the Collective" },
+            { to: "/training", icon: Beaker, label: "Training Lab" },
+          ].map((i) => (
+            <Link
+              key={i.to}
+              to={i.to}
+              className="flex items-center gap-3 rounded-xl px-3 py-2 text-sm text-white/80 hover:text-white hover:bg-white/5 transition"
+            >
+              <i.icon className="h-4 w-4 text-violet-300" />
+              {i.label}
+            </Link>
+          ))}
+        </nav>
+        <div className="mt-auto p-4">
+          <div className="rounded-xl border border-white/10 bg-white/5 p-3 backdrop-blur-xl">
+            <div className="flex items-center justify-between">
+              <LivePill />
+              <RefreshCw className="h-4 w-4 text-white/50" />
+            </div>
+            <div className="mt-3 grid grid-cols-3 gap-3">
+              <Stat label="Active PhDs" value="12" />
+              <Stat label="Docs" value="600K+" />
+              <Stat label="Accuracy" value="94.7%" />
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      {/* Main */}
+      <main className="md:ml-64">
+        <header className="mx-auto max-w-6xl px-6 pb-2 pt-8 sm:pt-10">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight">Welcome back</h1>
+              <p className="mt-1 text-white/60">Your Emotional Intelligence Infrastructure</p>
+            </div>
+            <button className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-violet-500 to-sky-500 px-4 py-2 text-sm font-semibold shadow-lg shadow-violet-500/20 ring-1 ring-white/20">
+              <Zap className="h-4 w-4" />
+              Go Live
+            </button>
+          </div>
+        </header>
+
+        {/* Cards */}
+        <section className="mx-auto grid max-w-6xl grid-cols-1 gap-5 px-6 pb-16 sm:grid-cols-2 lg:grid-cols-3">
+          <GlassCard
+            to="/collective"
+            icon={Users2}
+            title="PhD Collective"
+            desc="Watch 12 PhDs debate your marketing challenges in real time."
+            cta="Enter Faculty Room"
+          />
+          <GlassCard
+            to="/training"
+            icon={Beaker}
+            title="Training Lab"
+            desc="Blockchain-verified credentials and model training metrics."
+            cta="View Credentials"
+            accent="from-fuchsia-500/30 to-indigo-500/30"
+          />
+          <GlassCard
+            to="/evi"
+            icon={LineChart}
+            title="EVI™ Dashboard"
+            desc="Know when to launch or wait with minute + hour EVI."
+            cta="Monitor EVI"
+            accent="from-sky-500/30 to-emerald-500/30"
+          />
+          <GlassCard
+            to="/ask"
+            icon={MessageSquare}
+            title="Ask the Collective"
+            desc="Instant insights from 12 blockchain-verified PhDs."
+            cta="Ask Question"
+            accent="from-violet-500/30 to-pink-500/30"
+          />
+          <GlassCard
+            to="/how-it-works"
+            icon={Sparkles}
+            title="How It Works"
+            desc="Inside the neural faculty, features, and serving pipeline."
+            cta="Learn More"
+            accent="from-rose-500/30 to-amber-500/30"
+          />
+          <GlassCard
+            to="/risk"
+            icon={ShieldCheck}
+            title="Risk Insurance"
+            desc="Operational safeguards and emotional risk scoring."
+            cta="Open Controls"
+            accent="from-emerald-500/30 to-cyan-500/30"
+          />
+        </section>
+
+        {/* System status strip (full-width) */}
+        <section className="mx-auto max-w-6xl px-6 pb-24">
+          <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur-xl">
+            <div className="pointer-events-none absolute -inset-px rounded-2xl bg-gradient-to-r from-violet-500/20 via-sky-500/20 to-emerald-500/20 opacity-10 blur-2xl" />
+            <div className="flex flex-wrap items-center gap-x-8 gap-y-4">
+              <LivePill />
+              <Stat label="Active PhDs" value="12" />
+              <Stat label="Docs" value="600K+" />
+              <Stat label="Accuracy" value="94.7%" />
+              <div className="ml-auto text-sm text-white/60">System status: all systems operational</div>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+  );
+}
+
+
+
+
+plug-in notes (60-second install)
+
+ensure Tailwind is active and your app supports backdrop-blur (tailwind.config.js has backdropFilter if using a plugin, or Tailwind v3 already supports it).
+
+this uses react-router-dom’s Link; swap to your router as needed.
+
+optional: wrap your app with a dark theme (this design assumes dark mode).
+
+icons come from lucide-react (npm i lucide-react framer-motion).

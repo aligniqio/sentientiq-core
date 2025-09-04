@@ -1,0 +1,85 @@
+SENTIENTIQ — EMOTIONAL INTELLIGENCE PIPELINE (JETSTREAM AT THE CORE)
+
+[Sources]
+  • Social feeds  • Product/behavior events  • Internal signals
+        │
+        ▼
+(1) INGEST  — normalize → event {post_id, platform, text, meta, ts}
+  • Publish → NATS JetStream  subject: raw.posts.{platform}
+  • Retention: 7–30d (replay buffer)
+
+        │
+        ▼
+(2) LABEL (Sage / Sonnet “emotional nutrition labels”)
+  • Subscribe: raw.posts.*
+  • Output fields: lang, emotions{…}, authenticity, topics/brands, dedupe key
+  • Publish → labeled.posts.{platform}
+
+        │
+        ▼
+(3) ENRICH (12 PhD agent services; parallel, decoupled)
+  • Each agent subscribes: labeled.posts.*
+  • Compute per-agent features (intensity, velocity, consensus inputs, etc.)
+  • Publish → enriched.posts.{agent}
+
+        │
+        ├───────────────────────────────────────────────────────────────┐
+        ▼                                                               ▼
+(4) AGGREGATE TO MOAT (stream → lake)                             (4a) LIVE PULSE
+  • Consumers on enriched.posts.*                                  • Consumer on enriched + EVI calc
+  • Build rolling windows & write Parquet to S3:                   • Publish → pulse.evi.snapshots (in-mem or S3 JSON)
+      – /moat/evi_ts/agent=…/dt=…                                  • FastAPI /pulse reads latest snapshot (SSE)
+      – /moat/emotion_hist/…                                       └───────────────────────────────────────────────► /pulse (SSE)
+/moat  – /moat/fingerprints/…
+       – /moat/consensus/…
+
+        │
+        ▼
+(5) TRAINING (batch + incremental)
+  • Read features from /moat (per agent, per window)
+  • Train/eval → write models to S3: /ml-artifacts/models/{agent}/{version}
+  • Update registry: /ml-artifacts/registry/manifest.json
+
+        │
+        ▼
+(6) SERVING (FastAPI)
+  • /ask → route to {agent} → load model (prod/canary or MODEL_VERSION override)
+  • /pulse → serve live EVI (SSE) from snapshots
+  • /feedback → capture Ask/Answer/Why/Outcome → publish feedback.events
+  └──────────────────────────────────────────────────────────────────► feedback.events
+
+        │
+        ▼
+(7) REINFORCEMENT (nightly loop)
+  • Consume feedback.events, join with prior predictions
+  • Label outcomes → append to training data in /moat
+  • Retrain/promote if canary beats prod (AUC or policy)
+
+────────────────────────────────────────────────────────────────────────────────────
+
+CROSS-CUTTING CONCERNS (OPERATIONAL TRUTH)
+
+• Subjects (canonical):
+  raw.posts.*        → labeled.posts.* → enriched.posts.{agent}
+  pulse.evi.snapshots (for /pulse)     • feedback.events
+
+• Semantics:
+  – At-least-once on all stream processors (idempotency via post_id + dedupe_key)
+  – Backpressure handled by JetStream consumer lag; replay from retention window
+  – Partitioning in S3 by dt/agent/window for cheap scans (Parquet)
+
+• Security & Governance:
+  – Public access blocked on all buckets; KMS SSE
+  – Least-priv IAM: readers (serving) vs writers (jobs) vs admin (training/registry)
+  – Audit: append-only feedback events → immutable record of asks & outcomes
+
+• Monetization (already wired, orthogonal to flow):
+  – Auth → JWT(public_metadata.plan) → Edge proxy injects X-User/Org/Plan
+  – Usage gate on /ask (/pulse if desired): Free=20/mo; paid=unlimited (with minute caps)
+  – Checkout → Webhook → Clerk plan update → gate respects immediately
+
+• Defensibility (why this is the moat):
+  – Continuous accumulation of emotional fingerprints, authenticity trends,
+    and cross-agent consensus over time
+  – The longer the stream runs, the deeper the historical signal → non-replayable by competitors
+

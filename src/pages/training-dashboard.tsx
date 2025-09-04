@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Shield, Brain, Database, Cpu, Activity, CheckCircle, Lock } from 'lucide-react';
+import PageHeader from '../components/PageHeader';
 
 interface Credential {
   id: string;
@@ -18,7 +19,7 @@ interface Credential {
 // REAL PhD CREDENTIALS - CRYPTOGRAPHICALLY VERIFIED
 const TrainingDashboard: React.FC = () => {
   const [credentials, setCredentials] = useState<Credential[]>([]);
-  const [mlStats, setMlStats] = useState({
+  const [mlStats] = useState({
     totalDocuments: 612847,
     modelAccuracy: 94.7,
     consensusRate: 87.3,
@@ -184,18 +185,8 @@ const TrainingDashboard: React.FC = () => {
     
     setCredentials(phds);
 
-    // Simulate real-time updates
-    const interval = setInterval(() => {
-      setMlStats(prev => ({
-        ...prev,
-        totalDocuments: prev.totalDocuments + Math.floor(Math.random() * 100),
-        modelAccuracy: 94.7 + (Math.random() - 0.5) * 0.2,
-        consensusRate: 87.3 + (Math.random() - 0.5) * 2,
-        etlThroughput: `${(10.2 + (Math.random() - 0.5) * 0.5).toFixed(1)}K/sec`
-      }));
-    }, 3000);
-
-    return () => clearInterval(interval);
+    // Static stats - no fake updates
+    // Will be replaced with real API data
   }, []);
 
   return (
@@ -208,16 +199,12 @@ const TrainingDashboard: React.FC = () => {
 
       <div className="relative z-10">
         {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-center py-12"
-        >
-          <h1 className="text-5xl font-black mb-4">PhD CREDENTIAL VERIFICATION</h1>
-          <p className="text-xl text-gray-400">
-            600K+ documents. 4-core ML. $5.4M in education. All verifiable.
-          </p>
-        </motion.div>
+        <div className="max-w-7xl mx-auto px-8 pt-12 pb-6">
+          <PageHeader
+            title="PhD CREDENTIAL VERIFICATION"
+            subtitle="600K+ documents. 4-core ML. $5.4M in education. All verifiable."
+          />
+        </div>
 
         {/* Infrastructure Stats */}
         <div className="max-w-7xl mx-auto px-8 mb-12">
