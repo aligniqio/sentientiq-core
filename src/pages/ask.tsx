@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Brain, Sparkles, Send, Check } from "lucide-react";
+import { Brain, Sparkles, Send, Check, Users } from "lucide-react";
 import PageHeader from "../components/PageHeader";
 import { useCandyToast } from "../components/ui/SenseiCandy";
 import { Skeleton } from "../components/ui/Skeleton";
@@ -239,7 +239,8 @@ const ConfidenceRing: React.FC<{ value: number; decision: string }> = ({ value, 
 
 const Ask: React.FC = () => {
   const [q, setQ] = useState("");
-  const [agent, setAgent] = useState(PHDS[0]);
+  const [selectedAgents, setSelectedAgents] = useState<typeof PHDS>([]);
+  const [consensusMode, setConsensusMode] = useState(false);
   const [ans, setAns] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const { push: showToast } = useCandyToast();
@@ -251,7 +252,7 @@ const Ask: React.FC = () => {
     "Will this campaign resonate with Gen Z?",
   ], []);
 
-  const disabled = loading || q.trim().length < 3;
+  const disabled = loading || q.trim().length < 3 || (!consensusMode && selectedAgents.length === 0);
 
   async function onAsk() {
     if (disabled) return;
@@ -260,7 +261,10 @@ const Ask: React.FC = () => {
     setAns(null);
 
     try {
-      const result = await askAgent(q, agent.name);
+      // Consensus mode: send "Collective" as agent name
+      // Individual mode: send selected agents (for now just the first one)
+      const agentName = consensusMode ? "Collective" : (selectedAgents[0]?.name || "Strategy");
+      const result = await askAgent(q, agentName);
       setAns(result);
       
       // Check decision string for toast/chime
@@ -268,10 +272,16 @@ const Ask: React.FC = () => {
       
       if (isGo) {
         chime.go();
-        showToast({ kind: "success", msg: `${agent.name} says GO with ${(result.confidence * 100).toFixed(2)}% confidence` });
+        const msg = consensusMode 
+          ? `PhD Collective consensus: GO with ${(result.confidence * 100).toFixed(2)}% confidence`
+          : `${agentName} says GO with ${(result.confidence * 100).toFixed(2)}% confidence`;
+        showToast({ kind: "success", msg });
       } else {
         chime.nope();
-        showToast({ kind: "info", msg: `${agent.name} says WAIT with ${(result.confidence * 100).toFixed(2)}% confidence` });
+        const msg = consensusMode 
+          ? `PhD Collective consensus: WAIT with ${(result.confidence * 100).toFixed(2)}% confidence`
+          : `${agentName} says WAIT with ${(result.confidence * 100).toFixed(2)}% confidence`;
+        showToast({ kind: "info", msg });
       }
     } catch (error: any) {
       console.error("Ask error:", error);
@@ -306,17 +316,63 @@ const Ask: React.FC = () => {
           <div className="grid gap-8 lg:grid-cols-3">
             {/* PhD Cards Grid - 2 columns */}
             <div className="lg:col-span-2">
-              <h2 className="mb-4 text-lg font-bold text-white/90">Select PhD Expert</h2>
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                {PHDS.map((phd) => (
-                  <PhDCard
-                    key={phd.name}
-                    phd={phd}
-                    active={agent.name === phd.name}
-                    onClick={() => setAgent(phd)}
-                  />
-                ))}
+              <div className="mb-4 flex items-center justify-between">
+                <div>
+                  <h2 className="text-lg font-bold text-white/90">
+                    {consensusMode ? "PhD Collective Consensus" : "Select Individual Experts"}
+                  </h2>
+                  {!consensusMode && selectedAgents.length > 0 && (
+                    <p className="text-sm text-purple-300 mt-1">
+                      {selectedAgents.length} expert{selectedAgents.length > 1 ? 's' : ''} selected
+                      {selectedAgents.length > 1 && ' (will debate in parallel)'}
+                    </p>
+                  )}
+                </div>
+                <button
+                  onClick={() => {
+                    setConsensusMode(!consensusMode);
+                    setSelectedAgents([]);
+                    setAns(null);
+                  }}
+                  className="rounded-lg border border-purple-500/30 bg-purple-500/10 px-4 py-2 text-sm font-medium text-purple-300 transition-all hover:bg-purple-500/20"
+                >
+                  {consensusMode ? "Individual Mode" : "Consensus Mode"}
+                </button>
               </div>
+              
+              {/* Consensus Mode Card */}
+              {consensusMode ? (
+                <div className="glass-card group relative overflow-hidden rounded-xl border-2 border-purple-500/50 bg-gradient-to-br from-purple-500/10 to-indigo-500/10 p-6">
+                  <div className="flex items-center justify-center space-x-4">
+                    <Users className="h-12 w-12 text-purple-400" />
+                    <div>
+                      <h3 className="text-xl font-bold text-white">PhD Collective</h3>
+                      <p className="text-sm text-white/70">All 12 experts debate and reach consensus</p>
+                      <p className="mt-2 text-xs text-purple-300">Comprehensive analysis from multiple perspectives</p>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                  {PHDS.map((phd) => (
+                    <PhDCard
+                      key={phd.name}
+                      phd={phd}
+                      active={selectedAgents.some(a => a.name === phd.name)}
+                      onClick={() => {
+                        // Toggle selection for multi-select
+                        setSelectedAgents(prev => {
+                          const exists = prev.some(a => a.name === phd.name);
+                          if (exists) {
+                            return prev.filter(a => a.name !== phd.name);
+                          }
+                          return [...prev, phd];
+                        });
+                      }}
+                    />
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Question & Answer Panel - 1 column */}
@@ -427,7 +483,10 @@ const Ask: React.FC = () => {
                         : "bg-gradient-to-r from-violet-500 to-sky-500 shadow-lg shadow-violet-500/20 ring-1 ring-white/20"
                     }`}
                   >
-                    {loading ? "Thinking…" : <>Ask <Send className="h-4 w-4" /></>}
+                    {loading ? "Thinking…" : (
+                      consensusMode ? <>Get Consensus <Users className="h-4 w-4" /></> :
+                      <>Ask Expert <Send className="h-4 w-4" /></>
+                    )}
                   </button>
                 </div>
                 
