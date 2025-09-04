@@ -2,11 +2,11 @@
 // Uses environment variables for production, falls back to localhost for development
 
 export const API_CONFIG = {
-  // Posts API
-  POSTS_API: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8002',
+  // Posts API - use relative URLs in production to leverage Netlify proxy
+  POSTS_API: import.meta.env.PROD ? '' : (import.meta.env.VITE_API_BASE_URL || 'http://localhost:8002'),
   
-  // Swarm API  
-  SWARM_API: import.meta.env.VITE_SWARM_API_URL || 'http://localhost:8003',
+  // Swarm API - use relative URLs in production to leverage Netlify proxy
+  SWARM_API: import.meta.env.PROD ? '' : (import.meta.env.VITE_SWARM_API_URL || 'http://localhost:8003'),
   
   // Environment
   IS_PRODUCTION: import.meta.env.PROD,
