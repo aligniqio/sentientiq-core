@@ -81,7 +81,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                 <div className="relative">
                   <div className="absolute inset-0 bg-gradient-to-r from-purple-600 to-blue-600 rounded-lg blur-lg opacity-50" />
                   <div className="relative w-10 h-10 bg-gradient-to-r from-purple-600 to-blue-600 rounded-lg flex items-center justify-center">
-                    <Eye className="w-6 h-6 text-white" />
+                    <Brain className="w-6 h-6 text-white" />
                   </div>
                 </div>
                 <div>

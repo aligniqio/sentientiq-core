@@ -22,11 +22,11 @@ function App() {
       <Router>
         <Layout>
         <Routes>
-          {/* Root - Show Home if signed in, Auth if not */}
+          {/* Root - THE ONE TRUE ROUTE - Ask the PhDs! */}
           <Route path="/" element={
             <>
               <SignedIn>
-                <Home />
+                <Ask />
               </SignedIn>
               <SignedOut>
                 <Auth />
