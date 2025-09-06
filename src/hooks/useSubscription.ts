@@ -12,6 +12,7 @@ interface SubscriptionData {
   canAccessEvi: boolean;
   canExport: boolean;
   loading: boolean;
+  vertical?: string; // For enterprise tier vertical-specific EVI
 }
 
 export function useSubscription(): SubscriptionData {
@@ -56,6 +57,7 @@ export function useSubscription(): SubscriptionData {
           canAccessEvi: true, // Everyone can access, but with delays for free
           canExport: tier !== TIERS.FREE,
           loading: false,
+          vertical: user.publicMetadata?.vertical as string || undefined, // Enterprise vertical
         });
       } catch (error) {
         console.error('Error fetching subscription:', error);

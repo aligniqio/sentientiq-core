@@ -8,10 +8,17 @@ captureUtms();
 
 const clerkPubKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY
 
+// Only wrap with ClerkProvider if we have a key (allows landing page to work without auth)
+const AppWrapper = clerkPubKey ? (
+  <ClerkProvider publishableKey={clerkPubKey}>
+    <App />
+  </ClerkProvider>
+) : (
+  <App />
+)
+
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <ClerkProvider publishableKey={clerkPubKey}>
-      <App />
-    </ClerkProvider>
+    {AppWrapper}
   </React.StrictMode>
 )

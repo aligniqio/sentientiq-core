@@ -1,5 +1,6 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import { SignedIn, SignedOut } from '@clerk/clerk-react'
+import { HelmetProvider } from 'react-helmet-async'
 
 // The ONLY pages that matter
 import Layout from './components/Layout'
@@ -23,20 +24,25 @@ import { SenseiCandyProvider } from './components/ui/SenseiCandy'
 
 function App() {
   return (
-    <SenseiCandyProvider confetti cursor toasts>
-      <Router>
-        <Layout>
+    <HelmetProvider>
+      <SenseiCandyProvider confetti cursor toasts>
+        <Router>
+          <Layout>
         <Routes>
-          {/* Root - Intelligence Monitor showing the moat accumulating */}
+          {/* Root - Show Landing for .ai domain, Auth for .app domain */}
           <Route path="/" element={
-            <>
-              <SignedIn>
-                <IntelligenceMonitor />
-              </SignedIn>
-              <SignedOut>
-                <Auth />
-              </SignedOut>
-            </>
+            window.location.hostname.includes('sentientiq.ai') ? (
+              <Landing />
+            ) : (
+              <>
+                <SignedIn>
+                  <IntelligenceMonitor />
+                </SignedIn>
+                <SignedOut>
+                  <Auth />
+                </SignedOut>
+              </>
+            )
           } />
           
           {/* Everything requires auth - this is not a public domain */}
@@ -187,6 +193,7 @@ function App() {
       </Layout>
     </Router>
     </SenseiCandyProvider>
+    </HelmetProvider>
   )
 }
 

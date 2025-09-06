@@ -1,5 +1,5 @@
 functionsDirectory = "/Users/matthewkiselstein/projects/sentientiq-core/netlify/functions"
-functionsDirectoryOrigin = "config-v1"
+functionsDirectoryOrigin = "ui"
 redirectsOrigin = "config"
 plugins = []
 headers = []
@@ -8,12 +8,11 @@ headers = []
 edge_functions = "/Users/matthewkiselstein/projects/sentientiq-core/netlify/edge-functions"
 publish = "/Users/matthewkiselstein/projects/sentientiq-core/dist"
 publishOrigin = "config"
-commandOrigin = "config"
+commandOrigin = "ui"
 command = "npm run build"
 functions = "/Users/matthewkiselstein/projects/sentientiq-core/netlify/functions"
 
 [build.environment]
-API_ORIGIN = "http://3.15.29.138:8000"
 
 [build.processing]
 
@@ -27,20 +26,57 @@ API_ORIGIN = "http://3.15.29.138:8000"
 
 [build.services]
 
-[[edge_functions]]
-path = "/api/*"
-function = "api-proxy"
-
-[dev]
-command = "npm run dev"
-port = 5173.0
-targetPort = 3000.0
-publish = "dist"
-autoLaunch = false
-
 [functions]
 
 [functions."*"]
+
+[[redirects]]
+from = "/api/posts/*"
+to = "http://3.15.29.138:8002/api/posts/:splat"
+status = 200.0
+force = false
+
+[redirects.query]
+
+[redirects.conditions]
+
+[redirects.headers]
+
+[[redirects]]
+from = "/api/swarm/*"
+to = "http://3.15.29.138:8003/api/swarm/:splat"
+status = 200.0
+force = false
+
+[redirects.query]
+
+[redirects.conditions]
+
+[redirects.headers]
+
+[[redirects]]
+from = "/api/posts/*"
+to = "http://3.15.29.138:8002/api/posts/:splat"
+status = 200.0
+force = true
+
+[redirects.query]
+
+[redirects.conditions]
+
+[redirects.headers]
+
+[[redirects]]
+from = "/api/swarm/*"
+to = "http://3.15.29.138:8003/api/swarm/:splat"
+status = 200.0
+force = true
+
+[redirects.query]
+
+[redirects.conditions]
+
+[redirects.headers]
 
 [[redirects]]
 from = "/*"

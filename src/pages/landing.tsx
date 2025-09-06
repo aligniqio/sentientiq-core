@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { ArrowRight, Activity, Brain, Sparkles, CheckCircle2 } from "lucide-react";
+import SEO from '../components/SEO';
 
 const API_BASE = import.meta.env.VITE_API_BASE || "/api";
 
@@ -57,8 +58,10 @@ export default function Landing() {
   }, [pulse]);
 
   return (
-    <div className="min-h-dvh bg-[linear-gradient(180deg,#0a0a12_0%,#0b0b14_100%)] text-white">
-      {/* subtle neural lightfield */}
+    <>
+      <SEO />
+      <div className="min-h-dvh bg-[linear-gradient(180deg,#0a0a12_0%,#0b0b14_100%)] text-white">
+        {/* subtle neural lightfield */}
       <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
         <div className="absolute inset-0 bg-[radial-gradient(900px_500px_at_18%_-10%,rgba(124,58,237,0.16),transparent_60%),radial-gradient(800px_500px_at_82%_110%,rgba(56,189,248,0.14),transparent_60%)]" />
         <div className="absolute inset-0 bg-[radial-gradient(1200px_700px_at_50%_40%,rgba(255,255,255,0.04),transparent)]" />
@@ -317,5 +320,6 @@ export default function Landing() {
         </div>
       </footer>
     </div>
+    </>
   );
 }
