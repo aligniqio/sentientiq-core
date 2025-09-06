@@ -42,8 +42,8 @@ const EVIMonitor: React.FC = () => {
         const vertical = subscription.tier === 'enterprise' ? subscription.vertical : null;
         
         const url = vertical 
-          ? `http://localhost:8004/api/evi/${tier}/${vertical}`
-          : `http://localhost:8004/api/evi/${tier}`;
+          ? `/api/evi/${tier}/${vertical}`
+          : `/api/evi/${tier}`;
           
         const response = await fetch(url);
         const data = await response.json();

@@ -1,325 +1,299 @@
 // Marketing Landing Page - sentientiq.ai
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { ArrowRight, Activity, Brain, Sparkles, CheckCircle2 } from "lucide-react";
+import { ArrowRight, Sparkles, Zap, Shield, Brain, TrendingUp, Users } from "lucide-react";
 import SEO from '../components/SEO';
+import EVIMonitor from '../components/EVIMonitor';
 
-const API_BASE = import.meta.env.VITE_API_BASE || "/api";
-
-type PulseItem = { agent: string; evi: number; ts: string; window_seconds: number };
-type PulsePayload = { generated_at: string; items: PulseItem[] } | null;
-
-function LivePill({ live }: { live: boolean }) {
-  return (
-    <span className="inline-flex items-center gap-2 rounded-full bg-white/5 px-3 py-1.5 text-xs font-medium ring-1 ring-white/10">
-      <span className="relative flex h-2.5 w-2.5">
-        {live && <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400/60" />}
-        <span className={`relative inline-flex h-2.5 w-2.5 rounded-full ${live ? "bg-emerald-400" : "bg-amber-400"}`} />
-      </span>
-      {live ? "LIVE" : "OFFLINE"}
-    </span>
-  );
-}
-
-export default function Landing() {
-  const [live, setLive] = useState(false);
-  const [pulse, setPulse] = useState<PulsePayload>(null);
-
+// Matrix rain effect component
+const MatrixRain = () => {
   useEffect(() => {
-    let cancelled = false;
+    const canvas = document.getElementById('matrix') as HTMLCanvasElement;
+    if (!canvas) return;
+    
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
 
-    async function check() {
-      try {
-        const v = await fetch(`${API_BASE}/version`, { cache: "no-store" });
-        if (!v.ok) throw new Error();
-        const p = await fetch(`${API_BASE}/pulse/snapshot`, { cache: "no-store" });
-        if (cancelled) return;
-        setLive(v.ok && p.ok);
-        if (p.ok) setPulse(await p.json());
-      } catch {
-        if (!cancelled) setLive(false);
-      }
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    const matrix = "SENTIENTIQ01アイキュー感情知能";
+    const matrixArray = matrix.split("");
+    const fontSize = 16;
+    const columns = canvas.width / fontSize;
+    const drops: number[] = [];
+
+    for (let x = 0; x < columns; x++) {
+      drops[x] = Math.random() * -100;
     }
-    check();
-    const id = setInterval(check, 15000);
+
+    const draw = () => {
+      ctx.fillStyle = 'rgba(10, 10, 18, 0.04)';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      ctx.fillStyle = '#00ff9f';
+      ctx.font = fontSize + 'px monospace';
+
+      for (let i = 0; i < drops.length; i++) {
+        const text = matrixArray[Math.floor(Math.random() * matrixArray.length)];
+        ctx.fillText(text, i * fontSize, drops[i] * fontSize);
+
+        if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) {
+          drops[i] = 0;
+        }
+        drops[i]++;
+      }
+    };
+
+    const interval = setInterval(draw, 35);
+
+    const handleResize = () => {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    };
+
+    window.addEventListener('resize', handleResize);
+
     return () => {
-      cancelled = true;
-      clearInterval(id);
+      clearInterval(interval);
+      window.removeEventListener('resize', handleResize);
     };
   }, []);
 
-  const ticker = useMemo(() => {
-    const items = pulse?.items || [];
-    const lastByAgent = new Map<string, PulseItem>();
-    for (const it of items) if (it.window_seconds === 60) lastByAgent.set(it.agent, it);
-    return Array.from(lastByAgent.values())
-      .sort((a, b) => b.evi - a.evi)
-      .slice(0, 8);
-  }, [pulse]);
+  return <canvas id="matrix" className="fixed inset-0 opacity-20" />;
+};
+
+export default function Landing() {
+  const [unlocked, setUnlocked] = useState(false);
 
   return (
     <>
       <SEO />
-      <div className="min-h-dvh bg-[linear-gradient(180deg,#0a0a12_0%,#0b0b14_100%)] text-white">
-        {/* subtle neural lightfield */}
-      <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
-        <div className="absolute inset-0 bg-[radial-gradient(900px_500px_at_18%_-10%,rgba(124,58,237,0.16),transparent_60%),radial-gradient(800px_500px_at_82%_110%,rgba(56,189,248,0.14),transparent_60%)]" />
-        <div className="absolute inset-0 bg-[radial-gradient(1200px_700px_at_50%_40%,rgba(255,255,255,0.04),transparent)]" />
-      </div>
-
-      {/* HERO */}
-      <section className="mx-auto flex max-w-6xl flex-col gap-6 px-6 pt-20 pb-16">
-        <motion.h1
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, ease: "easeOut" }}
-          className="text-balance text-5xl font-extrabold tracking-tight sm:text-6xl"
-        >
-          The First Brain Built for Marketing Truth.
-        </motion.h1>
-        <motion.p
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4, delay: 0.05 }}
-            className="max-w-2xl text-lg text-white/70"
-        >
-          12 PhDs. Real neural intelligence. Answers with a <span className="text-white">Why</span>.
-        </motion.p>
-        <div className="flex flex-wrap items-center gap-3">
-          <a
-            href="/ask"
-            className="inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-violet-500 to-sky-500 px-5 py-3 text-sm font-semibold shadow-lg shadow-violet-500/20 ring-1 ring-white/20 hover:brightness-110"
-          >
-            Ask the Collective <ArrowRight className="h-4 w-4" />
-          </a>
-          <a href="/how" className="inline-flex items-center gap-2 rounded-2xl border border-white/15 bg-white/5 px-5 py-3 text-sm font-semibold">
-            See How It Works
-          </a>
-          <div className="ml-auto">
-            <LivePill live={live} />
-          </div>
+      <div className="relative min-h-screen bg-[#0a0a12] text-white overflow-hidden">
+        <MatrixRain />
+        
+        {/* EVI Monitor Bar */}
+        <div className="relative z-50">
+          <EVIMonitor />
         </div>
-      </section>
 
-      {/* PhD COLLECTIVE VALUE PROPOSITION */}
-      <section className="mx-auto max-w-6xl px-6 pb-12">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.2 }}
-          className="rounded-3xl bg-gradient-to-br from-purple-900/30 via-indigo-900/30 to-blue-900/30 backdrop-blur-xl p-8 border border-purple-500/30 shadow-2xl shadow-purple-500/10"
-        >
-          <div className="text-center mb-8">
-            <h2 className="text-4xl font-bold mb-4 bg-gradient-to-r from-purple-400 via-pink-400 to-indigo-400 bg-clip-text text-transparent">
-              24,000 PhD Equivalents
-            </h2>
-            <p className="text-2xl text-white/90 font-semibold mb-2">
-              320 Billion Training Tokens
-            </p>
-            <p className="text-xl text-white/70">
-              The largest concentration of analytical intelligence ever assembled for business strategy
-            </p>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-            <div className="text-center">
-              <div className="text-3xl font-bold text-purple-400">12</div>
-              <div className="text-sm text-white/60">Specialized AI Agents</div>
-            </div>
-            <div className="text-center">
-              <div className="text-3xl font-bold text-purple-400">240B</div>
-              <div className="text-sm text-white/60">Words Processed</div>
-            </div>
-            <div className="text-center">
-              <div className="text-3xl font-bold text-purple-400">24,000</div>
-              <div className="text-sm text-white/60">PhD Equivalents</div>
-            </div>
-          </div>
-          
-          <div className="text-center">
-            <p className="text-lg font-bold text-white mb-2">
-              This isn't marketing. It's math.
-            </p>
-            <p className="text-sm text-white/60">
-              No single human consultant, no matter how brilliant, has read this much,<br />
-              analyzed this deeply, or can synthesize this broadly.
-            </p>
-          </div>
-        </motion.div>
-      </section>
-
-      {/* PROOF OF LIFE */}
-      <section className="mx-auto max-w-6xl px-6 pb-8">
-        <div className="rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur-xl">
-          <div className="flex flex-wrap items-center gap-4">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500/25 to-sky-500/25 ring-1 ring-white/15">
-                <Brain className="h-5 w-5 text-violet-300" />
-              </div>
-              <div>
-                <div className="text-sm font-semibold">PhD Collective is online</div>
-                <div className="text-xs text-white/60">Real agents. Real models. No Math.random() theater.</div>
-              </div>
-            </div>
-            <div className="ml-auto text-sm">
-              <a href="/evi" className="text-violet-300 hover:text-violet-200 inline-flex items-center gap-2">
-                View EVI Dashboard <ArrowRight className="h-4 w-4" />
-              </a>
-            </div>
-          </div>
-          {/* ticker */}
-          {ticker.length > 0 && (
-            <div className="mt-4 overflow-hidden whitespace-nowrap border-t border-white/10 pt-3 text-xs font-mono text-white/80">
-              <div className="animate-[marquee_20s_linear_infinite] inline-block">
-                {ticker.map((t, i) => (
-                  <span key={i} className="mx-6">
-                    {t.agent}: <span className="font-semibold text-emerald-300">{t.evi.toFixed(1)}</span>
-                  </span>
-                ))}
-              </div>
-              <style>{`@keyframes marquee{0%{transform:translateX(100%)}100%{transform:translateX(-100%)}}`}</style>
-            </div>
-          )}
-        </div>
-      </section>
-
-      {/* FACULTY GRID */}
-      <section className="mx-auto max-w-6xl px-6 pb-8">
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {[
-            ["Strategy", "Revenue is a lagging indicator of emotion"],
-            ["Emotion", "People buy feelings, not features"],
-            ["Chaos", "Volatility is opportunity disguised as risk"],
-            ["Brutal", "Hope is not a strategy. Data is"],
-            ["ROI", "Every emotion has a price. Most are undervalued"],
-            ["Identity", "Resonance beats reach"],
-            ["Pattern", "Everything repeats if you zoom out"],
-            ["Warfare", "Win market share by timing, not shouting"],
-            ["Omni", "Every channel, same feeling"],
-            ["First", "Onboarding is destiny"],
-            ["Truth", "Attribution without emotion is a lie"],
-            ["Context", "The right answer in the wrong moment is wrong"],
-          ].map(([name, line]) => (
+        {/* Main Content */}
+        <div className="relative z-10">
+          {/* Hero Section */}
+          <section className="mx-auto max-w-7xl px-6 pt-32 pb-20">
             <motion.div
-              key={name}
-              initial={{ opacity: 0, y: 12 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.35, ease: "easeOut" }}
-              className="group relative overflow-hidden rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur-xl"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8 }}
+              className="text-center"
             >
-              <div className="pointer-events-none absolute -inset-px rounded-2xl bg-gradient-to-br from-violet-500/20 to-sky-500/20 opacity-0 blur-2xl transition group-hover:opacity-20" />
-              <div className="flex items-start gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/10 ring-1 ring-white/15">
-                  <Sparkles className="h-5 w-5 text-violet-300" />
+              {/* Tagline */}
+              <motion.p
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.2 }}
+                className="mb-6 text-sm font-medium tracking-wider text-emerald-400"
+              >
+                EMOTIONAL INTELLIGENCE FOR COMMERCE
+              </motion.p>
+
+              {/* Main Headline */}
+              <motion.h1
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 0.3, duration: 0.8 }}
+                className="mb-8 text-6xl md:text-8xl font-black tracking-tight"
+              >
+                <span className="bg-gradient-to-r from-cyan-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
+                  The Last Software
+                </span>
+                <br />
+                <span className="text-white">
+                  You'll Ever Notice
+                </span>
+              </motion.h1>
+
+              {/* Subheadline */}
+              <motion.p
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.5 }}
+                className="mx-auto max-w-3xl text-xl md:text-2xl text-gray-300 mb-12"
+              >
+                12 PhDs. Zero dashboards. <span className="text-white font-semibold">Decisions, not data.</span>
+              </motion.p>
+
+              {/* CTA Buttons */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.7 }}
+                className="flex flex-col sm:flex-row gap-4 justify-center"
+              >
+                <button
+                  onClick={() => setUnlocked(true)}
+                  className="group relative px-8 py-4 bg-gradient-to-r from-purple-600 to-pink-600 rounded-xl font-bold text-lg shadow-2xl shadow-purple-500/25 hover:shadow-purple-500/40 transition-all duration-300 hover:scale-105"
+                >
+                  <span className="relative z-10 flex items-center gap-2">
+                    Unlock 3 Recommendations
+                    <Sparkles className="w-5 h-5 group-hover:rotate-12 transition-transform" />
+                  </span>
+                  <div className="absolute inset-0 bg-gradient-to-r from-purple-400 to-pink-400 rounded-xl blur opacity-50 group-hover:opacity-75 transition-opacity" />
+                </button>
+
+                <a
+                  href="/auth"
+                  className="px-8 py-4 bg-white/10 backdrop-blur-sm rounded-xl font-bold text-lg border border-white/20 hover:bg-white/20 transition-all duration-300 flex items-center gap-2 justify-center"
+                >
+                  Start Free Trial
+                  <ArrowRight className="w-5 h-5" />
+                </a>
+              </motion.div>
+
+              {/* Trust Indicators */}
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.9 }}
+                className="mt-12 flex flex-wrap gap-8 justify-center text-sm text-gray-400"
+              >
+                <div className="flex items-center gap-2">
+                  <Shield className="w-4 h-4 text-emerald-400" />
+                  <span>SOC2 Compliant</span>
                 </div>
-                <div>
-                  <div className="font-semibold">{name}</div>
-                  <div className="mt-1 text-sm text-white/70">{line}</div>
+                <div className="flex items-center gap-2">
+                  <Zap className="w-4 h-4 text-yellow-400" />
+                  <span>Real-time Analysis</span>
                 </div>
-              </div>
+                <div className="flex items-center gap-2">
+                  <Brain className="w-4 h-4 text-purple-400" />
+                  <span>320B Parameters</span>
+                </div>
+              </motion.div>
             </motion.div>
-          ))}
-        </div>
-      </section>
+          </section>
 
-      {/* EVI SECTION */}
-      <section className="mx-auto max-w-6xl px-6 pb-8">
-        <div className="rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur-xl">
-          <div className="flex flex-wrap items-center gap-4">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500/25 to-sky-500/25 ring-1 ring-white/15">
-                <Activity className="h-5 w-5 text-violet-300" />
-              </div>
-              <div>
-                <h2 className="text-xl font-semibold">EVI™ — Emotional Volatility Index</h2>
-                <p className="text-sm text-white/70">Know when to launch. Know when to wait.</p>
-              </div>
-            </div>
-            <div className="ml-auto">
-              <a href="/evi" className="inline-flex items-center gap-2 rounded-xl border border-white/15 bg-white/5 px-3 py-2 text-sm">
-                View Dashboard <ArrowRight className="h-4 w-4" />
-              </a>
-            </div>
-          </div>
-          {/* minimalist sparkline placeholder */}
-          <div className="mt-4 h-24 w-full overflow-hidden rounded-xl border border-white/10 bg-black/30">
-            {/* simple SVG sparkline from ticker */}
-            <svg viewBox="0 0 600 96" className="h-full w-full">
-              <polyline
-                fill="none"
-                stroke="url(#g)"
-                strokeWidth="2"
-                points={(() => {
-                  const arr = (pulse?.items || [])
-                    .filter(i => i.window_seconds === 60)
-                    .slice(-40);
-                  if (arr.length < 2) return "0,48 600,48";
-                  return arr
-                    .map((p, idx) => {
-                      const x = (idx / (arr.length - 1)) * 600;
-                      const y = 96 - (p.evi / 100) * 96;
-                      return `${x.toFixed(1)},${y.toFixed(1)}`;
-                    })
-                    .join(" ");
-                })()}
-              />
-              <defs>
-                <linearGradient id="g" x1="0" y1="0" x2="1" y2="0">
-                  <stop offset="0%" stopColor="#a78bfa" />
-                  <stop offset="100%" stopColor="#38bdf8" />
-                </linearGradient>
-              </defs>
-            </svg>
-          </div>
-        </div>
-      </section>
-
-      {/* WHY IT MATTERS */}
-      <section className="mx-auto max-w-6xl px-6 pb-12">
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-          {[
-            ["Truth", "Expose fraud and randomness. See the real emotional signal."],
-            ["Speed", "Answers live, not quarterly. Deploy on sentiment, not slides."],
-            ["Learning", "Every Ask/Why/Outcome trains the faculty. It gets smarter daily."],
-          ].map(([title, body]) => (
-            <div key={title} className="rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur-xl">
-              <div className="flex items-center gap-2 text-sm font-semibold">
-                <CheckCircle2 className="h-4 w-4 text-emerald-300" /> {title}
-              </div>
-              <p className="mt-2 text-sm text-white/70">{body}</p>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* CTA STRIP */}
-      <section className="mx-auto max-w-6xl px-6 pb-24">
-        <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur-xl">
-          <div className="pointer-events-none absolute -inset-px rounded-2xl bg-gradient-to-r from-violet-500/20 via-sky-500/20 to-emerald-500/20 opacity-10 blur-2xl" />
-          <div className="flex flex-wrap items-center gap-4">
-            <h3 className="text-2xl font-bold">Stop guessing. Start listening to emotion.</h3>
-            <a
-              href="/ask"
-              className="ml-auto inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-violet-500 to-sky-500 px-5 py-3 text-sm font-semibold shadow-lg shadow-violet-500/20 ring-1 ring-white/20 hover:brightness-110"
+          {/* Features Grid */}
+          <section className="mx-auto max-w-7xl px-6 py-20">
+            <motion.div
+              initial={{ opacity: 0 }}
+              whileInView={{ opacity: 1 }}
+              viewport={{ once: true }}
+              className="grid md:grid-cols-3 gap-8"
             >
-              Ask the Collective <ArrowRight className="h-4 w-4" />
-            </a>
-          </div>
-        </div>
-      </section>
+              {/* Feature 1 */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: 0.1 }}
+                className="p-8 bg-gradient-to-br from-purple-900/20 to-pink-900/20 rounded-2xl border border-purple-500/20 backdrop-blur-sm"
+              >
+                <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-500 rounded-lg flex items-center justify-center mb-4">
+                  <TrendingUp className="w-6 h-6" />
+                </div>
+                <h3 className="text-xl font-bold mb-2">Emotional Value Index</h3>
+                <p className="text-gray-400">
+                  Real-time emotional volatility tracking across all customer interactions. Like VIX for feelings.
+                </p>
+              </motion.div>
 
-      {/* FOOTER */}
-      <footer className="mx-auto max-w-6xl px-6 pb-12">
-        <div className="flex flex-wrap items-center gap-4 text-sm text-white/60">
-          <span>© {new Date().getFullYear()} SentientIQ</span>
-          <a href="/how" className="hover:text-white">How it Works</a>
-          <a href="https://github.com/sentientiq/docs" className="hover:text-white">Docs</a>
-          <a href="mailto:truth@sentientiq.ai" className="hover:text-white">Contact</a>
-          <span className="ml-auto"><LivePill live={live} /></span>
+              {/* Feature 2 */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: 0.2 }}
+                className="p-8 bg-gradient-to-br from-cyan-900/20 to-blue-900/20 rounded-2xl border border-cyan-500/20 backdrop-blur-sm"
+              >
+                <div className="w-12 h-12 bg-gradient-to-br from-cyan-500 to-blue-500 rounded-lg flex items-center justify-center mb-4">
+                  <Brain className="w-6 h-6" />
+                </div>
+                <h3 className="text-xl font-bold mb-2">Plutchik's Wheel Analysis</h3>
+                <p className="text-gray-400">
+                  Eight-dimensional emotional mapping that actually means something. No more guessing.
+                </p>
+              </motion.div>
+
+              {/* Feature 3 */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: 0.3 }}
+                className="p-8 bg-gradient-to-br from-emerald-900/20 to-green-900/20 rounded-2xl border border-emerald-500/20 backdrop-blur-sm"
+              >
+                <div className="w-12 h-12 bg-gradient-to-br from-emerald-500 to-green-500 rounded-lg flex items-center justify-center mb-4">
+                  <Users className="w-6 h-6" />
+                </div>
+                <h3 className="text-xl font-bold mb-2">Collective Intelligence</h3>
+                <p className="text-gray-400">
+                  12 specialized PhDs working in parallel. 24,000 years of equivalent experience.
+                </p>
+              </motion.div>
+            </motion.div>
+          </section>
+
+          {/* Unlock Section */}
+          {unlocked && (
+            <motion.section
+              initial={{ opacity: 0, y: 40 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mx-auto max-w-4xl px-6 py-20"
+            >
+              <div className="p-8 bg-gradient-to-br from-purple-900/30 to-pink-900/30 rounded-2xl border border-purple-500/30 backdrop-blur-sm">
+                <h2 className="text-3xl font-bold mb-6">Your 3 Immediate Opportunities</h2>
+                <div className="space-y-4">
+                  <div className="p-4 bg-white/5 rounded-lg">
+                    <h3 className="font-semibold text-emerald-400 mb-2">1. Emotional Arbitrage Window</h3>
+                    <p className="text-gray-300">Your competitors are 73% fear-indexed while market sentiment is shifting optimistic. 48-hour opportunity.</p>
+                  </div>
+                  <div className="p-4 bg-white/5 rounded-lg">
+                    <h3 className="font-semibold text-cyan-400 mb-2">2. Trust Deficit Alert</h3>
+                    <p className="text-gray-300">Industry-wide anticipation spike with no fulfillment follow-through. First mover advantage available.</p>
+                  </div>
+                  <div className="p-4 bg-white/5 rounded-lg">
+                    <h3 className="font-semibold text-purple-400 mb-2">3. Joy Gap Identification</h3>
+                    <p className="text-gray-300">Your vertical shows 12% joy vs 31% category average. Specific intervention points mapped.</p>
+                  </div>
+                </div>
+                <div className="mt-8 text-center">
+                  <a
+                    href="/auth"
+                    className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 rounded-lg font-semibold hover:shadow-lg hover:shadow-purple-500/25 transition-all"
+                  >
+                    Get Full Analysis
+                    <ArrowRight className="w-4 h-4" />
+                  </a>
+                </div>
+              </div>
+            </motion.section>
+          )}
+
+          {/* Bottom CTA */}
+          <section className="mx-auto max-w-4xl px-6 py-20 text-center">
+            <motion.div
+              initial={{ opacity: 0 }}
+              whileInView={{ opacity: 1 }}
+              viewport={{ once: true }}
+            >
+              <h2 className="text-4xl font-bold mb-4">
+                Stop measuring. <span className="bg-gradient-to-r from-cyan-400 to-purple-400 bg-clip-text text-transparent">Start knowing.</span>
+              </h2>
+              <p className="text-xl text-gray-400 mb-8">
+                While others count clicks, we decode intentions.
+              </p>
+              <a
+                href="/auth"
+                className="inline-flex items-center gap-2 px-8 py-4 bg-white text-black rounded-xl font-bold text-lg hover:bg-gray-100 transition-colors"
+              >
+                Start Free Trial
+                <ArrowRight className="w-5 h-5" />
+              </a>
+            </motion.div>
+          </section>
         </div>
-      </footer>
-    </div>
+      </div>
     </>
   );
 }
