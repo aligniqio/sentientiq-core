@@ -11,7 +11,6 @@ import {
   Shield,
   Zap
 } from 'lucide-react';
-import DrBrutalFloating from './DrBrutalFloating';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -182,8 +181,6 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         </div>
       </main>
 
-      {/* Dr. Brutal - Omnipresent */}
-      {user && <DrBrutalFloating />}
 
       {/* Overlay for mobile */}
       {sidebarOpen && isMobile && (

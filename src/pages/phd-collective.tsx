@@ -184,16 +184,16 @@ const PhDCollective: React.FC = () => {
 
     // Neural network nodes
     const nodes: { x: number; y: number; vx: number; vy: number; connections: number[] }[] = [];
-    const nodeCount = 60; // More nodes for PhD collective
-    const connectionDistance = 200;
+    const nodeCount = 120; // Many more nodes for depth
+    const connectionDistance = 150; // Shorter connections for more intricate web
 
     // Initialize nodes
     for (let i = 0; i < nodeCount; i++) {
       nodes.push({
         x: Math.random() * canvas.width,
         y: Math.random() * canvas.height,
-        vx: (Math.random() - 0.5) * 0.3,
-        vy: (Math.random() - 0.5) * 0.3,
+        vx: (Math.random() - 0.5) * 0.15, // Slower movement for elegance
+        vy: (Math.random() - 0.5) * 0.15,
         connections: []
       });
     }
@@ -244,13 +244,13 @@ const PhDCollective: React.FC = () => {
         glow.addColorStop(1, 'rgba(147, 197, 253, 0)');
         ctx.fillStyle = glow;
         ctx.beginPath();
-        ctx.arc(node.x, node.y, 8, 0, Math.PI * 2);
+        ctx.arc(node.x, node.y, 3, 0, Math.PI * 2); // Much smaller glow
         ctx.fill();
         
         // Core node
         ctx.fillStyle = 'rgba(147, 197, 253, 1)';
         ctx.beginPath();
-        ctx.arc(node.x, node.y, 2, 0, Math.PI * 2);
+        ctx.arc(node.x, node.y, 0.8, 0, Math.PI * 2); // Tiny core nodes
         ctx.fill();
       });
 
@@ -383,22 +383,30 @@ Provide strategic advice from your area of expertise.`;
       {/* Neural Network Canvas */}
       <canvas 
         ref={canvasRef}
-        className="absolute inset-0 opacity-30"
+        className="absolute inset-0 opacity-20" // More subtle neural network
         style={{ mixBlendMode: 'screen' }}
       />
       
-      {/* Subtle backlighting effect */}
-      <div className="absolute inset-0">
-        <div className="absolute top-0 left-1/4 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl" />
-        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl" />
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-gradient-radial from-blue-400/5 via-transparent to-transparent rounded-full blur-2xl" />
+      {/* Luxe backlighting effect */}
+      <div className="absolute inset-0 pointer-events-none">
+        {/* Primary colored backlight - top left */}
+        <div className="absolute top-20 left-10 w-[500px] h-[500px] bg-gradient-to-br from-violet-600/8 via-purple-500/5 to-transparent rounded-full blur-[100px]" />
+        
+        {/* Secondary colored backlight - bottom right */}
+        <div className="absolute bottom-32 right-20 w-[600px] h-[600px] bg-gradient-to-tl from-cyan-500/6 via-blue-500/4 to-transparent rounded-full blur-[120px]" />
+        
+        {/* Subtle center glow */}
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-gradient-radial from-indigo-400/3 via-transparent to-transparent rounded-full blur-[80px]" />
+        
+        {/* Extra accent - small but bright */}
+        <div className="absolute top-1/3 right-1/3 w-[300px] h-[300px] bg-gradient-radial from-pink-400/5 to-transparent rounded-full blur-[60px]" />
       </div>
       
-      <div className="max-w-[1600px] mx-auto w-full px-8">
+      <div className="max-w-[1600px] mx-auto w-full px-4 md:px-6 lg:px-8">
         <div className="pt-8">
           <PageHeader 
             title="PhD Collective™" 
-            subtitle="The Crystal Palace of Marketing Truth"
+            subtitle="The $5.4 Million Payroll You'll Never Have to Pay"
           />
           
           {/* Usage Indicator */}
@@ -425,10 +433,10 @@ Provide strategic advice from your area of expertise.`;
           )}
         </div>
 
-        <div className="flex pb-8 flex-col lg:flex-row gap-8" style={{ height: 'calc(100vh - 10rem)' }}>
+        <div className="flex pb-8 flex-col lg:flex-row gap-4 lg:gap-6" style={{ height: 'calc(100vh - 10rem)' }}>
         
         {/* PhD Cards Grid - LEFT SIDE */}
-        <div className="flex-1 lg:flex-[2] flex flex-col">
+        <div className="flex-1 lg:flex-[2] flex flex-col overflow-hidden">
           <div className="mb-3 flex gap-3 relative z-50">
             <button
               onClick={() => {
@@ -449,21 +457,21 @@ Provide strategic advice from your area of expertise.`;
               Clear Selection
             </button>
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 flex-1 overflow-y-auto" style={{ gridAutoRows: 'minmax(180px, 1fr)' }}>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 flex-1 overflow-y-auto overflow-x-hidden p-1" style={{ gridAutoRows: 'minmax(180px, 1fr)' }}>
           {PHD_FACULTY.map((phd) => {
             const isSelected = selectedPhDs.has(phd.id);
             
             return (
               <motion.div
                 key={phd.id}
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
+                whileHover={{ scale: 1 }}
+                whileTap={{ scale: 0.95 }}
                 onClick={() => togglePhD(phd.id)}
                 className={`relative cursor-pointer h-full ${
-                  isSelected ? 'ring-4 ring-green-500/50' : ''
-                } rounded-2xl`}
+                  isSelected ? 'ring-1 ring-green-500/50 ring-inset' : ''
+                } rounded-xl`}
               >
-                <div className="h-full backdrop-blur-xl bg-white/5 rounded-2xl p-3 relative overflow-hidden flex flex-col">
+                <div className="h-full backdrop-blur-xl bg-white/5 rounded-xl p-2 md:p-3 relative overflow-hidden flex flex-col">
                   {/* Selection Indicator */}
                   <div className="absolute top-3 right-3 z-20">
                     {isSelected ? (

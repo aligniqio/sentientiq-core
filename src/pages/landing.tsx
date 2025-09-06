@@ -98,6 +98,53 @@ export default function Landing() {
         </div>
       </section>
 
+      {/* PhD COLLECTIVE VALUE PROPOSITION */}
+      <section className="mx-auto max-w-6xl px-6 pb-12">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.2 }}
+          className="rounded-3xl bg-gradient-to-br from-purple-900/30 via-indigo-900/30 to-blue-900/30 backdrop-blur-xl p-8 border border-purple-500/30 shadow-2xl shadow-purple-500/10"
+        >
+          <div className="text-center mb-8">
+            <h2 className="text-4xl font-bold mb-4 bg-gradient-to-r from-purple-400 via-pink-400 to-indigo-400 bg-clip-text text-transparent">
+              24,000 PhD Equivalents
+            </h2>
+            <p className="text-2xl text-white/90 font-semibold mb-2">
+              320 Billion Training Tokens
+            </p>
+            <p className="text-xl text-white/70">
+              The largest concentration of analytical intelligence ever assembled for business strategy
+            </p>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <div className="text-center">
+              <div className="text-3xl font-bold text-purple-400">12</div>
+              <div className="text-sm text-white/60">Specialized AI Agents</div>
+            </div>
+            <div className="text-center">
+              <div className="text-3xl font-bold text-purple-400">240B</div>
+              <div className="text-sm text-white/60">Words Processed</div>
+            </div>
+            <div className="text-center">
+              <div className="text-3xl font-bold text-purple-400">24,000</div>
+              <div className="text-sm text-white/60">PhD Equivalents</div>
+            </div>
+          </div>
+          
+          <div className="text-center">
+            <p className="text-lg font-bold text-white mb-2">
+              This isn't marketing. It's math.
+            </p>
+            <p className="text-sm text-white/60">
+              No single human consultant, no matter how brilliant, has read this much,<br />
+              analyzed this deeply, or can synthesize this broadly.
+            </p>
+          </div>
+        </motion.div>
+      </section>
+
       {/* PROOF OF LIFE */}
       <section className="mx-auto max-w-6xl px-6 pb-8">
         <div className="rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur-xl">
