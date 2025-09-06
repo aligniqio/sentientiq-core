@@ -19,6 +19,12 @@
   status = 200
   force = true
 
+[[redirects]]
+  from = "/api/evi/*"
+  to = "http://3.15.29.138:8001/api/evi/:splat"
+  status = 200
+  force = true
+
 # SPA fallback
 [[redirects]]
   from = "/*"
