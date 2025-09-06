@@ -14,11 +14,20 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
 // Request current audit status when popup opens
 chrome.tabs.query({active: true, currentWindow: true}, (tabs) => {
-  chrome.tabs.sendMessage(tabs[0].id, {type: 'GET_REPORT'}, (response) => {
-    if (response && response.report) {
-      updateUI(response.report);
-    }
-  });
+  if (tabs[0] && tabs[0].id) {
+    chrome.tabs.sendMessage(tabs[0].id, {type: 'GET_REPORT'}, (response) => {
+      // Check for chrome.runtime.lastError to prevent console errors
+      if (chrome.runtime.lastError) {
+        // Content script not loaded on this tab - show default state
+        document.getElementById('status').textContent = 'INACTIVE';
+        document.getElementById('message').textContent = 'Extension not active on this page';
+        return;
+      }
+      if (response && response.report) {
+        updateUI(response.report);
+      }
+    });
+  }
 });
 
 function updateUI(report) {
@@ -45,18 +54,16 @@ function updateUI(report) {
     cmoMessageEl.style.display = 'block';
     cmoTextEl.textContent = `Your "${report.platform}" platform is using Math.random() to generate "AI-powered intent scores". You have ${report.mathRandomCalls} documented instances. This is not machine learning. This is not AI. This is a random number generator charging you enterprise prices.`;
     
-  } else if (report.verdict.includes('SUSPICIOUS')) {
-    statusEl.className = 'verdict-status suspicious';
-    statusEl.textContent = 'SUSPICIOUS';
-    messageEl.textContent = 'Multiple anomalies detected. Investigation recommended.';
-    
-    cmoMessageEl.style.display = 'block';
-    cmoTextEl.textContent = `${report.suspiciousPatterns.length} suspicious patterns detected. Recommend running the Replay Test to verify data consistency. If "historical" data changes on refresh, you're looking at generated data, not real intelligence.`;
-    
   } else {
     statusEl.className = 'verdict-status clean';
     statusEl.textContent = 'MONITORING';
-    messageEl.textContent = 'No conclusive evidence detected yet.';
+    messageEl.textContent = 'No fraud detected';
+    
+    // Only show CMO message if we have actual patterns to report
+    if (report.suspiciousPatterns && report.suspiciousPatterns.length > 0) {
+      cmoMessageEl.style.display = 'block';
+      cmoTextEl.textContent = `DataTruth Pro is monitoring for Math.random() usage. Try the Replay Test to check data consistency.`;
+    }
   }
   
   // Update evidence
@@ -101,10 +108,17 @@ document.getElementById('replayButton').addEventListener('click', () => {
 // Auto-refresh every 5 seconds to get latest data
 setInterval(() => {
   chrome.tabs.query({active: true, currentWindow: true}, (tabs) => {
-    chrome.tabs.sendMessage(tabs[0].id, {type: 'GET_REPORT'}, (response) => {
-      if (response && response.report) {
-        updateUI(response.report);
-      }
-    });
+    if (tabs[0] && tabs[0].id) {
+      chrome.tabs.sendMessage(tabs[0].id, {type: 'GET_REPORT'}, (response) => {
+        // Check for chrome.runtime.lastError to prevent console errors
+        if (chrome.runtime.lastError) {
+          // Content script not loaded - don't update
+          return;
+        }
+        if (response && response.report) {
+          updateUI(response.report);
+        }
+      });
+    }
   });
 }, 5000);

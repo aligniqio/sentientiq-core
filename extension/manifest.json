@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Intent Data Auditor",
+  "name": "DataTruth Pro",
   "version": "1.0.0",
-  "description": "Forensic analysis tool for marketing data integrity. Detects Math.random() masquerading as AI.",
+  "description": "Enterprise-grade verification for marketing intelligence platforms. Detects fraudulent scoring algorithms.",
   "permissions": [
     "activeTab",
     "storage",

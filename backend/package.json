@@ -1,0 +1,26 @@
+{
+  "name": "sentientiq-backend",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Backend services for SentientIQ - Real intelligence, not Math.random()",
+  "scripts": {
+    "start:sage": "node sage-api.js",
+    "start:posts": "node posts-server.cjs",
+    "start:all": "npm run start:sage & npm run start:posts",
+    "dev:sage": "node --watch sage-api.js"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.32.1",
+    "@supabase/supabase-js": "^2.45.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "node-fetch": "^3.3.2",
+    "openai": "^4.73.1",
+    "stripe": "^18.5.0",
+    "svix": "^1.76.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0"
+  }
+}

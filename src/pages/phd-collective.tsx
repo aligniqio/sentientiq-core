@@ -1,0 +1,636 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { motion } from 'framer-motion';
+import { CheckCircle, Brain } from 'lucide-react';
+import PageHeader from '../components/PageHeader';
+import { useUser } from '@clerk/clerk-react';
+import { useTrackUsage, useSubscription } from '../hooks/useSubscription';
+
+const SAGE_API = import.meta.env.VITE_SAGE_API_URL || 'http://localhost:8004';
+
+// Mapping between UI IDs and backend agent keys
+const AGENT_MAPPING: Record<string, string> = {
+  'cmo': 'strategic',
+  'psychology': 'emotion', 
+  'data': 'pattern',
+  'identity': 'identity',
+  'creative': 'chaos',
+  'budget': 'roi',
+  'competitive': 'warfare',
+  'channel': 'omni',
+  'onboarding': 'first',
+  'attribution': 'truth',
+  'sage': 'brutal',
+  'learning': 'context'
+};
+
+// The 12 PhD Faculty
+const PHD_FACULTY = [
+  {
+    id: 'cmo',
+    name: 'Dr. Strategic',
+    title: 'Chief Marketing Officer',
+    degree: 'PhD Marketing Strategy, Wharton',
+    specialty: 'Market orchestration & resource allocation',
+    icon: '👔',
+    catchphrase: 'Revenue is a lagging indicator of emotion',
+    color: 'from-purple-900 to-indigo-900'
+  },
+  {
+    id: 'psychology',
+    name: 'Dr. Emotion',
+    title: 'Consumer Psychology',
+    degree: 'PhD Behavioral Economics, Stanford',
+    specialty: 'Emotional triggers & decision architecture',
+    icon: '🧠',
+    catchphrase: 'They buy feelings, not features',
+    color: 'from-pink-600 to-rose-600'
+  },
+  {
+    id: 'data',
+    name: 'Dr. Pattern',
+    title: 'Data Science Lead',
+    degree: 'PhD Machine Learning, MIT',
+    specialty: 'Predictive modeling & anomaly detection',
+    icon: '📊',
+    catchphrase: 'The data never lies, but it often misleads',
+    color: 'from-blue-600 to-cyan-600'
+  },
+  {
+    id: 'identity',
+    name: 'Dr. Identity',
+    title: 'CDP Architect',
+    degree: 'PhD Information Systems, Carnegie Mellon',
+    specialty: 'Identity resolution & data unification',
+    icon: '🔍',
+    catchphrase: 'One customer, infinite signals',
+    color: 'from-green-600 to-emerald-600'
+  },
+  {
+    id: 'creative',
+    name: 'Dr. Chaos',
+    title: 'Creative Mutation',
+    degree: 'PhD Cognitive Science, Berkeley',
+    specialty: 'Creative optimization & A/B evolution',
+    icon: '🎨',
+    catchphrase: 'Best practices are where innovation goes to die',
+    color: 'from-orange-600 to-yellow-600'
+  },
+  {
+    id: 'budget',
+    name: 'Dr. ROI',
+    title: 'Budget Optimization',
+    degree: 'PhD Financial Engineering, Chicago',
+    specialty: 'Resource allocation & efficiency metrics',
+    icon: '💰',
+    catchphrase: 'Every dollar has an emotion attached',
+    color: 'from-yellow-600 to-amber-600'
+  },
+  {
+    id: 'competitive',
+    name: 'Dr. Warfare',
+    title: 'Competitive Intelligence',
+    degree: 'PhD Strategic Management, INSEAD',
+    specialty: 'Market dynamics & competitive positioning',
+    icon: '⚔️',
+    catchphrase: 'Your competition is already using AI wrong',
+    color: 'from-red-600 to-red-800'
+  },
+  {
+    id: 'channel',
+    name: 'Dr. Omni',
+    title: 'Channel Optimizer',
+    degree: 'PhD Media Studies, Northwestern',
+    specialty: 'Cross-channel orchestration & attribution',
+    icon: '📡',
+    catchphrase: 'Channels are dead, experiences are forever',
+    color: 'from-teal-600 to-blue-600'
+  },
+  {
+    id: 'onboarding',
+    name: 'Dr. First',
+    title: 'Onboarding Intelligence',
+    degree: 'PhD User Experience, Michigan',
+    specialty: 'First impressions & activation metrics',
+    icon: '🚀',
+    catchphrase: 'You have 3 seconds to matter',
+    color: 'from-indigo-600 to-purple-600'
+  },
+  {
+    id: 'attribution',
+    name: 'Dr. Truth',
+    title: 'Attribution Science',
+    degree: 'PhD Statistical Analysis, Harvard',
+    specialty: 'Multi-touch attribution & causality',
+    icon: '🎯',
+    catchphrase: 'Last-click attribution is astrology for marketers',
+    color: 'from-gray-600 to-gray-800'
+  },
+  {
+    id: 'sage',
+    name: 'Dr. Brutal',
+    title: 'Sage Intelligence',
+    degree: 'PhD Philosophy of Mind, Oxford',
+    specialty: 'Uncomfortable truths & reality checks',
+    icon: '🔮',
+    catchphrase: 'Your KPIs are lying to make you feel better',
+    color: 'from-purple-800 to-pink-800'
+  },
+  {
+    id: 'learning',
+    name: 'Dr. Context',
+    title: 'Learning Engine',
+    degree: 'PhD Neural Networks, Toronto',
+    specialty: 'Pattern learning & adaptation',
+    icon: '🧬',
+    catchphrase: 'Every interaction teaches us who you really are',
+    color: 'from-emerald-600 to-teal-600'
+  }
+];
+
+const PhDCollective: React.FC = () => {
+  const { user } = useUser();
+  const { trackQuestion } = useTrackUsage();
+  const subscription = useSubscription();
+  const [selectedPhDs, setSelectedPhDs] = useState<Set<string>>(new Set()); // Start with none selected
+  const [question, setQuestion] = useState('');
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [debateResults, setDebateResults] = useState<any>(null);
+  const [showResults, setShowResults] = useState(false);
+  const [showAnnouncement, setShowAnnouncement] = useState(false);
+  const [conversationHistory, setConversationHistory] = useState<any[]>([]);
+  const [businessContext] = useState({
+    company: 'SentientIQ',
+    industry: 'MarTech',
+    stage: 'Destroying Math.random() industry',
+    insideJokes: ['Math.random() detection', 'Kavita vanity awards', 'Baked alaska celebration']
+  });
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  // Neural Network Animation
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    // Set canvas size
+    const resizeCanvas = () => {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    };
+    resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
+
+    // Neural network nodes
+    const nodes: { x: number; y: number; vx: number; vy: number; connections: number[] }[] = [];
+    const nodeCount = 60; // More nodes for PhD collective
+    const connectionDistance = 200;
+
+    // Initialize nodes
+    for (let i = 0; i < nodeCount; i++) {
+      nodes.push({
+        x: Math.random() * canvas.width,
+        y: Math.random() * canvas.height,
+        vx: (Math.random() - 0.5) * 0.3,
+        vy: (Math.random() - 0.5) * 0.3,
+        connections: []
+      });
+    }
+
+    // Animation loop
+    const animate = () => {
+      ctx.fillStyle = 'rgba(0, 0, 20, 0.03)'; // Darker fade for blue theme
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Update and draw nodes
+      nodes.forEach((node, i) => {
+        // Update position
+        node.x += node.vx;
+        node.y += node.vy;
+
+        // Bounce off walls
+        if (node.x < 0 || node.x > canvas.width) node.vx *= -1;
+        if (node.y < 0 || node.y > canvas.height) node.vy *= -1;
+
+        // Find connections
+        node.connections = [];
+        nodes.forEach((other, j) => {
+          if (i !== j) {
+            const dx = other.x - node.x;
+            const dy = other.y - node.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            if (distance < connectionDistance) {
+              node.connections.push(j);
+              
+              // Draw connection with gradient
+              const opacity = (1 - distance / connectionDistance) * 0.3;
+              const gradient = ctx.createLinearGradient(node.x, node.y, other.x, other.y);
+              gradient.addColorStop(0, `rgba(59, 130, 246, ${opacity})`); // Blue
+              gradient.addColorStop(1, `rgba(147, 51, 234, ${opacity})`); // Purple
+              ctx.strokeStyle = gradient;
+              ctx.lineWidth = 1;
+              ctx.beginPath();
+              ctx.moveTo(node.x, node.y);
+              ctx.lineTo(other.x, other.y);
+              ctx.stroke();
+            }
+          }
+        });
+
+        // Draw node with glow
+        const glow = ctx.createRadialGradient(node.x, node.y, 0, node.x, node.y, 8);
+        glow.addColorStop(0, 'rgba(147, 197, 253, 0.8)');
+        glow.addColorStop(1, 'rgba(147, 197, 253, 0)');
+        ctx.fillStyle = glow;
+        ctx.beginPath();
+        ctx.arc(node.x, node.y, 8, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Core node
+        ctx.fillStyle = 'rgba(147, 197, 253, 1)';
+        ctx.beginPath();
+        ctx.arc(node.x, node.y, 2, 0, Math.PI * 2);
+        ctx.fill();
+      });
+
+      requestAnimationFrame(animate);
+    };
+
+    animate();
+
+    return () => {
+      window.removeEventListener('resize', resizeCanvas);
+    };
+  }, []);
+
+  const togglePhD = (id: string) => {
+    const newSelected = new Set(selectedPhDs);
+    if (newSelected.has(id)) {
+      newSelected.delete(id);
+    } else {
+      newSelected.add(id);
+    }
+    setSelectedPhDs(newSelected);
+  };
+
+  const selectAll = () => {
+    console.log('Selecting all PhDs');
+    const allIds = PHD_FACULTY.map(phd => phd.id);
+    console.log('All IDs:', allIds);
+    const newSet = new Set(allIds);
+    console.log('New Set size:', newSet.size);
+    setSelectedPhDs(newSet);
+    // Force a check after state update
+    setTimeout(() => {
+      console.log('Selected PhDs after update:', selectedPhDs.size);
+    }, 100);
+  };
+
+  const clearAll = () => {
+    console.log('Clearing all selections');
+    setSelectedPhDs(new Set());
+  };
+
+  const askAdvisors = async () => {
+    if (!question.trim() || selectedPhDs.size === 0) return;
+
+    // Check usage limits
+    if (!subscription.canAsk) {
+      alert(`You've reached your monthly limit of ${subscription.questionsLimit} questions. Please upgrade your plan to continue.`);
+      window.location.href = '/billing';
+      return;
+    }
+
+    setIsAnalyzing(true);
+    setShowResults(false);
+
+    // Track usage
+    await trackQuestion();
+
+    // Add to conversation history
+    const newQuestion = {
+      type: 'question',
+      content: question,
+      timestamp: new Date().toISOString()
+    };
+    
+    setConversationHistory(prev => [...prev, newQuestion]);
+    
+    // Clear the input field
+    setQuestion('');
+
+    try {
+      // Map UI IDs to backend agent names
+      const agents = Array.from(selectedPhDs).map(id => AGENT_MAPPING[id] || id);
+      
+      // Include business context in the question
+      const contextualQuestion = `
+Context: You are advising ${businessContext.company}, a ${businessContext.industry} company currently ${businessContext.stage}.
+Previous discussions included: ${businessContext.insideJokes.join(', ')}.
+
+Question: ${question}
+
+Provide strategic advice from your area of expertise.`;
+      
+      const response = await fetch(`${SAGE_API}/api/sage/debate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: contextualQuestion,
+          agents,
+          context: businessContext
+        })
+      });
+
+      const data = await response.json();
+      console.log('API Response:', data); // Debug log
+      if (data.success) {
+        setDebateResults(data.debate);
+        setShowAnnouncement(true);
+        setTimeout(() => {
+          setShowAnnouncement(false);
+          setShowResults(true);
+        }, 2500); // Show announcement for 2.5 seconds
+        console.log('Debate results set:', data.debate); // Debug log
+        
+        // Add response to history
+        const newResponse = {
+          type: 'response',
+          content: data.debate,
+          timestamp: new Date().toISOString()
+        };
+        setConversationHistory(prev => [...prev, newResponse]);
+        
+        // Store in Supabase for persistence
+        storeConversation(newQuestion, newResponse);
+      }
+    } catch (error) {
+      console.error('Advisory session failed:', error);
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+
+  const storeConversation = async (question: any, response: any) => {
+    // TODO: Store in Supabase for context persistence
+    console.log('Storing conversation for future context:', { question, response });
+  };
+
+
+  return (
+    <div className="min-h-screen bg-black relative overflow-hidden">
+      {/* Neural Network Canvas */}
+      <canvas 
+        ref={canvasRef}
+        className="absolute inset-0 opacity-30"
+        style={{ mixBlendMode: 'screen' }}
+      />
+      
+      {/* Subtle backlighting effect */}
+      <div className="absolute inset-0">
+        <div className="absolute top-0 left-1/4 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl" />
+        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl" />
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-gradient-radial from-blue-400/5 via-transparent to-transparent rounded-full blur-2xl" />
+      </div>
+      
+      <div className="max-w-[1600px] mx-auto w-full px-8">
+        <div className="pt-8">
+          <PageHeader 
+            title="PhD Collective™" 
+            subtitle="The Crystal Palace of Marketing Truth"
+          />
+          
+          {/* Usage Indicator */}
+          {subscription.tier === 'free' && (
+            <div className="mt-4 mb-2 flex justify-center">
+              <div className="bg-white/5 backdrop-blur-xl rounded-lg px-4 py-2 border border-white/10">
+                <div className="flex items-center gap-3">
+                  <span className="text-sm text-white/60">Questions Used:</span>
+                  <span className="text-sm font-bold text-white">
+                    {subscription.questionsUsed} / {subscription.questionsLimit}
+                  </span>
+                  {subscription.questionsUsed >= subscription.questionsLimit && (
+                    <span className="text-xs text-red-400">Limit Reached</span>
+                  )}
+                </div>
+                <div className="mt-1 h-1 bg-white/10 rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-gradient-to-r from-purple-500 to-blue-500 transition-all"
+                    style={{ width: `${Math.min(100, (subscription.questionsUsed / subscription.questionsLimit) * 100)}%` }}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="flex pb-8 flex-col lg:flex-row gap-8" style={{ height: 'calc(100vh - 10rem)' }}>
+        
+        {/* PhD Cards Grid - LEFT SIDE */}
+        <div className="flex-1 lg:flex-[2] flex flex-col">
+          <div className="mb-3 flex gap-3 relative z-50">
+            <button
+              onClick={() => {
+                console.log('BUTTON CLICKED - Summon All');
+                selectAll();
+              }}
+              className="px-3 py-1.5 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-lg font-medium hover:from-purple-700 hover:to-indigo-700 transition-all text-sm"
+            >
+              Summon Entire Collective
+            </button>
+            <button
+              onClick={() => {
+                console.log('BUTTON CLICKED - Clear All');
+                clearAll();
+              }}
+              className="px-3 py-1.5 bg-white/10 backdrop-blur-xl text-white/80 rounded-lg font-medium hover:bg-white/20 transition-all text-sm"
+            >
+              Clear Selection
+            </button>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 flex-1 overflow-y-auto" style={{ gridAutoRows: 'minmax(180px, 1fr)' }}>
+          {PHD_FACULTY.map((phd) => {
+            const isSelected = selectedPhDs.has(phd.id);
+            
+            return (
+              <motion.div
+                key={phd.id}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => togglePhD(phd.id)}
+                className={`relative cursor-pointer h-full ${
+                  isSelected ? 'ring-4 ring-green-500/50' : ''
+                } rounded-2xl`}
+              >
+                <div className="h-full backdrop-blur-xl bg-white/5 rounded-2xl p-3 relative overflow-hidden flex flex-col">
+                  {/* Selection Indicator */}
+                  <div className="absolute top-3 right-3 z-20">
+                    {isSelected ? (
+                      <CheckCircle className="h-6 w-6 text-green-400" />
+                    ) : (
+                      <div className="h-6 w-6 border-2 border-white/30 rounded-full" />
+                    )}
+                  </div>
+
+                  {/* PhD Info */}
+                  <div className="relative z-10 flex flex-col h-full">
+                    <div className="text-3xl mb-1">{phd.icon}</div>
+                    <h3 className="text-white font-bold text-sm mb-1">{phd.name}</h3>
+                    <p className="text-white/60 text-xs mb-2">{phd.title}</p>
+                    <p className="text-white/70 text-xs italic flex-grow">"{phd.catchphrase}"</p>
+                    
+                    {/* Specialty */}
+                    <div className="mt-2 pt-2 border-t border-white/10">
+                      <p className="text-white/70 text-xs">{phd.specialty}</p>
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            );
+          })}
+          </div>
+        </div>
+
+        {/* RIGHT SIDE - 2 Sections like in mockup */}
+        <div className="lg:w-96 relative z-20">
+          <div className="flex flex-col gap-6 h-full">
+            
+            {/* TOP SECTION - Output (Always visible) */}
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              className="flex-1 bg-white/5 backdrop-blur-xl rounded-xl p-6 overflow-y-auto"
+            >
+              {showAnnouncement ? (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, y: -20 }}
+                  className="flex items-center justify-center h-full"
+                >
+                  <div className="text-center">
+                    <motion.div
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.3 }}
+                      className="text-3xl font-bold bg-gradient-to-r from-purple-400 to-indigo-400 bg-clip-text text-transparent mb-2"
+                    >
+                      The Collective Has Spoken
+                    </motion.div>
+                    <motion.div
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      transition={{ delay: 0.6, type: "spring" }}
+                      className="text-white/60 text-sm"
+                    >
+                      Preparing wisdom...
+                    </motion.div>
+                  </div>
+                </motion.div>
+              ) : showResults && debateResults ? (
+                <>
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="text-white/60 text-xs mb-3"
+                  >
+                    COLLECTIVE SYNTHESIS
+                  </motion.div>
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.2 }}
+                    className="text-white/90 text-sm leading-relaxed"
+                  >
+                    {debateResults.collective_synthesis || 
+                     debateResults.synthesis || 
+                     debateResults.message || 
+                     JSON.stringify(debateResults, null, 2)}
+                  </motion.div>
+                  
+                  {/* Emotional State Badge */}
+                  {(debateResults.debate?.analysis?.emotional_state || 
+                    debateResults.debate?.perspectives?.[0]?.analysis?.emotional_state) && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.5 }}
+                      className="mt-6 pt-4 border-t border-white/10"
+                    >
+                      <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-purple-500/20 to-indigo-500/20 rounded-lg backdrop-blur-sm">
+                        <div className="w-2 h-2 rounded-full bg-gradient-to-r from-purple-400 to-indigo-400 animate-pulse" />
+                        <span className="text-xs font-medium text-white/90">
+                          {debateResults.debate?.analysis?.emotional_state || 
+                           debateResults.debate?.perspectives?.[0]?.analysis?.emotional_state}
+                        </span>
+                        <span className="text-xs text-white/60">
+                          {Math.round((debateResults.debate?.analysis?.emotional_confidence || 
+                                      debateResults.debate?.perspectives?.[0]?.analysis?.emotional_confidence || 0.85) * 100)}% confidence
+                        </span>
+                      </div>
+                    </motion.div>
+                  )}
+                </>
+              ) : (
+                <div className="text-white/40 text-sm text-center flex flex-col items-center justify-center h-full">
+                  {isAnalyzing ? (
+                    <>
+                      <Brain className="w-12 h-12 text-purple-400/30 mb-4 animate-pulse" />
+                      <div className="mb-2">The faculty is deliberating...</div>
+                      <div className="text-xs">This may take a moment</div>
+                    </>
+                  ) : (
+                    <>
+                      <Brain className="w-16 h-16 text-purple-400/20 mb-4" />
+                      <div className="text-white/60 text-sm mb-2">The faculty is ready...</div>
+                      <div className="text-white/80 text-lg">Ask a question to begin the debate.</div>
+                    </>
+                  )}
+                </div>
+              )}
+            </motion.div>
+            
+            {/* BOTTOM SECTION - Input */}
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              className="bg-white/5 backdrop-blur-xl rounded-xl p-6 relative z-50"
+            >
+              <textarea
+                placeholder="e.g., 'Should we launch before Black Friday?'"
+                value={question}
+                onChange={(e) => setQuestion(e.target.value)}
+                rows={3}
+                className="w-full px-4 py-3 bg-black/30 rounded-lg text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none mb-4"
+              />
+
+              <button
+                onClick={() => {
+                  console.log('SUBMIT CLICKED!');
+                  console.log('Question:', question);
+                  console.log('Selected PhDs:', Array.from(selectedPhDs));
+                  console.log('Selected PhDs size:', selectedPhDs.size);
+                  console.log('Is Analyzing:', isAnalyzing);
+                  askAdvisors();
+                }}
+                disabled={isAnalyzing || selectedPhDs.size === 0 || !question.trim()}
+                className="w-full px-6 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-lg font-medium hover:from-purple-700 hover:to-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                title={`Analyzing: ${isAnalyzing}, PhDs: ${selectedPhDs.size}, Question: ${question ? question.length : 0} chars`}
+              >
+                {isAnalyzing ? 'Analyzing...' : 'Start a Debate'}
+              </button>
+              
+              <div className="mt-3 text-xs text-white/40">
+                Tip: Cmd + Enter to ask
+              </div>
+            </motion.div>
+          </div>
+        </div>
+      </div>
+    </div>
+    </div>
+  );
+};
+
+export default PhDCollective;

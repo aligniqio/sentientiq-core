@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Test Page - Intent Data Simulator</title>
+<style>
+  body {
+    font-family: system-ui;
+    padding: 40px;
+    background: #f5f5f5;
+  }
+  .container {
+    max-width: 800px;
+    margin: 0 auto;
+    background: white;
+    padding: 30px;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+  }
+  h1 { color: #333; }
+  .fake-vendor {
+    background: #f0f0f0;
+    padding: 20px;
+    margin: 20px 0;
+    border-radius: 5px;
+  }
+  button {
+    padding: 10px 20px;
+    background: #007bff;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    margin: 5px;
+  }
+  button:hover {
+    background: #0056b3;
+  }
+  .alert {
+    padding: 15px;
+    margin: 20px 0;
+    border-radius: 5px;
+  }
+  .alert-danger {
+    background: #fee;
+    border: 1px solid #fcc;
+    color: #c00;
+  }
+  .code {
+    background: #f4f4f4;
+    padding: 10px;
+    border-radius: 3px;
+    font-family: monospace;
+    margin: 10px 0;
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <h1>🔍 Intent Data Auditor - Test Page</h1>
+  
+  <div class="alert alert-danger">
+    <strong>⚠️ Test Environment</strong><br>
+    This page simulates various intent data vendor behaviors.<br>
+    The extension should detect Math.random() usage in real-time.
+  </div>
+
+  <h2>Simulated Vendor: Generic Intent Scoring Platform</h2>
+  
+  <div class="fake-vendor">
+    <h3>Intent Score Generator</h3>
+    <p>Click to generate "AI-powered" intent scores:</p>
+    
+    <button onclick="generateFakeIntent()">Generate Intent Score</button>
+    <button onclick="generateBulkScores()">Generate 10 Scores</button>
+    <button onclick="runPredictiveModel()">Run "Predictive Model"</button>
+    
+    <div id="output" class="code"></div>
+  </div>
+
+  <div class="fake-vendor">
+    <h3>Visitor Identification "AI"</h3>
+    <button onclick="identifyVisitor()">Identify Current Visitor</button>
+    <button onclick="generateLeadScore()">Calculate Lead Score</button>
+    
+    <div id="visitor-output" class="code"></div>
+  </div>
+
+  <div class="fake-vendor">
+    <h3>Real Data (Control)</h3>
+    <button onclick="getRealData()">Get Actual Timestamp</button>
+    <button onclick="getRealMetrics()">Get Real Metrics</button>
+    
+    <div id="real-output" class="code"></div>
+  </div>
+</div>
+
+<script>
+// INTENTIONALLY USING Math.random() TO TEST DETECTION
+
+// Fake intent score generator (what vendors might do)
+function generateFakeIntent() {
+  const score = Math.random() * 100; // THIS SHOULD BE DETECTED!
+  const intent = Math.random() > 0.5 ? 'High' : 'Low'; // THIS TOO!
+  
+  document.getElementById('output').innerHTML = `
+    <strong>Intent Score:</strong> ${score.toFixed(2)}<br>
+    <strong>Intent Level:</strong> ${intent}<br>
+    <strong>Confidence:</strong> ${(Math.random() * 100).toFixed(1)}%<br>
+    <small>Generated at: ${new Date().toISOString()}</small>
+  `;
+  
+  // Simulate API call
+  console.log('Intent API Response:', {
+    score: score,
+    intent: intent,
+    algorithm: 'proprietary-ai-v2' // LOL
+  });
+}
+
+// Generate multiple scores (batch fraud)
+function generateBulkScores() {
+  let scores = [];
+  for(let i = 0; i < 10; i++) {
+    scores.push({
+      company: `Company_${Math.floor(Math.random() * 1000)}`,
+      score: Math.random() * 100,
+      intent: Math.random() > 0.5 ? 'Active' : 'Passive'
+    });
+  }
+  
+  document.getElementById('output').innerHTML = '<strong>Bulk Scores:</strong><br>' +
+    scores.map(s => `${s.company}: ${s.score.toFixed(1)} (${s.intent})`).join('<br>');
+}
+
+// Fake predictive model
+function runPredictiveModel() {
+  const prediction = {
+    buyProbability: Math.random(),
+    timeToClose: Math.floor(Math.random() * 90),
+    dealSize: Math.floor(Math.random() * 100000),
+    nextBestAction: ['Email', 'Call', 'Demo', 'Wait'][Math.floor(Math.random() * 4)]
+  };
+  
+  document.getElementById('output').innerHTML = `
+    <strong>AI Prediction Results:</strong><br>
+    Buy Probability: ${(prediction.buyProbability * 100).toFixed(1)}%<br>
+    Time to Close: ${prediction.timeToClose} days<br>
+    Predicted Deal Size: $${prediction.dealSize.toLocaleString()}<br>
+    Recommended Action: ${prediction.nextBestAction}
+  `;
+}
+
+// Fake visitor identification
+function identifyVisitor() {
+  const companies = ['Acme Corp', 'TechCo', 'Enterprise Inc', 'Global Solutions'];
+  const visitor = {
+    company: companies[Math.floor(Math.random() * companies.length)],
+    industry: ['SaaS', 'Finance', 'Healthcare', 'Retail'][Math.floor(Math.random() * 4)],
+    employees: Math.floor(Math.random() * 10000),
+    intent_score: Math.random() * 100
+  };
+  
+  document.getElementById('visitor-output').innerHTML = `
+    <strong>Visitor Identified:</strong><br>
+    Company: ${visitor.company}<br>
+    Industry: ${visitor.industry}<br>
+    Size: ${visitor.employees} employees<br>
+    Intent Score: ${visitor.intent_score.toFixed(1)}
+  `;
+}
+
+// Fake lead scoring
+function generateLeadScore() {
+  const leadScore = {
+    demographic: Math.random() * 40,
+    behavioral: Math.random() * 30,
+    intent: Math.random() * 30,
+    total: 0
+  };
+  leadScore.total = leadScore.demographic + leadScore.behavioral + leadScore.intent;
+  
+  document.getElementById('visitor-output').innerHTML = `
+    <strong>Lead Score Breakdown:</strong><br>
+    Demographic: ${leadScore.demographic.toFixed(1)}/40<br>
+    Behavioral: ${leadScore.behavioral.toFixed(1)}/30<br>
+    Intent: ${leadScore.intent.toFixed(1)}/30<br>
+    <strong>Total: ${leadScore.total.toFixed(1)}/100</strong>
+  `;
+}
+
+// Real data functions (no Math.random())
+function getRealData() {
+  const now = new Date();
+  document.getElementById('real-output').innerHTML = `
+    <strong>Real Timestamp:</strong> ${now.toISOString()}<br>
+    <strong>Milliseconds:</strong> ${now.getTime()}<br>
+    <strong>User Agent:</strong> ${navigator.userAgent.substring(0, 50)}...
+  `;
+}
+
+function getRealMetrics() {
+  document.getElementById('real-output').innerHTML = `
+    <strong>Real Page Metrics:</strong><br>
+    Screen Width: ${window.screen.width}px<br>
+    Screen Height: ${window.screen.height}px<br>
+    Color Depth: ${window.screen.colorDepth}-bit<br>
+    Pixel Ratio: ${window.devicePixelRatio}<br>
+    <small>These are actual device values, not random!</small>
+  `;
+}
+
+// Auto-generate some fake data on load
+window.addEventListener('load', () => {
+  console.log('Test page loaded - Intent Data Auditor should be monitoring...');
+  
+  // Simulate background "AI" processing
+  setInterval(() => {
+    const fakeBackgroundScore = Math.random() * 100;
+    console.log('Background intent calculation:', fakeBackgroundScore);
+  }, 5000);
+});
+</script>
+
+</body>
+</html>

@@ -11,8 +11,11 @@ import Settings from './pages/settings'
 import Pricing from './pages/pricing'
 import Billing from './pages/billing'
 import Landing from './pages/landing'
-import Brutal from './pages/brutal'
 import IntelligenceMonitor from './pages/intelligence-monitor'
+import SageInbox from './pages/sage-inbox'
+import PhDCollective from './pages/phd-collective'
+import Onboarding from './pages/onboarding'
+import SuperAdmin from './pages/super-admin'
 
 // Candy Kit UI enhancements
 import { SenseiCandyProvider } from './components/ui/SenseiCandy'
@@ -74,13 +77,28 @@ function App() {
             }
           />
           
-          {/* Dr. Brutal - The LinkedIn Spam Destroyer */}
+          {/* Sage - The Inbox Protector */}
           <Route
-            path="/brutal"
+            path="/sage"
             element={
               <>
                 <SignedIn>
-                  <Brutal />
+                  <SageInbox />
+                </SignedIn>
+                <SignedOut>
+                  <Auth />
+                </SignedOut>
+              </>
+            }
+          />
+          
+          {/* PhD Collective - The Expert Swarm */}
+          <Route
+            path="/collective"
+            element={
+              <>
+                <SignedIn>
+                  <PhDCollective />
                 </SignedIn>
                 <SignedOut>
                   <Auth />
@@ -125,6 +143,33 @@ function App() {
           
           {/* Marketing landing page */}
           <Route path="/landing" element={<Landing />} />
+          
+          {/* Instant value onboarding - NO AUTH REQUIRED */}
+          <Route path="/start" element={<Onboarding />} />
+          
+          {/* SuperAdmin Dashboard - GOD MODE */}
+          <Route path="/admin" element={
+            <>
+              <SignedIn>
+                <SuperAdmin />
+              </SignedIn>
+              <SignedOut>
+                <Auth />
+              </SignedOut>
+            </>
+          } />
+          
+          {/* PhD Collective - The Crystal Palace */}
+          <Route path="/phd-collective" element={
+            <>
+              <SignedIn>
+                <PhDCollective />
+              </SignedIn>
+              <SignedOut>
+                <Auth />
+              </SignedOut>
+            </>
+          } />
           
         </Routes>
       </Layout>

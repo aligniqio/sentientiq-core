@@ -147,7 +147,7 @@ export default function PricingSection() {
                 onClick={(e) => {
                   e.stopPropagation();
                   if (plan.id === 'enterprise') {
-                    window.location.href = 'mailto:truth@sentientiq.ai?subject=Enterprise Reality Engine';
+                    window.location.href = 'mailto:info@sentientiq.ai?subject=Enterprise Reality Engine';
                   } else {
                     handleCheckout(plan.priceId, plan.name);
                   }
@@ -197,7 +197,7 @@ export default function PricingSection() {
 
         <div className="mt-12 text-center text-white/40 text-sm">
           <p>Secure payment via Stripe. Your data never touches our servers.</p>
-          <p>Questions? Email truth@sentientiq.ai - We respond in minutes, not days.</p>
+          <p>Questions? Email info@sentientiq.ai - We respond in minutes, not days.</p>
         </div>
       </div>
     </section>

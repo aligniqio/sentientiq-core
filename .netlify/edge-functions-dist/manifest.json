@@ -1,0 +1,1 @@
+{"bundles":[{"asset":"cbfde97418a0868ec52823a22bcd26b17714a78315fd36e2a3ae60b0672e4c16.eszip","format":"eszip2"}],"routes":[{"function":"api-proxy","pattern":"^/api(?:/(.*))/?$","excluded_patterns":[],"path":"/api/*"}],"post_cache_routes":[],"bundler_version":"14.5.3","layers":[],"import_map":"netlify:import-map","function_config":{}}

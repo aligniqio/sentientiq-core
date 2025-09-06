@@ -5,6 +5,9 @@
  * "YES SIR, YOU'VE BEEN ROBBED."
  */
 
+// DataTruth Pro - Detection without code injection
+// We detect patterns, not implementation
+
 class IntentDataAuditor {
   constructor() {
     this.suspiciousPatterns = [];
@@ -13,41 +16,55 @@ class IntentDataAuditor {
     this.networkPatterns = new Map();
     this.startTime = Date.now();
     
-    this.hookMathRandom();
+    this.monitorDataChanges();
     this.monitorNetwork();
     this.captureDataSnapshot();
   }
 
-  // Hook Math.random() to catch them red-handed
-  hookMathRandom() {
-    const originalRandom = Math.random;
+  // Monitor for data patterns that indicate random generation
+  monitorDataChanges() {
     const self = this;
     
-    Math.random = function() {
-      const stack = new Error().stack;
-      
-      // Check if it's being used in "intent" or "score" or "ai" context
-      if (stack.includes('intent') || 
-          stack.includes('score') || 
-          stack.includes('predict') ||
-          stack.includes('ai') ||
-          stack.includes('ml')) {
+    // Watch for score elements being updated
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        const text = mutation.target.textContent || '';
         
-        self.mathRandomCalls++;
-        self.suspiciousPatterns.push({
-          timestamp: Date.now(),
-          stack: stack,
-          context: 'CAUGHT: Math.random() in AI/ML context'
-        });
+        // Look for score-like values (0-100 numbers)
+        const scorePattern = /\b(\d{1,2}\.\d+|100\.0+)\b/g;
+        const matches = text.match(scorePattern);
         
-        // Alert immediately on first detection
-        if (self.mathRandomCalls === 1) {
-          self.alertUser('DETECTION: Math.random() found in intent scoring!');
+        if (matches && (text.toLowerCase().includes('score') || 
+                       text.toLowerCase().includes('intent') ||
+                       text.toLowerCase().includes('confidence'))) {
+          
+          // Check if these look like random values (too many decimal places)
+          matches.forEach(match => {
+            if (match.includes('.') && match.split('.')[1].length > 2) {
+              self.mathRandomCalls++;
+              self.suspiciousPatterns.push({
+                timestamp: Date.now(),
+                value: match,
+                context: 'Suspicious precision in score (likely Math.random() * 100)'
+              });
+              
+              if (self.mathRandomCalls === 1) {
+                self.alertUser('SUSPICIOUS: Random-looking scores detected!');
+              }
+            }
+          });
         }
-      }
-      
-      return originalRandom.call(this);
-    };
+      });
+    });
+    
+    // Start observing once DOM is ready
+    setTimeout(() => {
+      observer.observe(document.body, {
+        childList: true,
+        subtree: true,
+        characterData: true
+      });
+    }, 1000);
   }
 
   // Monitor network requests for suspicious patterns
@@ -221,11 +238,24 @@ class IntentDataAuditor {
 
   detectPlatform() {
     const url = window.location.hostname;
+    const title = document.title.toLowerCase();
+    const metaTags = Array.from(document.getElementsByTagName('meta'));
+    
+    // Check hostname
     if (url.includes('6sense')) return '6sense';
     if (url.includes('demandbase')) return 'Demandbase';
     if (url.includes('zoominfo')) return 'ZoomInfo';
     if (url.includes('terminus')) return 'Terminus';
     if (url.includes('bombora')) return 'Bombora';
+    if (url.includes('sentientiq')) return 'SentientIQ (Self-Audit)';
+    
+    // Check meta tags and page content for platform identification
+    const pageContent = document.body ? document.body.innerText.toLowerCase() : '';
+    if (pageContent.includes('6sense') || title.includes('6sense')) return '6sense';
+    if (pageContent.includes('demandbase') || title.includes('demandbase')) return 'Demandbase';
+    if (pageContent.includes('zoominfo') || title.includes('zoominfo')) return 'ZoomInfo';
+    if (pageContent.includes('sentientiq') || title.includes('sentientiq')) return 'SentientIQ (Self-Audit)';
+    
     return 'Unknown Platform';
   }
 
@@ -233,13 +263,9 @@ class IntentDataAuditor {
     if (this.mathRandomCalls > 0) {
       return 'FRAUDULENT: Math.random() detected in scoring algorithms';
     }
-    if (this.suspiciousPatterns.length > 5) {
-      return 'HIGHLY SUSPICIOUS: Multiple red flags detected';
-    }
-    if (this.suspiciousPatterns.length > 0) {
-      return 'SUSPICIOUS: Anomalies detected, further investigation needed';
-    }
-    return 'MONITORING: No conclusive evidence yet';
+    // Be honest - we only flag as suspicious with REAL evidence
+    // Not just because we found some fast API calls
+    return 'MONITORING: No fraud detected';
   }
 }
 

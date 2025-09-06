@@ -1,0 +1,6 @@
+# Proxy API requests to EC2 backend
+/api/posts/*  http://3.15.29.138:8002/api/posts/:splat  200
+/api/swarm/*  http://3.15.29.138:8003/api/swarm/:splat  200
+
+# SPA fallback
+/*  /index.html  200
