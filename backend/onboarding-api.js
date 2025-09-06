@@ -21,7 +21,7 @@ const anthropic = new Anthropic({
 });
 
 // Initialize Resend for email delivery
-const resend = new Resend(process.env.RESEND_API_KEY || 're_Vfdt96WE_5Zba47zxL58Ptngzi4aZThon');
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 // Google PageSpeed Insights API
 const PAGESPEED_API = 'https://www.googleapis.com/pagespeedonline/v5/runPagespeed';
