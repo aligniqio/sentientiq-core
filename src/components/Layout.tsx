@@ -6,8 +6,7 @@ import {
   Brain, 
   Menu, 
   X, 
-  LogOut, 
-  Home,
+  LogOut,
   Shield,
   Zap
 } from 'lucide-react';

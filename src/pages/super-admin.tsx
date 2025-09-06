@@ -4,22 +4,18 @@ import {
   Building2, 
   Users, 
   DollarSign, 
-  Shield, 
   Brain, 
   TrendingUp,
   Network,
   Zap,
   AlertTriangle,
-  Settings,
   Plus,
   X,
   Eye,
   UserCheck,
   Activity,
-  CreditCard,
   Award,
   Target,
-  Layers,
   Crown
 } from 'lucide-react';
 import { createClient } from '@supabase/supabase-js';
@@ -72,7 +68,7 @@ export default function SuperAdmin() {
       
       // Calculate MRR
       const mrr = tenantsData.data?.reduce((sum, t) => {
-        const tierPrices = { free: 0, starter: 99, professional: 499, enterprise: 2000, agency: 999 };
+        const tierPrices: Record<string, number> = { free: 0, starter: 99, professional: 499, enterprise: 2000, agency: 999 };
         return sum + (tierPrices[t.subscription_tier] || 0);
       }, 0) || 0;
 
@@ -107,7 +103,7 @@ export default function SuperAdmin() {
     
     try {
       // Create tenant in Supabase
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('tenants')
         .insert({
           company_name: newTenant.company_name,

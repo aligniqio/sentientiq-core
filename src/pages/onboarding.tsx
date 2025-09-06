@@ -27,7 +27,6 @@ export default function Onboarding() {
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [insights, setInsights] = useState<InstantInsights | null>(null);
-  const [analysisId, setAnalysisId] = useState('');
   const [step, setStep] = useState<'email' | 'analyzing' | 'results'>('email');
 
   const handleEmailSubmit = async (e: React.FormEvent) => {
@@ -52,7 +51,6 @@ export default function Onboarding() {
       
       if (data.success) {
         setInsights(data.instant_insights);
-        setAnalysisId(data.analysis_id);
         setTimeout(() => setStep('results'), 2000);
       }
     } catch (error) {

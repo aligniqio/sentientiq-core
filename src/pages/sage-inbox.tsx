@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Shield, AlertTriangle, CheckCircle, Trash2, Send, Search, Brain } from 'lucide-react';
+import { Shield, AlertTriangle, Trash2, Send, Search, Brain } from 'lucide-react';
 import PageHeader from '../components/PageHeader';
 
 const API_BASE = import.meta.env.VITE_SAGE_API_URL || 'http://localhost:8004';

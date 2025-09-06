@@ -148,7 +148,7 @@ const PHD_FACULTY = [
 ];
 
 const PhDCollective: React.FC = () => {
-  const { user } = useUser();
+  useUser();
   const { trackQuestion } = useTrackUsage();
   const subscription = useSubscription();
   const [selectedPhDs, setSelectedPhDs] = useState<Set<string>>(new Set()); // Start with none selected
@@ -157,7 +157,6 @@ const PhDCollective: React.FC = () => {
   const [debateResults, setDebateResults] = useState<any>(null);
   const [showResults, setShowResults] = useState(false);
   const [showAnnouncement, setShowAnnouncement] = useState(false);
-  const [conversationHistory, setConversationHistory] = useState<any[]>([]);
   const [businessContext] = useState({
     company: 'SentientIQ',
     industry: 'MarTech',
@@ -315,7 +314,7 @@ const PhDCollective: React.FC = () => {
       timestamp: new Date().toISOString()
     };
     
-    setConversationHistory(prev => [...prev, newQuestion]);
+    // setConversationHistory(prev => [...prev, newQuestion]);
     
     // Clear the input field
     setQuestion('');
@@ -360,7 +359,7 @@ Provide strategic advice from your area of expertise.`;
           content: data.debate,
           timestamp: new Date().toISOString()
         };
-        setConversationHistory(prev => [...prev, newResponse]);
+        // setConversationHistory(prev => [...prev, newResponse]);
         
         // Store in Supabase for persistence
         storeConversation(newQuestion, newResponse);
