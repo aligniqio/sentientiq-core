@@ -10,6 +10,8 @@ import OpenAI from 'openai';
 import { createClient } from '@supabase/supabase-js';
 import crypto from 'crypto';
 import dotenv from 'dotenv';
+import onboardingRouter from './onboarding-api.js';
+import recommendationsRouter from './recommendations-api.js';
 
 dotenv.config();
 
@@ -51,6 +53,10 @@ if (process.env.SUPABASE_URL && process.env.SUPABASE_URL !== 'your_supabase_url_
 // Middleware
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
+
+// Mount onboarding routes
+app.use(onboardingRouter);
+app.use(recommendationsRouter);
 
 // Map PhDs to their optimal LLM based on personality
 const PHD_LLM_MAPPING = {

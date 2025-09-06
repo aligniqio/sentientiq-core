@@ -34,6 +34,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
   const menuItems = [
     { path: '/phd-collective', icon: Brain, label: 'PhD Collective', public: false },
+    { path: '/recommendations', icon: Zap, label: 'Recommendations', public: false },
     { path: '/billing', icon: Shield, label: 'Billing', public: false },
   ];
 

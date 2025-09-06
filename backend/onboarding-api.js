@@ -2,6 +2,10 @@ import express from 'express';
 import fetch from 'node-fetch';
 import { createClient } from '@supabase/supabase-js';
 import Anthropic from '@anthropic-ai/sdk';
+import { Resend } from 'resend';
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 const router = express.Router();
 
@@ -16,9 +20,12 @@ const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
 });
 
+// Initialize Resend for email delivery
+const resend = new Resend(process.env.RESEND_API_KEY || 're_Vfdt96WE_5Zba47zxL58Ptngzi4aZThon');
+
 // Google PageSpeed Insights API
 const PAGESPEED_API = 'https://www.googleapis.com/pagespeedonline/v5/runPagespeed';
-const PAGESPEED_KEY = process.env.GOOGLE_PAGESPEED_API_KEY;
+const PAGESPEED_KEY = process.env.GOOGLE_PAGE_SPEED_INSIGHTS || process.env.GOOGLE_PAGESPEED_API_KEY;
 
 /**
  * FRICTIONLESS ONBOARDING FLOW
@@ -71,6 +78,15 @@ router.post('/api/onboard/analyze', async (req, res) => {
     
     if (error) throw error;
     
+    // Send instant value email
+    try {
+      await sendInstantValueEmail(email, domain, emotionalAnalysis, phdInsights);
+      console.log(`📧 Instant value email sent to ${email}`);
+    } catch (emailError) {
+      console.error('Email send failed:', emailError);
+      // Don't fail the whole request if email fails
+    }
+    
     // Return instant value report
     res.json({
       success: true,
@@ -121,64 +137,207 @@ async function fetchPageSpeedData(url) {
 async function analyzeEmotionalImpact(pagespeedData) {
   const metrics = pagespeedData.lighthouseResult?.audits || {};
   
-  const problems = [];
-  const opportunities = [];
+  // Plutchik's Wheel of Emotions - the REAL emotional states
+  const plutchikEmotions = {
+    joy: 0,
+    trust: 0,
+    fear: 0,
+    surprise: 0,
+    sadness: 0,
+    disgust: 0,
+    anger: 0,
+    anticipation: 0
+  };
   
-  // Loading time anxiety
+  const emotionalTriggers = [];
+  
+  // SLOW LOADING → ANGER & DISGUST
   const fcp = parseFloat(metrics['first-contentful-paint']?.numericValue || 0);
-  if (fcp > 2500) {
-    problems.push({
-      type: 'anxiety',
-      issue: 'Slow loading causing visitor anxiety',
+  const lcp = parseFloat(metrics['largest-contentful-paint']?.numericValue || 0);
+  
+  if (fcp > 3000) {
+    plutchikEmotions.anger += 35;
+    plutchikEmotions.disgust += 25;
+    emotionalTriggers.push({
+      trigger: 'Extreme loading delay',
       metric: `${(fcp/1000).toFixed(1)}s first paint`,
-      emotional_impact: 'Users feel frustrated and may abandon'
+      emotions: ['anger', 'disgust'],
+      impact: 'Users rage-quit before content loads',
+      severity: 'critical'
+    });
+  } else if (fcp > 2000) {
+    plutchikEmotions.anger += 20;
+    plutchikEmotions.fear += 15; // Fear of wasting time
+    emotionalTriggers.push({
+      trigger: 'Slow initial load',
+      metric: `${(fcp/1000).toFixed(1)}s first paint`,
+      emotions: ['anger', 'fear'],
+      impact: 'Frustration builds, trust erodes',
+      severity: 'high'
     });
   }
   
-  // Decision paralysis from too many CTAs
+  // TOO MANY CTAs → FEAR & SADNESS (overwhelm)
   const buttons = pagespeedData.lighthouseResult?.audits?.['link-text']?.details?.items?.length || 0;
-  if (buttons > 20) {
-    problems.push({
-      type: 'paralysis',
-      issue: 'Too many calls-to-action creating decision paralysis',
-      metric: `${buttons} clickable elements detected`,
-      emotional_impact: 'Overwhelms users, reduces conversion'
+  if (buttons > 30) {
+    plutchikEmotions.fear += 30;
+    plutchikEmotions.sadness += 20;
+    plutchikEmotions.disgust += 15;
+    emotionalTriggers.push({
+      trigger: 'Choice overload paralysis',
+      metric: `${buttons} competing CTAs`,
+      emotions: ['fear', 'sadness', 'disgust'],
+      impact: 'Users freeze, then flee',
+      severity: 'critical'
+    });
+  } else if (buttons > 15) {
+    plutchikEmotions.fear += 15;
+    plutchikEmotions.anticipation -= 10; // Reduces excitement
+    emotionalTriggers.push({
+      trigger: 'Decision fatigue',
+      metric: `${buttons} CTAs`,
+      emotions: ['fear'],
+      impact: 'Cognitive overload reduces action',
+      severity: 'medium'
     });
   }
   
-  // Trust signals
+  // CUMULATIVE LAYOUT SHIFT → SURPRISE (negative) & ANGER
+  const cls = parseFloat(metrics['cumulative-layout-shift']?.numericValue || 0);
+  if (cls > 0.25) {
+    plutchikEmotions.surprise += 25; // Bad surprise
+    plutchikEmotions.anger += 30;
+    plutchikEmotions.trust -= 20;
+    emotionalTriggers.push({
+      trigger: 'Layout instability chaos',
+      metric: `${cls.toFixed(2)} CLS`,
+      emotions: ['surprise', 'anger'],
+      impact: 'Users lose place, misclick, rage',
+      severity: 'critical'
+    });
+  } else if (cls > 0.1) {
+    plutchikEmotions.surprise += 10;
+    plutchikEmotions.trust -= 10;
+    emotionalTriggers.push({
+      trigger: 'Shifting content',
+      metric: `${cls.toFixed(2)} CLS`,
+      emotions: ['surprise'],
+      impact: 'Disrupts user flow',
+      severity: 'medium'
+    });
+  }
+  
+  // MISSING HTTPS → FEAR & DISTRUST
   const https = pagespeedData.lighthouseResult?.audits?.['is-on-https']?.score === 1;
   if (!https) {
-    problems.push({
-      type: 'trust',
-      issue: 'Missing HTTPS reducing trust',
-      emotional_impact: 'Users feel unsafe sharing information'
+    plutchikEmotions.fear += 40;
+    plutchikEmotions.trust -= 50;
+    emotionalTriggers.push({
+      trigger: 'Security warning',
+      metric: 'No HTTPS',
+      emotions: ['fear'],
+      impact: 'Users abort transactions',
+      severity: 'critical'
     });
   } else {
-    opportunities.push({
-      type: 'trust',
-      strength: 'Secure connection builds confidence',
-      emotional_impact: 'Users feel safe to engage'
+    plutchikEmotions.trust += 20;
+    plutchikEmotions.anticipation += 10;
+  }
+  
+  // POOR CONTRAST → SADNESS & ANGER
+  const contrast = pagespeedData.lighthouseResult?.audits?.['color-contrast']?.score || 0;
+  if (contrast < 0.5) {
+    plutchikEmotions.sadness += 25;
+    plutchikEmotions.anger += 20;
+    emotionalTriggers.push({
+      trigger: 'Unreadable content',
+      metric: `${Math.round(contrast * 100)}% contrast score`,
+      emotions: ['sadness', 'anger'],
+      impact: 'Users give up trying to read',
+      severity: 'high'
+    });
+  } else if (contrast < 0.9) {
+    plutchikEmotions.sadness += 10;
+    emotionalTriggers.push({
+      trigger: 'Reading strain',
+      metric: `${Math.round(contrast * 100)}% contrast`,
+      emotions: ['sadness'],
+      impact: 'Cognitive fatigue',
+      severity: 'medium'
     });
   }
   
-  // Color contrast affecting readability stress
-  const contrast = pagespeedData.lighthouseResult?.audits?.['color-contrast']?.score || 0;
-  if (contrast < 0.9) {
-    problems.push({
-      type: 'stress',
-      issue: 'Poor color contrast causing reading stress',
-      emotional_impact: 'Users strain to read, increasing cognitive load'
+  // BLOCKING TIME → ANTICIPATION KILLER
+  const tbt = parseFloat(metrics['total-blocking-time']?.numericValue || 0);
+  if (tbt > 600) {
+    plutchikEmotions.anticipation -= 30;
+    plutchikEmotions.anger += 25;
+    emotionalTriggers.push({
+      trigger: 'Frozen interface',
+      metric: `${(tbt/1000).toFixed(1)}s blocking`,
+      emotions: ['anger'],
+      impact: 'Users think site is broken',
+      severity: 'critical'
     });
   }
+  
+  // IMAGE OPTIMIZATION → JOY OPPORTUNITY
+  const imageOpt = metrics['uses-optimized-images']?.score || 0;
+  if (imageOpt === 1) {
+    plutchikEmotions.joy += 15;
+    plutchikEmotions.anticipation += 10;
+    emotionalTriggers.push({
+      trigger: 'Fast visual loading',
+      metric: 'Optimized images',
+      emotions: ['joy', 'anticipation'],
+      impact: 'Delightful experience',
+      severity: 'positive'
+    });
+  }
+  
+  // Calculate dominant emotions
+  const dominantEmotions = Object.entries(plutchikEmotions)
+    .filter(([_, value]) => value > 0)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 3)
+    .map(([emotion, intensity]) => ({
+      emotion,
+      intensity: Math.min(100, Math.max(0, intensity))
+    }));
+  
+  // Overall emotional health score (inverse of negative emotions)
+  const negativeTotal = plutchikEmotions.anger + plutchikEmotions.fear + 
+                        plutchikEmotions.sadness + plutchikEmotions.disgust;
+  const positiveTotal = Math.max(0, plutchikEmotions.joy + plutchikEmotions.trust + 
+                        plutchikEmotions.anticipation);
+  
+  const emotionalHealth = Math.max(0, Math.min(100, 
+    100 - (negativeTotal / 2) + (positiveTotal / 3)
+  ));
   
   return {
-    overall_emotional_score: Math.max(0, 100 - (problems.length * 15)),
-    problems,
-    opportunities,
-    summary: problems.length > 3 
-      ? 'High emotional friction detected - multiple user experience issues'
-      : 'Moderate emotional health with improvement opportunities'
+    plutchik_wheel: plutchikEmotions,
+    dominant_emotions: dominantEmotions,
+    emotional_triggers: emotionalTriggers,
+    emotional_health_score: Math.round(emotionalHealth),
+    diagnosis: emotionalHealth < 30 
+      ? 'Severe emotional friction - users actively suffering'
+      : emotionalHealth < 60
+      ? 'Significant negative emotions blocking conversion'
+      : emotionalHealth < 80
+      ? 'Mixed emotions - room for delight'
+      : 'Positive emotional experience',
+    prescription: dominantEmotions[0]?.emotion === 'anger' 
+      ? 'URGENT: Fix performance immediately - users are rage-quitting'
+      : dominantEmotions[0]?.emotion === 'fear'
+      ? 'Reduce complexity and add trust signals'
+      : dominantEmotions[0]?.emotion === 'disgust'
+      ? 'Site feels broken - rebuild user confidence'
+      : 'Optimize for joy and anticipation',
+    // Backwards compatibility
+    problems: emotionalTriggers.filter(t => t.severity !== 'positive'),
+    opportunities: emotionalTriggers.filter(t => t.severity === 'positive'),
+    summary: dominantEmotions[0]?.emotion || 'Emotional state analyzed'
   };
 }
 
@@ -323,5 +482,100 @@ router.post('/api/onboard/complete', async (req, res) => {
     res.status(500).json({ error: 'Signup failed', details: error.message });
   }
 });
+
+/**
+ * Send instant value email with emotional analysis
+ */
+async function sendInstantValueEmail(email, domain, emotionalAnalysis, phdInsights) {
+  const problemsList = emotionalAnalysis.problems?.map(p => 
+    `<li><strong>${p.issue}</strong><br/>${p.emotional_impact}</li>`
+  ).join('') || '';
+
+  const opportunitiesList = emotionalAnalysis.opportunities?.map(o => 
+    `<li><strong>${o.strength}</strong><br/>${o.emotional_impact}</li>`
+  ).join('') || '';
+
+  const emailHtml = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; border-radius: 10px; margin-bottom: 30px; }
+        .score-card { background: #f7f9fc; padding: 20px; border-radius: 8px; margin: 20px 0; }
+        .score { font-size: 48px; font-weight: bold; color: #667eea; }
+        .problems { background: #fef5f5; border-left: 4px solid #ef4444; padding: 15px; margin: 20px 0; }
+        .opportunities { background: #f0fdf4; border-left: 4px solid #10b981; padding: 15px; margin: 20px 0; }
+        .phd-insight { background: linear-gradient(135deg, #667eea15, #764ba215); padding: 20px; border-radius: 8px; margin: 20px 0; }
+        .cta-button { display: inline-block; background: linear-gradient(135deg, #667eea, #764ba2); color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; margin: 20px 0; }
+        h1 { margin: 0; }
+        ul { padding-left: 20px; }
+        li { margin: 10px 0; }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">
+          <h1>🚀 Your Instant Site Analysis</h1>
+          <p style="margin: 10px 0 0 0; opacity: 0.9;">Domain: ${domain}</p>
+        </div>
+
+        <div class="score-card">
+          <h2>Emotional Impact Score</h2>
+          <div class="score">${emotionalAnalysis.overall_emotional_score}/100</div>
+          <p>${emotionalAnalysis.summary}</p>
+        </div>
+
+        ${problemsList ? `
+        <div class="problems">
+          <h3>⚠️ Emotional Friction Points</h3>
+          <ul>${problemsList}</ul>
+        </div>
+        ` : ''}
+
+        ${opportunitiesList ? `
+        <div class="opportunities">
+          <h3>✅ Strengths Detected</h3>
+          <ul>${opportunitiesList}</ul>
+        </div>
+        ` : ''}
+
+        <div class="phd-insight">
+          <h3>🧠 PhD Collective Says</h3>
+          <p>${phdInsights.summary}</p>
+        </div>
+
+        <div style="text-align: center; margin: 40px 0;">
+          <h2>Ready for the Full Analysis?</h2>
+          <p>Get 20 free questions with our PhD Collective and see how your entire MarTech stack measures up.</p>
+          <a href="https://sentientiq.ai/sign-up?email=${encodeURIComponent(email)}" class="cta-button">
+            Continue to Full Analysis →
+          </a>
+          <p style="color: #666; font-size: 14px;">No credit card required • 3-second setup</p>
+        </div>
+
+        <div style="border-top: 1px solid #e5e5e5; margin-top: 40px; padding-top: 20px; text-align: center; color: #666; font-size: 12px;">
+          <p>© 2025 SentientIQ • The Emotional Intelligence Layer for MarTech</p>
+          <p>This analysis was generated in under 3 seconds using Google PageSpeed + AI</p>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+
+  const { data, error } = await resend.emails.send({
+    from: 'SentientIQ <insights@sentientiq.ai>',
+    to: email,
+    subject: `🎯 Instant Analysis: ${domain} scores ${emotionalAnalysis.overall_emotional_score}/100`,
+    html: emailHtml
+  });
+
+  if (error) {
+    throw error;
+  }
+
+  return data;
+}
 
 export default router;

@@ -16,6 +16,7 @@ import SageInbox from './pages/sage-inbox'
 import PhDCollective from './pages/phd-collective'
 import Onboarding from './pages/onboarding'
 import SuperAdmin from './pages/super-admin'
+import DynamicRecommendations from './pages/dynamic-recommendations'
 
 // Candy Kit UI enhancements
 import { SenseiCandyProvider } from './components/ui/SenseiCandy'
@@ -164,6 +165,17 @@ function App() {
             <>
               <SignedIn>
                 <PhDCollective />
+              </SignedIn>
+              <SignedOut>
+                <Auth />
+              </SignedOut>
+            </>
+          } />
+
+          <Route path="/recommendations" element={
+            <>
+              <SignedIn>
+                <DynamicRecommendations />
               </SignedIn>
               <SignedOut>
                 <Auth />

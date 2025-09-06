@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowRight, Zap, AlertTriangle, TrendingUp, Shield, Brain } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { useSignUp } from '@clerk/clerk-react';
 
 interface InstantInsights {
   domain: string;
@@ -28,6 +30,8 @@ export default function Onboarding() {
   const [loading, setLoading] = useState(false);
   const [insights, setInsights] = useState<InstantInsights | null>(null);
   const [step, setStep] = useState<'email' | 'analyzing' | 'results'>('email');
+  const navigate = useNavigate();
+  const { signUp } = useSignUp();
 
   const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,6 +55,12 @@ export default function Onboarding() {
       
       if (data.success) {
         setInsights(data.instant_insights);
+        
+        // Store in localStorage for sticky persistence
+        localStorage.setItem('onboarding_email', email);
+        localStorage.setItem('onboarding_insights', JSON.stringify(data.instant_insights));
+        localStorage.setItem('free_questions_remaining', '20');
+        
         setTimeout(() => setStep('results'), 2000);
       }
     } catch (error) {
@@ -246,14 +256,43 @@ export default function Onboarding() {
                 <h3 className="text-2xl font-bold text-white mb-4">
                   Want the Full Analysis?
                 </h3>
-                <p className="text-white/70 mb-8">
+                <p className="text-white/70 mb-4">
                   Connect your MarTech stack to see how your tools compare to reality
                 </p>
-                <button className="inline-flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-blue-500 to-purple-500 text-white text-lg font-semibold rounded-xl hover:from-blue-600 hover:to-purple-600 transition-all transform hover:scale-105">
-                  <Shield className="w-5 h-5" />
-                  Create Free Account
-                  <ArrowRight className="w-5 h-5" />
-                </button>
+                <div className="bg-gradient-to-r from-green-500/20 to-blue-500/20 backdrop-blur-xl rounded-xl p-4 mb-8 inline-block">
+                  <p className="text-xl font-bold text-white">
+                    🎯 Get 20 Free Questions with PhD Collective
+                  </p>
+                  <p className="text-sm text-white/70 mt-1">
+                    No credit card required • Cancel anytime
+                  </p>
+                </div>
+                <div>
+                  <button 
+                    onClick={async () => {
+                      // Pre-fill Clerk signup with email
+                      if (signUp) {
+                        try {
+                          await signUp.create({
+                            emailAddress: email,
+                          });
+                          // Navigate to sign-up page with email pre-filled
+                          navigate('/sign-up?email=' + encodeURIComponent(email));
+                        } catch (err) {
+                          // If error, still navigate with email as param
+                          navigate('/sign-up?email=' + encodeURIComponent(email));
+                        }
+                      } else {
+                        navigate('/sign-up?email=' + encodeURIComponent(email));
+                      }
+                    }}
+                    className="inline-flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-blue-500 to-purple-500 text-white text-lg font-semibold rounded-xl hover:from-blue-600 hover:to-purple-600 transition-all transform hover:scale-105"
+                  >
+                    <Shield className="w-5 h-5" />
+                    Continue with Free Account
+                    <ArrowRight className="w-5 h-5" />
+                  </button>
+                </div>
               </div>
             </motion.div>
           )}

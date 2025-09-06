@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { CheckCircle, Brain } from 'lucide-react';
 import PageHeader from '../components/PageHeader';
-import { useUser } from '@clerk/clerk-react';
+// import { useUser } from '@clerk/clerk-react';
 import { useTrackUsage, useSubscription } from '../hooks/useSubscription';
 
 const SAGE_API = import.meta.env.VITE_SAGE_API_URL || 'http://localhost:8004';
@@ -148,7 +148,7 @@ const PHD_FACULTY = [
 ];
 
 const PhDCollective: React.FC = () => {
-  useUser();
+  // const user = useUser();
   const { trackQuestion } = useTrackUsage();
   const subscription = useSubscription();
   const [selectedPhDs, setSelectedPhDs] = useState<Set<string>>(new Set()); // Start with none selected
@@ -157,6 +157,10 @@ const PhDCollective: React.FC = () => {
   const [debateResults, setDebateResults] = useState<any>(null);
   const [showResults, setShowResults] = useState(false);
   const [showAnnouncement, setShowAnnouncement] = useState(false);
+  // const [freeQuestionsRemaining, setFreeQuestionsRemaining] = useState<number>(() => {
+  //   const stored = localStorage.getItem('free_questions_remaining');
+  //   return stored ? parseInt(stored, 10) : 20;
+  // });
   const [businessContext] = useState({
     company: 'SentientIQ',
     industry: 'MarTech',
@@ -294,9 +298,13 @@ const PhDCollective: React.FC = () => {
   const askAdvisors = async () => {
     if (!question.trim() || selectedPhDs.size === 0) return;
 
-    // Check usage limits
+    // Check subscription limits (all users must be authenticated)
     if (!subscription.canAsk) {
-      alert(`You've reached your monthly limit of ${subscription.questionsLimit} questions. Please upgrade your plan to continue.`);
+      if (subscription.tier === 'free') {
+        alert('You\'ve used all 20 free questions! Upgrade to Pro for unlimited access.');
+      } else {
+        alert(`You've reached your monthly limit of ${subscription.questionsLimit} questions. Please upgrade your plan to continue.`);
+      }
       window.location.href = '/billing';
       return;
     }
@@ -304,7 +312,7 @@ const PhDCollective: React.FC = () => {
     setIsAnalyzing(true);
     setShowResults(false);
 
-    // Track usage
+    // Track usage (all users are authenticated)
     await trackQuestion();
 
     // Add to conversation history
@@ -386,19 +394,30 @@ Provide strategic advice from your area of expertise.`;
         style={{ mixBlendMode: 'screen' }}
       />
       
-      {/* Luxe backlighting effect */}
+      {/* Luxe backlighting effect - INTENSE DEPTH */}
       <div className="absolute inset-0 pointer-events-none">
-        {/* Primary colored backlight - top left */}
-        <div className="absolute top-20 left-10 w-[500px] h-[500px] bg-gradient-to-br from-violet-600/8 via-purple-500/5 to-transparent rounded-full blur-[100px]" />
+        {/* Primary INTENSE backlight - behind cards */}
+        <div className="absolute top-[30%] left-[15%] w-[400px] h-[400px]">
+          <div className="absolute inset-0 bg-gradient-to-br from-violet-500/20 via-purple-400/15 to-transparent rounded-full blur-[60px] animate-pulse" />
+          <div className="absolute inset-0 bg-gradient-to-br from-violet-400/10 via-transparent to-transparent rounded-full blur-[100px]" />
+        </div>
         
-        {/* Secondary colored backlight - bottom right */}
-        <div className="absolute bottom-32 right-20 w-[600px] h-[600px] bg-gradient-to-tl from-cyan-500/6 via-blue-500/4 to-transparent rounded-full blur-[120px]" />
+        {/* Secondary INTENSE backlight - right side */}
+        <div className="absolute top-[40%] right-[20%] w-[350px] h-[350px]">
+          <div className="absolute inset-0 bg-gradient-to-tl from-cyan-400/20 via-blue-400/15 to-transparent rounded-full blur-[50px] animate-pulse" style={{animationDelay: '1s'}} />
+          <div className="absolute inset-0 bg-gradient-to-tl from-cyan-300/10 via-transparent to-transparent rounded-full blur-[90px]" />
+        </div>
         
-        {/* Subtle center glow */}
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-gradient-radial from-indigo-400/3 via-transparent to-transparent rounded-full blur-[80px]" />
+        {/* Center POWER light - brightest, shines through everything */}
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px]">
+          <div className="absolute inset-0 bg-gradient-radial from-white/8 via-indigo-300/5 to-transparent rounded-full blur-[40px]" />
+          <div className="absolute inset-0 bg-gradient-radial from-indigo-400/10 via-transparent to-transparent rounded-full blur-[80px] animate-pulse" style={{animationDuration: '3s'}} />
+        </div>
         
-        {/* Extra accent - small but bright */}
-        <div className="absolute top-1/3 right-1/3 w-[300px] h-[300px] bg-gradient-radial from-pink-400/5 to-transparent rounded-full blur-[60px]" />
+        {/* Spotlight effects - smaller, brighter, strategic placement */}
+        <div className="absolute top-[25%] left-[40%] w-[200px] h-[200px] bg-gradient-radial from-pink-300/15 to-transparent rounded-full blur-[30px]" />
+        <div className="absolute bottom-[30%] right-[35%] w-[250px] h-[250px] bg-gradient-radial from-amber-300/12 to-transparent rounded-full blur-[40px]" />
+        <div className="absolute top-[60%] left-[25%] w-[180px] h-[180px] bg-gradient-radial from-emerald-300/10 to-transparent rounded-full blur-[35px]" />
       </div>
       
       <div className="max-w-[1600px] mx-auto w-full px-4 md:px-6 lg:px-8">
@@ -408,23 +427,36 @@ Provide strategic advice from your area of expertise.`;
             subtitle="The $5.4 Million Payroll You'll Never Have to Pay"
           />
           
-          {/* Usage Indicator */}
+          {/* Usage Indicator - Show for free tier users */}
           {subscription.tier === 'free' && (
             <div className="mt-4 mb-2 flex justify-center">
               <div className="bg-white/5 backdrop-blur-xl rounded-lg px-4 py-2 border border-white/10">
                 <div className="flex items-center gap-3">
-                  <span className="text-sm text-white/60">Questions Used:</span>
+                  <span className="text-sm text-white/60">
+                    🎯 Free Trial Questions:
+                  </span>
                   <span className="text-sm font-bold text-white">
                     {subscription.questionsUsed} / {subscription.questionsLimit}
                   </span>
+                  {(subscription.questionsLimit - subscription.questionsUsed <= 5 && subscription.questionsUsed < subscription.questionsLimit) && (
+                    <span className="text-xs text-yellow-400 animate-pulse">
+                      {subscription.questionsLimit - subscription.questionsUsed} left!
+                    </span>
+                  )}
                   {subscription.questionsUsed >= subscription.questionsLimit && (
-                    <span className="text-xs text-red-400">Limit Reached</span>
+                    <span className="text-xs text-red-400">Upgrade to continue</span>
                   )}
                 </div>
                 <div className="mt-1 h-1 bg-white/10 rounded-full overflow-hidden">
                   <div 
-                    className="h-full bg-gradient-to-r from-purple-500 to-blue-500 transition-all"
-                    style={{ width: `${Math.min(100, (subscription.questionsUsed / subscription.questionsLimit) * 100)}%` }}
+                    className={`h-full transition-all ${
+                      subscription.questionsLimit - subscription.questionsUsed <= 5 
+                        ? 'bg-gradient-to-r from-yellow-500 to-orange-500' 
+                        : 'bg-gradient-to-r from-purple-500 to-blue-500'
+                    }`}
+                    style={{ 
+                      width: `${Math.min(100, (subscription.questionsUsed / subscription.questionsLimit) * 100)}%` 
+                    }}
                   />
                 </div>
               </div>
