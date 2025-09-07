@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { ArrowRight, Sparkles, Zap, Shield, Brain, TrendingUp, Users } from "lucide-react";
 import SEO from '../SEO/SEO';
-import EVIMonitor from '../components/EVIMonitor';
+import { SafeSignIn, SafeSignUp } from '../auth/SafeSignIn';
 
 // Matrix rain effect component
 const MatrixRain = () => {
@@ -75,15 +75,31 @@ export default function Landing() {
       <div className="relative min-h-screen bg-[#0a0a12] text-white overflow-hidden">
         <MatrixRain />
         
-        {/* EVI Monitor Bar */}
-        <div className="relative z-50">
-          <EVIMonitor />
-        </div>
+        {/* Navigation Bar */}
+        <nav className="relative z-40 px-6 py-4">
+          <div className="mx-auto max-w-7xl flex items-center justify-between">
+            <div className="text-2xl font-bold bg-gradient-to-r from-cyan-400 to-purple-400 bg-clip-text text-transparent">
+              SentientIQ
+            </div>
+            <div className="flex items-center gap-4">
+              <SafeSignIn>
+                <span className="px-4 py-2 text-white/80 hover:text-white transition-colors">
+                  Sign in
+                </span>
+              </SafeSignIn>
+              <SafeSignUp>
+                <span className="px-6 py-2 bg-gradient-to-r from-purple-600 to-pink-600 rounded-lg font-semibold hover:shadow-lg hover:shadow-purple-500/25 transition-all">
+                  Start free
+                </span>
+              </SafeSignUp>
+            </div>
+          </div>
+        </nav>
 
         {/* Main Content */}
         <div className="relative z-10">
           {/* Hero Section */}
-          <section className="mx-auto max-w-7xl px-6 pt-32 pb-20">
+          <section className="mx-auto max-w-7xl px-6 pt-20 pb-20">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
