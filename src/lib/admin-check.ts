@@ -1,11 +1,11 @@
 // Role-based authorization
 // Roles: super_admin > tenant_admin > tenant > user
 
-export const SUPER_ADMIN_EMAILS = [
+export const SUPER_ADMIN_EMAILS: string[] = [
   'matt@sentientiq.ai',
 ];
 
-export const ADMIN_USER_IDS = [
+export const ADMIN_USER_IDS: string[] = [
   // Add Clerk user IDs here when needed
   // 'user_2abc...'
 ];

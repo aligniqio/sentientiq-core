@@ -1,5 +1,4 @@
 import { useUser } from '@clerk/clerk-react';
-import { Navigate } from 'react-router-dom';
 import { isAdmin } from '../lib/admin-check';
 
 interface AdminRouteProps {

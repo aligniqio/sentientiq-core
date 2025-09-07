@@ -144,12 +144,7 @@ const PhDCollective: React.FC = () => {
   //   const stored = localStorage.getItem('free_questions_remaining');
   //   return stored ? parseInt(stored, 10) : 20;
   // });
-  const [businessContext] = useState({
-    company: 'SentientIQ',
-    industry: 'MarTech',
-    stage: 'Destroying Math.random() industry',
-    insideJokes: ['Math.random() detection', 'Kavita vanity awards', 'Baked alaska celebration']
-  });
+  // Business context removed - can be added back when needed
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   // Neural Network Animation
