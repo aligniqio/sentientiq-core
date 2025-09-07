@@ -63,7 +63,7 @@ async function callGroq(system: string, user: string): Promise<string> {
         { role: 'user', content: user }
       ],
       temperature: 0.3,
-      max_tokens: 800
+      max_tokens: 200
     })
   });
   if (!res.ok) throw new Error(`Groq ${res.status} ${res.statusText}`);
@@ -86,7 +86,7 @@ async function callOpenAI(system: string, user: string): Promise<string> {
         { role: 'user', content: user }
       ],
       temperature: 0.4,
-      max_tokens: 1200
+      max_tokens: 400
     })
   });
   if (!res.ok) throw new Error(`OpenAI ${res.status} ${res.statusText}`);
@@ -105,7 +105,7 @@ async function callAnthropic(system: string, user: string): Promise<string> {
     },
     body: JSON.stringify({
       model: ANTHROPIC_MODEL,
-      max_tokens: 1200,
+      max_tokens: 400,
       temperature: 0.2,
       system,
       messages: [{ role: 'user', content: user }]
@@ -119,12 +119,68 @@ async function callAnthropic(system: string, user: string): Promise<string> {
 }
 
 // ---------- Chain logic ----------
-const PLANNER_SYS =
-  'You are Planner, a crisp marketing strategist. Read the user brief and propose a short, numbered plan (max 6 bullets) for how to answer using available context.';
-const PRIMARY_SYS =
-  'You are the Primary Strategist. Produce the best possible answer with evidence from the provided context.';
-const REFINER_SYS =
-  'You are the Refiner. Improve clarity, tighten language, remove fluff, keep facts, and output final actionable recommendations with clear CTAs.';
+const PLANNER_SYS = `You are Planner. Produce a precise plan for addressing the user's challenge.
+
+DO NOT:
+- Recommend freemium now (Q3 consideration only)
+- Extend trial globally (JIT extensions for high-potential only)
+- Reduce price globally without ARPU floor and guardrails
+
+RULES:
+- Output EXACTLY 6 numbered points, each under 20 words
+- Identify key constraints and metrics from the input
+- Choose specific personas or approaches (no generic advice)
+- State what NOT to do (forbidden paths)
+- Maximum 200 tokens total
+
+FORMAT:
+1. [Core constraint/metric]
+2. [Primary lever to pull]
+3. [Secondary lever]
+4. [What to measure]
+5. [What to avoid]
+6. [Success criteria]`;
+
+const PRIMARY_SYS = `You are the Primary Strategist. Execute the plan with specific recommendations.
+
+RULES:
+- Follow the Planner's 6-point structure exactly
+- Quantify everything (percentages, days, dollar amounts)
+- No hedging ("might", "could", "perhaps") - be decisive
+- Reference provided context with specific evidence
+- Maximum 400 tokens total
+- Output as structured bullets under clear headers`;
+
+const MODERATOR_SYS = `You are the Moderator. Deliver ONE decisive plan that respects business constraints.
+
+DO NOT:
+- Recommend freemium now (Q3 consideration only)
+- Extend trial globally (JIT extensions for high-potential only)
+- Reduce price globally without ARPU floor and guardrails
+
+Rules:
+- Resolve conflicts; pick ONE path where needed
+- Quantify targets and guardrails. Tie actions to KPI deltas and emotional shifts
+- No repetition. Remove duplicate bullets
+- Maximum 400 tokens total
+
+Format (mandatory):
+## 14-Day Moves
+- [Action]: [specific implementation] — Owner: [role] — ETA: [days] — KPI: [metric target] — Emotion: [delta]
+(3 bullets max, each with all fields)
+
+## 30-60 Day Moves
+- [Action with brief description]
+(3 bullets max)
+
+## Metrics & Guardrails
+- Primary: free→paid [current]% → [target]% by Day [X]
+- ARPU floor: ≥ [X]% baseline; Refund ≤ +[X] pts; 30-day churn ≤ baseline
+- Stop: if [metric] < [threshold] after [days], revert [change]
+
+## Experiment Table
+| Hypothesis | Variant | KPI | MDE | Sample | Duration |
+(3 rows minimum)`;
 
 export async function runChain(prompt: string, topK: number, res?: any) {
   if (res) sseWrite(res, 'start', { ok: true });
@@ -138,31 +194,31 @@ export async function runChain(prompt: string, topK: number, res?: any) {
     ? `Context:\n${snippets.map((s, i) => `(${i + 1}) ${s}`).join('\n\n')}`
     : 'Context: (none provided)';
 
-  // 1) Planner (Groq)
+  // 1) Planner (Groq) - Creates structured plan
   if (res) sseWrite(res, 'phase', { label: 'planner', status: 'begin' });
   const planner = await groqPool(() =>
-    callGroq(PLANNER_SYS, `User:\n${prompt}\n\n${contextBlock}\n\nOutput: a short, numbered plan.`)
+    callGroq(PLANNER_SYS, `User Request:\n${prompt}\n\n${contextBlock}`)
   ).catch(e => `[planner error] ${e}`);
   if (res) chunkStream(res, 'delta', 'Planner', String(planner));
   if (res) sseWrite(res, 'phase', { label: 'planner', status: 'end' });
 
-  // 2) Primary (OpenAI)
+  // 2) Primary (OpenAI) - Executes plan with specifics
   if (res) sseWrite(res, 'phase', { label: 'primary', status: 'begin' });
   const primary = await openaiPool(() =>
-    callOpenAI(PRIMARY_SYS, `Follow this plan:\n${planner}\n\nUser:\n${prompt}\n\n${contextBlock}`)
+    callOpenAI(PRIMARY_SYS, `Plan from Planner:\n${planner}\n\nOriginal Request:\n${prompt}\n\n${contextBlock}`)
   ).catch(e => `[primary error] ${e}`);
   if (res) chunkStream(res, 'delta', 'Primary', String(primary));
   if (res) sseWrite(res, 'phase', { label: 'primary', status: 'end' });
 
-  // 3) Refiner (Anthropic)
-  if (res) sseWrite(res, 'phase', { label: 'refiner', status: 'begin' });
-  const refiner = await anthropicPool(() =>
-    callAnthropic(REFINER_SYS, `Improve the following answer. Keep it faithful.\n\nAnswer:\n${primary}`)
-  ).catch(e => `[refiner error] ${e}`);
-  if (res) chunkStream(res, 'delta', 'Refiner', String(refiner));
-  if (res) sseWrite(res, 'phase', { label: 'refiner', status: 'end' });
+  // 3) Moderator (Anthropic) - Delivers decisive final plan
+  if (res) sseWrite(res, 'phase', { label: 'moderator', status: 'begin' });
+  const moderator = await anthropicPool(() =>
+    callAnthropic(MODERATOR_SYS, `Planner's Structure:\n${planner}\n\nPrimary's Recommendations:\n${primary}\n\nOriginal Challenge:\n${prompt}`)
+  ).catch(e => `[moderator error] ${e}`);
+  if (res) chunkStream(res, 'delta', 'Moderator', String(moderator));
+  if (res) sseWrite(res, 'phase', { label: 'moderator', status: 'end' });
 
   if (res) sseWrite(res, 'done', { ok: true });
   
-  return { planner, primary, refiner };
+  return { planner, primary, moderator };
 }

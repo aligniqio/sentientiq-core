@@ -12,7 +12,6 @@ import Ask from '../pages/ask'
 import Settings from '../pages/settings'
 import Pricing from '../pages/pricing'
 import Billing from '../pages/billing'
-// import IntelligenceMonitor from '../pages/intelligence-monitor' // DEAD - no purpose
 import SageInbox from '../pages/sage-inbox'
 import PhDCollective from '../pages/phd-collective'
 import Onboarding from '../pages/onboarding'

@@ -477,40 +477,43 @@ const PhDCollective: React.FC = () => {
               Clear Selection
             </button>
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 flex-1 overflow-y-auto overflow-x-hidden p-1" style={{ gridAutoRows: 'minmax(180px, 1fr)' }}>
+          <div className="grid grid-cols-4 gap-2 overflow-y-auto overflow-x-hidden p-1" style={{ maxHeight: '400px' }}>
           {PHD_FACULTY.map((phd) => {
             const isSelected = selectedPhDs.has(phd.id);
             
             return (
               <motion.div
                 key={phd.id}
-                whileHover={{ scale: 1 }}
-                whileTap={{ scale: 0.95 }}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
                 onClick={() => togglePhD(phd.id)}
-                className={`relative cursor-pointer h-full ${
-                  isSelected ? 'ring-1 ring-green-500/50 ring-inset' : ''
-                } rounded-xl`}
+                className={`relative cursor-pointer ${
+                  isSelected ? 'ring-2 ring-green-500/70 ring-inset' : ''
+                } rounded-lg`}
               >
-                <div className="h-full backdrop-blur-xl bg-white/5 rounded-xl p-2 md:p-3 relative overflow-hidden flex flex-col">
+                <div className="backdrop-blur-xl bg-white/5 rounded-lg p-2 relative overflow-hidden h-[120px]">
                   {/* Selection Indicator */}
-                  <div className="absolute top-3 right-3 z-20">
+                  <div className="absolute top-1.5 right-1.5 z-20">
                     {isSelected ? (
-                      <CheckCircle className="h-6 w-6 text-green-400" />
+                      <CheckCircle className="h-4 w-4 text-green-400" />
                     ) : (
-                      <div className="h-6 w-6 border-2 border-white/30 rounded-full" />
+                      <div className="h-4 w-4 border border-white/30 rounded-full" />
                     )}
                   </div>
 
-                  {/* PhD Info */}
-                  <div className="relative z-10 flex flex-col h-full">
-                    <div className="text-3xl mb-1">{phd.icon}</div>
-                    <h3 className="text-white font-bold text-sm mb-1">{phd.name}</h3>
-                    <p className="text-white/60 text-xs mb-2">{phd.title}</p>
-                    <p className="text-white/70 text-xs italic flex-grow">"{phd.catchphrase}"</p>
+                  {/* PhD Info - Ultra Compressed */}
+                  <div className="relative z-10 h-full flex flex-col">
+                    <div className="flex items-start gap-1.5">
+                      <div className="text-xl leading-none">{phd.icon}</div>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="text-white font-bold text-xs truncate pr-4">{phd.name}</h3>
+                        <p className="text-white/50 text-[10px] truncate">{phd.title}</p>
+                      </div>
+                    </div>
                     
-                    {/* Specialty */}
-                    <div className="mt-2 pt-2 border-t border-white/10">
-                      <p className="text-white/70 text-xs">{phd.specialty}</p>
+                    {/* Specialty - Bottom */}
+                    <div className="mt-auto pt-1 border-t border-white/10">
+                      <p className="text-white/60 text-[10px] leading-snug line-clamp-2">{phd.specialty}</p>
                     </div>
                   </div>
                 </div>
@@ -520,9 +523,9 @@ const PhDCollective: React.FC = () => {
           </div>
         </div>
 
-        {/* RIGHT SIDE - 2 Sections like in mockup */}
-        <div className="lg:w-96 relative z-20">
-          <div className="flex flex-col gap-6 h-full">
+        {/* RIGHT SIDE - Expanded Output Area */}
+        <div className="lg:w-[500px] relative z-20">
+          <div className="flex flex-col gap-4 h-full">
             
             {/* TOP SECTION - Output (Always visible) */}
             <motion.div
