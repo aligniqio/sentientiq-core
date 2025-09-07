@@ -12,7 +12,6 @@ import Ask from '../pages/ask'
 import Settings from '../pages/settings'
 import Pricing from '../pages/pricing'
 import Billing from '../pages/billing'
-import Landing from '../pages/landing'
 import IntelligenceMonitor from '../pages/intelligence-monitor'
 import SageInbox from '../pages/sage-inbox'
 import PhDCollective from '../pages/phd-collective'
@@ -32,20 +31,16 @@ function App() {
         <Router>
           <Layout>
         <Routes>
-          {/* Root - Show Landing for .ai domain, Auth for .app domain */}
+          {/* Root - App only (domain routing handles marketing site) */}
           <Route path="/" element={
-            window.location.hostname.includes('sentientiq.ai') ? (
-              <Landing />
-            ) : (
-              <>
-                <SignedIn>
-                  <IntelligenceMonitor />
-                </SignedIn>
-                <SignedOut>
-                  <Auth />
-                </SignedOut>
-              </>
-            )
+            <>
+              <SignedIn>
+                <IntelligenceMonitor />
+              </SignedIn>
+              <SignedOut>
+                <Auth />
+              </SignedOut>
+            </>
           } />
           
           {/* Everything requires auth - this is not a public domain */}
@@ -150,9 +145,6 @@ function App() {
           
           {/* Auth page - explicit route */}
           <Route path="/auth" element={<Auth />} />
-          
-          {/* Marketing landing page */}
-          <Route path="/landing" element={<Landing />} />
           
           {/* Instant value onboarding - NO AUTH REQUIRED */}
           <Route path="/start" element={<Onboarding />} />

@@ -1,7 +1,7 @@
 import { Suspense, lazy } from 'react';
 
 // Lazy chunks so the other side never loads
-const Marketing = lazy(() => import('./marketing/MarketingSite'));
+const Marketing = lazy(() => import('./marketing/MarketingEntry'));
 const ProductApp = lazy(() => import('./product/App'));
 
 const isAppHost = (h: string) =>
