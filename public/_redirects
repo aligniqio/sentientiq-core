@@ -1,7 +1,7 @@
-# Proxy orchestrator API calls (SSE streaming)
-/api/sage/debate   https://api.sentientiq.app/v1/boardroom   200!
-/api/sage/analyze  https://api.sentientiq.app/v1/analyze     200!
-/api/usage/track   https://api.sentientiq.app/v1/usage/track 200!
+# Proxy orchestrator API calls (SSE streaming) - Direct to port 8787
+/api/sage/debate   http://98.87.12.130:8787/v1/boardroom   200!
+/api/sage/analyze  http://98.87.12.130:8787/v1/analyze     200!
+/api/usage/track   http://98.87.12.130:8787/v1/usage/track 200!
 
 # Legacy EC2 backend proxies (if still needed)
 /api/posts/*  http://3.15.29.138:8002/api/posts/:splat  200
