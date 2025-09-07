@@ -477,7 +477,7 @@ const PhDCollective: React.FC = () => {
               Clear Selection
             </button>
           </div>
-          <div className="grid grid-cols-4 gap-2 overflow-y-auto overflow-x-hidden p-1" style={{ maxHeight: '400px' }}>
+          <div className="grid grid-cols-3 gap-2 overflow-y-auto overflow-x-hidden p-1">
           {PHD_FACULTY.map((phd) => {
             const isSelected = selectedPhDs.has(phd.id);
             
@@ -491,7 +491,7 @@ const PhDCollective: React.FC = () => {
                   isSelected ? 'ring-2 ring-green-500/70 ring-inset' : ''
                 } rounded-lg`}
               >
-                <div className="backdrop-blur-xl bg-white/5 rounded-lg p-2 relative overflow-hidden h-[120px]">
+                <div className="backdrop-blur-xl bg-white/5 rounded-lg p-2 relative overflow-hidden h-[140px]">
                   {/* Selection Indicator */}
                   <div className="absolute top-1.5 right-1.5 z-20">
                     {isSelected ? (
@@ -523,8 +523,8 @@ const PhDCollective: React.FC = () => {
           </div>
         </div>
 
-        {/* RIGHT SIDE - Expanded Output Area */}
-        <div className="lg:w-[500px] relative z-20">
+        {/* RIGHT SIDE - Maximum Output Area */}
+        <div className="flex-1 lg:max-w-[600px] relative z-20">
           <div className="flex flex-col gap-4 h-full">
             
             {/* TOP SECTION - Output (Always visible) */}
