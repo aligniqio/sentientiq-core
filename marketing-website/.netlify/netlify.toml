@@ -1,44 +1,15 @@
-functionsDirectory = "/Users/matthewkiselstein/projects/sentientiq-core/marketing-website/netlify/functions"
-functionsDirectoryOrigin = "ui"
-redirectsOrigin = "config"
-plugins = []
-headers = []
-
-[functions]
-
-[functions."*"]
-
 [build]
-publish = "/Users/matthewkiselstein/projects/sentientiq-core/marketing-website/dist"
-publishOrigin = "config"
-commandOrigin = "config"
-base = "/Users/matthewkiselstein/projects/sentientiq-core/marketing-website"
-command = "npm run build"
-functions = "/Users/matthewkiselstein/projects/sentientiq-core/marketing-website/netlify/functions"
-
-[build.environment]
-NODE_VERSION = "18"
-
-[build.processing]
-
-[build.processing.css]
-
-[build.processing.html]
-
-[build.processing.images]
-
-[build.processing.js]
-
-[build.services]
+  command = "npm run build"
+  publish = "dist"
+  functions = "netlify/functions"
 
 [[redirects]]
-from = "/*"
-to = "/index.html"
-status = 200.0
-force = false
+  from = "https://www.sentientiq.ai/*"
+  to   = "https://sentientiq.ai/:splat"
+  status = 301
+  force = true
 
-[redirects.query]
-
-[redirects.conditions]
-
-[redirects.headers]
+[[redirects]]
+  from = "/sitemap.xml"
+  to   = "/.netlify/functions/sitemap"
+  status = 200

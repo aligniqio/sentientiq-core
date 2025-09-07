@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { ArrowRight, Sparkles, Zap, Shield, Brain, TrendingUp, Users } from "lucide-react";
-import SEO from '../components/SEO';
+import SEO from '../SEO/SEO';
 import EVIMonitor from '../components/EVIMonitor';
 
 // Matrix rain effect component
