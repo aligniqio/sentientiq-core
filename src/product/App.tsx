@@ -1,4 +1,3 @@
-import React from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { SignedIn, SignedOut } from '@clerk/clerk-react'
 import { HelmetProvider } from 'react-helmet-async'
@@ -15,10 +14,7 @@ import Billing from '../pages/billing'
 import SageInbox from '../pages/sage-inbox'
 import PhDCollective from '../pages/phd-collective'
 import Onboarding from '../pages/onboarding'
-// Lazy load SuperAdmin to prevent Supabase initialization on landing page
-const SuperAdmin = React.lazy(() => import('../pages/super-admin'))
 import DynamicRecommendations from '../pages/dynamic-recommendations'
-import AdminRoute from '../components/AdminRoute'
 
 // Candy Kit UI enhancements
 import { SenseiCandyProvider } from '../components/ui/SenseiCandy'
@@ -147,22 +143,6 @@ function App() {
           
           {/* Instant value onboarding - NO AUTH REQUIRED */}
           <Route path="/start" element={<Onboarding />} />
-          
-          {/* SuperAdmin Dashboard - GOD MODE - PROTECTED */}
-          <Route path="/admin" element={
-            <>
-              <SignedIn>
-                <AdminRoute>
-                  <React.Suspense fallback={<div>Loading admin panel...</div>}>
-                    <SuperAdmin />
-                  </React.Suspense>
-                </AdminRoute>
-              </SignedIn>
-              <SignedOut>
-                <Navigate to="/auth" replace />
-              </SignedOut>
-            </>
-          } />
           
           {/* PhD Collective - The Crystal Palace */}
           <Route path="/phd-collective" element={
