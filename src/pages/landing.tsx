@@ -145,7 +145,7 @@ export default function Landing() {
                 </button>
 
                 <a
-                  href="/auth"
+                  href="https://sentientiq.app/auth"
                   className="px-8 py-4 bg-white/10 backdrop-blur-sm rounded-xl font-bold text-lg border border-white/20 hover:bg-white/20 transition-all duration-300 flex items-center gap-2 justify-center"
                 >
                   Start Free Trial
@@ -262,7 +262,7 @@ export default function Landing() {
                 </div>
                 <div className="mt-8 text-center">
                   <a
-                    href="/auth"
+                    href="https://sentientiq.app/auth"
                     className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 rounded-lg font-semibold hover:shadow-lg hover:shadow-purple-500/25 transition-all"
                   >
                     Get Full Analysis
@@ -287,7 +287,7 @@ export default function Landing() {
                 While others count clicks, we decode intentions.
               </p>
               <a
-                href="/auth"
+                href="https://sentientiq.app/auth"
                 className="inline-flex items-center gap-2 px-8 py-4 bg-white text-black rounded-xl font-bold text-lg hover:bg-gray-100 transition-colors"
               >
                 Start Free Trial
