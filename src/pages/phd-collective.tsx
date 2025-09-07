@@ -456,7 +456,7 @@ const PhDCollective: React.FC = () => {
         <div className="flex pb-8 flex-col lg:flex-row gap-6" style={{ height: 'calc(100vh - 10rem)' }}>
         
         {/* LEFT SIDE - PhD Cards Grid + Input */}
-        <div className="lg:w-[600px] flex flex-col gap-4">
+        <div className="lg:w-[720px] flex flex-col gap-4">
           {/* Selection Buttons */}
           <div className="flex gap-3 relative z-50">
             <button
@@ -480,7 +480,7 @@ const PhDCollective: React.FC = () => {
           </div>
           
           {/* PhD Cards Grid */}
-          <div className="grid grid-cols-3 gap-2 overflow-y-auto overflow-x-hidden p-1 flex-1">
+          <div className="grid grid-cols-3 gap-4 overflow-y-auto overflow-x-hidden p-2 flex-1">
           {PHD_FACULTY.map((phd) => {
             const isSelected = selectedPhDs.has(phd.id);
             
@@ -490,17 +490,19 @@ const PhDCollective: React.FC = () => {
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 onClick={() => togglePhD(phd.id)}
-                className={`relative cursor-pointer ${
-                  isSelected ? 'ring-2 ring-green-500/70 ring-inset' : ''
-                } rounded-lg`}
+                className={`relative cursor-pointer rounded-lg transition-all ${
+                  isSelected 
+                    ? 'ring-2 ring-green-500 ring-offset-2 ring-offset-black/50' 
+                    : 'ring-1 ring-white/10'
+                }`}
               >
-                <div className="backdrop-blur-xl bg-white/5 rounded-lg p-2 relative overflow-hidden h-[140px]">
+                <div className="backdrop-blur-xl bg-white/5 rounded-lg p-3 relative overflow-hidden h-[150px]">
                   {/* Selection Indicator */}
-                  <div className="absolute top-1.5 right-1.5 z-20">
+                  <div className="absolute top-2 right-2 z-20">
                     {isSelected ? (
-                      <CheckCircle className="h-4 w-4 text-green-400" />
+                      <CheckCircle className="h-5 w-5 text-green-400" />
                     ) : (
-                      <div className="h-4 w-4 border border-white/30 rounded-full" />
+                      <div className="h-5 w-5 border border-white/30 rounded-full" />
                     )}
                   </div>
 
