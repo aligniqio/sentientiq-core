@@ -416,41 +416,6 @@ const PhDCollective: React.FC = () => {
             subtitle="The $5.4 Million Payroll You'll Never Have to Pay"
           />
           
-          {/* Usage Indicator - Show for free tier users */}
-          {subscription.tier === 'free' && (
-            <div className="mt-4 mb-2 flex justify-center">
-              <div className="bg-white/5 backdrop-blur-xl rounded-lg px-4 py-2 border border-white/10">
-                <div className="flex items-center gap-3">
-                  <span className="text-sm text-white/60">
-                    🎯 Free Trial Questions:
-                  </span>
-                  <span className="text-sm font-bold text-white">
-                    {subscription.questionsUsed} / {subscription.questionsLimit}
-                  </span>
-                  {(subscription.questionsLimit - subscription.questionsUsed <= 5 && subscription.questionsUsed < subscription.questionsLimit) && (
-                    <span className="text-xs text-yellow-400 animate-pulse">
-                      {subscription.questionsLimit - subscription.questionsUsed} left!
-                    </span>
-                  )}
-                  {subscription.questionsUsed >= subscription.questionsLimit && (
-                    <span className="text-xs text-red-400">Upgrade to continue</span>
-                  )}
-                </div>
-                <div className="mt-1 h-1 bg-white/10 rounded-full overflow-hidden">
-                  <div 
-                    className={`h-full transition-all ${
-                      subscription.questionsLimit - subscription.questionsUsed <= 5 
-                        ? 'bg-gradient-to-r from-yellow-500 to-orange-500' 
-                        : 'bg-gradient-to-r from-purple-500 to-blue-500'
-                    }`}
-                    style={{ 
-                      width: `${Math.min(100, (subscription.questionsUsed / subscription.questionsLimit) * 100)}%` 
-                    }}
-                  />
-                </div>
-              </div>
-            </div>
-          )}
         </div>
 
         <div className="flex pb-8 flex-col lg:flex-row gap-6" style={{ height: 'calc(100vh - 10rem)' }}>
