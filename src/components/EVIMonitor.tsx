@@ -34,46 +34,17 @@ const EVIMonitor: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const subscription = useSubscription();
   
-  // Fetch EVI data
+  // No fake data - API disabled, show the truth: 0
   useEffect(() => {
-    const fetchEVI = async () => {
-      try {
-        const tier = subscription.tier || 'free';
-        const vertical = subscription.tier === 'enterprise' ? subscription.vertical : null;
-        
-        const url = vertical 
-          ? `/api/evi/${tier}/${vertical}`
-          : `/api/evi/${tier}`;
-          
-        const response = await fetch(url);
-        const data = await response.json();
-        
-        if (data.success && data.evi) {
-          setEviData(data.evi);
-        }
-      } catch (error) {
-        console.error('Failed to fetch EVI:', error);
-        // Set default data on error
-        setEviData({
-          score: 0,
-          condition: 'NEUTRAL',
-          signal: 'Data unavailable',
-          dominantEmotion: 'neutral',
-          timestamp: new Date().toISOString()
-        });
-      } finally {
-        setLoading(false);
-      }
-    };
-    
-    // Initial fetch
-    fetchEVI();
-    
-    // Refresh every 30 seconds
-    const interval = setInterval(fetchEVI, 30000);
-    
-    return () => clearInterval(interval);
-  }, [subscription.tier, subscription.vertical]);
+    setEviData({
+      score: 0,
+      condition: 'NEUTRAL', 
+      signal: 'No data',
+      dominantEmotion: 'neutral',
+      timestamp: new Date().toISOString()
+    });
+    setLoading(false);
+  }, []);
   
   // Get color based on condition
   const getConditionColor = (condition: string) => {

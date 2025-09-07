@@ -1,5 +1,5 @@
 import React from 'react'
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { SignedIn, SignedOut } from '@clerk/clerk-react'
 import { HelmetProvider } from 'react-helmet-async'
 
@@ -38,7 +38,7 @@ function App() {
                 <PhDCollective /> {/* Changed from dead IntelligenceMonitor */}
               </SignedIn>
               <SignedOut>
-                <Auth />
+                <Navigate to="/auth" replace />
               </SignedOut>
             </>
           } />
@@ -50,7 +50,7 @@ function App() {
                 <HowItWorks />
               </SignedIn>
               <SignedOut>
-                <Auth />
+                <Navigate to="/auth" replace />
               </SignedOut>
             </>
           } />
@@ -63,7 +63,7 @@ function App() {
                   <AlwaysOnFaculty />
                 </SignedIn>
                 <SignedOut>
-                  <Auth />
+                  <Navigate to="/auth" replace />
                 </SignedOut>
               </>
             }
@@ -76,7 +76,7 @@ function App() {
                   <Ask />
                 </SignedIn>
                 <SignedOut>
-                  <Auth />
+                  <Navigate to="/auth" replace />
                 </SignedOut>
               </>
             }
@@ -91,7 +91,7 @@ function App() {
                   <SageInbox />
                 </SignedIn>
                 <SignedOut>
-                  <Auth />
+                  <Navigate to="/auth" replace />
                 </SignedOut>
               </>
             }
@@ -106,7 +106,7 @@ function App() {
                   <PhDCollective />
                 </SignedIn>
                 <SignedOut>
-                  <Auth />
+                  <Navigate to="/auth" replace />
                 </SignedOut>
               </>
             }
@@ -121,7 +121,7 @@ function App() {
                   <Settings />
                 </SignedIn>
                 <SignedOut>
-                  <Auth />
+                  <Navigate to="/auth" replace />
                 </SignedOut>
               </>
             }
@@ -137,7 +137,7 @@ function App() {
                   <Billing />
                 </SignedIn>
                 <SignedOut>
-                  <Auth />
+                  <Navigate to="/auth" replace />
                 </SignedOut>
               </>
             }
@@ -160,7 +160,7 @@ function App() {
                 </AdminRoute>
               </SignedIn>
               <SignedOut>
-                <Auth />
+                <Navigate to="/auth" replace />
               </SignedOut>
             </>
           } />
@@ -172,7 +172,7 @@ function App() {
                 <PhDCollective />
               </SignedIn>
               <SignedOut>
-                <Auth />
+                <Navigate to="/auth" replace />
               </SignedOut>
             </>
           } />
@@ -183,7 +183,7 @@ function App() {
                 <DynamicRecommendations />
               </SignedIn>
               <SignedOut>
-                <Auth />
+                <Navigate to="/auth" replace />
               </SignedOut>
             </>
           } />
