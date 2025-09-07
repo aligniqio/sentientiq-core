@@ -147,6 +147,19 @@ const PhDCollective: React.FC = () => {
   // Business context removed - can be added back when needed
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
+  // Keyboard shortcut for Get Answer
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Enter' && (e.metaKey || e.ctrlKey) && !isAnalyzing && question.trim()) {
+        e.preventDefault();
+        runAnswer();
+      }
+    };
+    
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [question, isAnalyzing]);
+
   // Neural Network Animation
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -271,6 +284,113 @@ const PhDCollective: React.FC = () => {
   const clearAll = () => {
     console.log('Clearing all selections');
     setSelectedPhDs(new Set());
+  };
+
+  const runAnswer = async () => {
+    if (!question.trim()) return;
+    
+    setIsAnalyzing(true);
+    setShowResults(false);
+    setDebateResults(null);
+    
+    // Track usage
+    await trackQuestion();
+    
+    const newQuestion = {
+      type: 'question',
+      content: question,
+      timestamp: new Date().toISOString()
+    };
+    
+    // Clear input
+    setQuestion('');
+    
+    try {
+      let synthesis = '';
+      
+      await ssePost(`/api/sage/debate`, {
+        prompt: question,
+        mode: 'answer',
+        topK: 3
+      }, ({ event, data }) => {
+        if (event === 'meta') {
+          console.log('Answer mode meta:', data);
+        }
+        if (event === 'delta' && data.label === 'Answer') {
+          synthesis += data.text;
+          setDebateResults({ collective_synthesis: synthesis });
+        }
+        if (event === 'done') {
+          setShowResults(true);
+        }
+      });
+      
+      storeConversation(newQuestion, { type: 'response', content: { collective_synthesis: synthesis }});
+    } catch (error) {
+      console.error('Answer failed:', error);
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+
+  const runDebate = async () => {
+    if (!question.trim() || selectedPhDs.size === 0) return;
+    
+    setIsAnalyzing(true);
+    setShowResults(false);
+    setDebateResults(null);
+    
+    // Track usage
+    await trackQuestion();
+    
+    const newQuestion = {
+      type: 'question',
+      content: question,
+      timestamp: new Date().toISOString()
+    };
+    
+    // Clear input
+    setQuestion('');
+    
+    try {
+      let synthesis = '';
+      const panels: Record<string, string> = {};
+      
+      // Map selected PhD IDs to persona names
+      const personas = Array.from(selectedPhDs).map(id => {
+        const phd = PHD_FACULTY.find(p => p.id === id);
+        return phd ? phd.name.replace('Dr. ', '') : id;
+      });
+      
+      await ssePost(`/api/sage/debate`, {
+        prompt: question,
+        personas: personas,
+        mode: 'debate',
+        topK: 3
+      }, ({ event, data }) => {
+        if (event === 'delta') {
+          const label = data.label;
+          panels[label] = (panels[label] || '') + data.text;
+          synthesis = Object.entries(panels)
+            .map(([persona, text]) => `**${persona}:**\n${text}`)
+            .join('\n\n---\n\n');
+          setDebateResults({ collective_synthesis: synthesis });
+        }
+        if (event === 'done') {
+          setShowAnnouncement(true);
+          setTimeout(() => {
+            setShowAnnouncement(false);
+            setShowResults(true);
+          }, 2500);
+        }
+      });
+      
+      storeConversation(newQuestion, { type: 'response', content: { collective_synthesis: synthesis }});
+    } catch (error) {
+      console.error('Debate failed:', error);
+    } finally {
+      setIsAnalyzing(false);
+    }
   };
 
   const askAdvisors = async () => {
@@ -506,25 +626,27 @@ const PhDCollective: React.FC = () => {
               className="w-full px-3 py-2 bg-black/30 rounded-lg text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none mb-2"
             />
 
-            <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
               <button
-                onClick={() => {
-                  console.log('SUBMIT CLICKED!');
-                  console.log('Question:', question);
-                  console.log('Selected PhDs:', Array.from(selectedPhDs));
-                  console.log('Selected PhDs size:', selectedPhDs.size);
-                  console.log('Is Analyzing:', isAnalyzing);
-                  askAdvisors();
-                }}
-                disabled={isAnalyzing || selectedPhDs.size === 0 || !question.trim()}
+                onClick={() => runAnswer()}
+                disabled={isAnalyzing || !question.trim()}
                 className="flex-1 px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-lg font-medium hover:from-purple-700 hover:to-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-                title={`Analyzing: ${isAnalyzing}, PhDs: ${selectedPhDs.size}, Question: ${question ? question.length : 0} chars`}
+                title="Get a focused plan in under 60s (⌘/Ctrl+Enter)"
               >
-                {isAnalyzing ? 'Analyzing...' : 'Start a Debate'}
+                {isAnalyzing ? 'Analyzing...' : 'Get Answer'}
               </button>
               
-              <div className="ml-4 text-xs text-white/40">
-                Tip: Cmd + Enter to ask
+              <button
+                onClick={() => runDebate()}
+                disabled={isAnalyzing || selectedPhDs.size === 0 || !question.trim()}
+                className="px-4 py-2 bg-white/10 backdrop-blur-xl text-white/80 rounded-lg font-medium hover:bg-white/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                title="Watch specialists argue it out live"
+              >
+                Start a Debate
+              </button>
+              
+              <div className="text-xs text-white/40">
+                ⌘+Enter
               </div>
             </div>
           </motion.div>

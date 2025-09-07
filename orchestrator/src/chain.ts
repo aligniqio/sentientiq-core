@@ -182,7 +182,7 @@ Format (mandatory):
 | Hypothesis | Variant | KPI | MDE | Sample | Duration |
 (3 rows minimum)`;
 
-export async function runChain(prompt: string, topK: number, res?: any, personas?: string[]) {
+export async function runChain(prompt: string, topK: number, res?: any, personas?: string[], moderatorOnly = false) {
   if (res) sseWrite(res, 'start', { ok: true });
 
   // Retrieval
@@ -194,31 +194,65 @@ export async function runChain(prompt: string, topK: number, res?: any, personas
     ? `Context:\n${snippets.map((s, i) => `(${i + 1}) ${s}`).join('\n\n')}`
     : 'Context: (none provided)';
 
-  // 1) Planner (Groq) - Creates structured plan
-  if (res) sseWrite(res, 'phase', { label: 'planner', status: 'begin' });
-  const planner = await groqPool(() =>
-    callGroq(PLANNER_SYS, `User Request:\n${prompt}\n\n${contextBlock}`)
-  ).catch(e => `[planner error] ${e}`);
-  if (res) chunkStream(res, 'delta', 'Planner', String(planner));
-  if (res) sseWrite(res, 'phase', { label: 'planner', status: 'end' });
+  let planner: string;
+  let primary: string;
+  let moderator: string;
 
-  // 2) Primary (OpenAI) - Executes plan with specifics
-  if (res) sseWrite(res, 'phase', { label: 'primary', status: 'begin' });
-  const primary = await openaiPool(() =>
-    callOpenAI(PRIMARY_SYS, `Plan from Planner:\n${planner}\n\nOriginal Request:\n${prompt}\n\n${contextBlock}`)
-  ).catch(e => `[primary error] ${e}`);
-  if (res) chunkStream(res, 'delta', 'Primary', String(primary));
-  if (res) sseWrite(res, 'phase', { label: 'primary', status: 'end' });
+  if (moderatorOnly) {
+    // Answer mode: Run chain silently, only stream Moderator
+    if (res) sseWrite(res, 'phase', { label: 'analysis', status: 'begin' });
+    
+    // Run Planner silently
+    planner = await groqPool(() =>
+      callGroq(PLANNER_SYS, `User Request:\n${prompt}\n\n${contextBlock}`)
+    ).catch(e => `[planner error] ${e}`);
+    
+    // Run Primary silently
+    primary = await openaiPool(() =>
+      callOpenAI(PRIMARY_SYS, `Plan from Planner:\n${planner}\n\nOriginal Request:\n${prompt}\n\n${contextBlock}`)
+    ).catch(e => `[primary error] ${e}`);
+    
+    if (res) sseWrite(res, 'phase', { label: 'analysis', status: 'end' });
+    
+    // Stream only the Moderator
+    if (res) sseWrite(res, 'phase', { label: 'answer', status: 'begin' });
+    moderator = await anthropicPool(() =>
+      callAnthropic(MODERATOR_SYS, `Planner's Structure:\n${planner}\n\nPrimary's Recommendations:\n${primary}\n\nOriginal Challenge:\n${prompt}`)
+    ).catch(e => `[moderator error] ${e}`);
+    if (res) chunkStream(res, 'delta', 'Answer', String(moderator));
+    if (res) sseWrite(res, 'phase', { label: 'answer', status: 'end' });
+  } else {
+    // Debate mode: Stream all personas
+    // 1) Planner (Groq) - Creates structured plan
+    if (res) sseWrite(res, 'phase', { label: 'planner', status: 'begin' });
+    planner = await groqPool(() =>
+      callGroq(PLANNER_SYS, `User Request:\n${prompt}\n\n${contextBlock}`)
+    ).catch(e => `[planner error] ${e}`);
+    if (res) chunkStream(res, 'delta', 'Planner', String(planner));
+    if (res) sseWrite(res, 'phase', { label: 'planner', status: 'end' });
 
-  // 3) Moderator (Anthropic) - Delivers decisive final plan
-  if (res) sseWrite(res, 'phase', { label: 'moderator', status: 'begin' });
-  const moderator = await anthropicPool(() =>
-    callAnthropic(MODERATOR_SYS, `Planner's Structure:\n${planner}\n\nPrimary's Recommendations:\n${primary}\n\nOriginal Challenge:\n${prompt}`)
-  ).catch(e => `[moderator error] ${e}`);
-  if (res) chunkStream(res, 'delta', 'Moderator', String(moderator));
-  if (res) sseWrite(res, 'phase', { label: 'moderator', status: 'end' });
+    // 2) Primary (OpenAI) - Executes plan with specifics
+    if (res) sseWrite(res, 'phase', { label: 'primary', status: 'begin' });
+    primary = await openaiPool(() =>
+      callOpenAI(PRIMARY_SYS, `Plan from Planner:\n${planner}\n\nOriginal Request:\n${prompt}\n\n${contextBlock}`)
+    ).catch(e => `[primary error] ${e}`);
+    if (res) chunkStream(res, 'delta', 'Primary', String(primary));
+    if (res) sseWrite(res, 'phase', { label: 'primary', status: 'end' });
+
+    // 3) Moderator (Anthropic) - Delivers decisive final plan
+    if (res) sseWrite(res, 'phase', { label: 'moderator', status: 'begin' });
+    moderator = await anthropicPool(() =>
+      callAnthropic(MODERATOR_SYS, `Planner's Structure:\n${planner}\n\nPrimary's Recommendations:\n${primary}\n\nOriginal Challenge:\n${prompt}`)
+    ).catch(e => `[moderator error] ${e}`);
+    if (res) chunkStream(res, 'delta', 'Moderator', String(moderator));
+    if (res) sseWrite(res, 'phase', { label: 'moderator', status: 'end' });
+  }
 
   if (res) sseWrite(res, 'done', { ok: true });
   
+  if (moderatorOnly) {
+    // In answer mode, we still ran the chain but only streamed moderator
+    return { moderator: moderator };
+  }
   return { planner, primary, moderator };
 }

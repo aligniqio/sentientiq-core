@@ -42,9 +42,11 @@ async function getTenantPlan(tenantId?: string): Promise<string> {
 const DebateBody = z.object({
   prompt: z.string().min(3),
   personas: z.array(z.string()).optional(),
-  topK: z.number().int().min(0).max(20).optional().default(6),
+  topK: z.number().int().min(0).max(20).optional().default(3),
   tenantId: z.string().optional(),
-  userId: z.string().optional()
+  userId: z.string().optional(),
+  mode: z.enum(['answer', 'debate']).optional().default('answer'),
+  temperature: z.number().min(0).max(1).optional().default(0.2)
 });
 
 // Default personas for free tier
@@ -84,38 +86,36 @@ app.post('/v1/debate', async (req: Request, res: Response) => {
     return res.end();
   }
 
-  const { prompt, topK, tenantId, personas } = parsed.data;
+  const { prompt, topK, tenantId, personas, mode } = parsed.data;
+  const debateId = `debate-${Date.now()}`;
 
   // Get tenant plan and enforce caps
   const plan = await getTenantPlan(tenantId);
   const personaCap = capForPlan(plan);
   
-  // Sanitize incoming list
-  const rawRequested = (personas && Array.isArray(personas) ? personas : []);
-  const dedup = Array.from(new Set(rawRequested)).slice(0, personaCap);
+  // Roster (dedupe + cap) or default quartet
+  const requested = Array.from(new Set(personas ?? []));
+  const roster = (requested.length ? requested : DEFAULT4).slice(0, personaCap);
   
-  // If none requested, pick sensible defaults based on plan
-  const roster = dedup.length 
-    ? dedup 
-    : (plan === 'free' ? DEFAULT4 : DEFAULT_PERSONAS.slice(0, personaCap));
-  
-  // Tell the UI what we enforced
-  const debateId = `debate-${Date.now()}`;
+  // Meta for UI
   sseWrite(res, 'meta', { 
-    debateId, 
-    tenantId, 
+    mode, 
     plan, 
     personaCap, 
     roster,
-    limited: rawRequested.length > personaCap 
+    debateId,
+    tenantId
   });
-  
-  // Hard trim downstream to avoid accidental over-fanout
-  const list = roster.slice(0, personaCap);
 
   try {
-    // Pass the capped list to runChain
-    await runChain(prompt, topK, res, list);
+    if (mode === 'answer') {
+      // Answer mode: Hidden panel → Moderator-only stream
+      // For now, run normal chain but only stream the Moderator
+      await runChain(prompt, topK, res, roster, true); // true = moderatorOnly flag
+    } else {
+      // Debate mode: Full visible personas + Moderator
+      await runChain(prompt, topK, res, roster, false);
+    }
   } catch (e: any) {
     res.write(`event: error\ndata: ${JSON.stringify({ message: String(e?.message || e) })}\n\n`);
   } finally {
