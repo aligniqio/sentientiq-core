@@ -2,18 +2,58 @@ import 'dotenv/config';
 import express, { Request, Response } from 'express';
 import cors from 'cors';
 import { z } from 'zod';
-import { runChain } from './chain';
+import { runChain, sseWrite } from './chain';
 import { enqueueDebate } from './queue/redis';
+import { createClient } from '@supabase/supabase-js';
 
 // ---------- Env ----------
 const PORT = Number(process.env.PORT || 8787);
 
+// ---------- Plan Caps ----------
+const PLAN_CAP: Record<string, number> = { 
+  free: 4, 
+  starter: 4, 
+  pro: 12, 
+  team: 12, 
+  enterprise: 12 
+};
+
+function capForPlan(plan?: string) { 
+  return PLAN_CAP[(plan || 'free').toLowerCase()] ?? 4; 
+}
+
+// ---------- Supabase ----------
+const supabase = process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY
+  ? createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY)
+  : null;
+
+// ---------- Tenant Plan Helper ----------
+async function getTenantPlan(tenantId?: string): Promise<string> {
+  if (!tenantId || !supabase) return 'free';
+  const { data, error } = await supabase
+    .from('tenants')
+    .select('plan')
+    .eq('id', tenantId)
+    .maybeSingle();
+  return (error || !data?.plan) ? 'free' : String(data.plan);
+}
+
 // ---------- Validation ----------
 const DebateBody = z.object({
   prompt: z.string().min(3),
-  personas: z.array(z.string()).optional().default(['ROI Analyst','Emotion Scientist']),
-  topK: z.number().int().min(0).max(20).optional().default(6)
+  personas: z.array(z.string()).optional(),
+  topK: z.number().int().min(0).max(20).optional().default(6),
+  tenantId: z.string().optional(),
+  userId: z.string().optional()
 });
+
+// Default personas for free tier
+const DEFAULT4 = ['ROI Analyst', 'CRO Specialist', 'Emotion Scientist', 'Data Skeptic'];
+const DEFAULT_PERSONAS = [
+  'ROI Analyst', 'Emotion Scientist', 'CRO Specialist', 'Copy Chief',
+  'Performance Engineer', 'Brand Strategist', 'UX Researcher', 'Data Skeptic',
+  'Social Strategist', 'Customer Success', 'CEO Provocateur', 'Compliance Counsel'
+];
 
 // ---------- Server ----------
 const app = express();
@@ -44,10 +84,38 @@ app.post('/v1/debate', async (req: Request, res: Response) => {
     return res.end();
   }
 
-  const { prompt, topK } = parsed.data;
+  const { prompt, topK, tenantId, personas } = parsed.data;
+
+  // Get tenant plan and enforce caps
+  const plan = await getTenantPlan(tenantId);
+  const personaCap = capForPlan(plan);
+  
+  // Sanitize incoming list
+  const rawRequested = (personas && Array.isArray(personas) ? personas : []);
+  const dedup = Array.from(new Set(rawRequested)).slice(0, personaCap);
+  
+  // If none requested, pick sensible defaults based on plan
+  const roster = dedup.length 
+    ? dedup 
+    : (plan === 'free' ? DEFAULT4 : DEFAULT_PERSONAS.slice(0, personaCap));
+  
+  // Tell the UI what we enforced
+  const debateId = `debate-${Date.now()}`;
+  sseWrite(res, 'meta', { 
+    debateId, 
+    tenantId, 
+    plan, 
+    personaCap, 
+    roster,
+    limited: rawRequested.length > personaCap 
+  });
+  
+  // Hard trim downstream to avoid accidental over-fanout
+  const list = roster.slice(0, personaCap);
 
   try {
-    await runChain(prompt, topK, res);
+    // Pass the capped list to runChain
+    await runChain(prompt, topK, res, list);
   } catch (e: any) {
     res.write(`event: error\ndata: ${JSON.stringify({ message: String(e?.message || e) })}\n\n`);
   } finally {

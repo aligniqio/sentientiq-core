@@ -182,7 +182,7 @@ Format (mandatory):
 | Hypothesis | Variant | KPI | MDE | Sample | Duration |
 (3 rows minimum)`;
 
-export async function runChain(prompt: string, topK: number, res?: any) {
+export async function runChain(prompt: string, topK: number, res?: any, personas?: string[]) {
   if (res) sseWrite(res, 'start', { ok: true });
 
   // Retrieval
