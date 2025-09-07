@@ -4,6 +4,7 @@
     "lib": ["ES2020", "DOM", "DOM.Iterable"],
     "module": "ESNext",
     "skipLibCheck": true,
+    "allowJs": true,
     "moduleResolution": "bundler",
     "allowImportingTsExtensions": true,
     "resolveJsonModule": true,
@@ -19,5 +20,6 @@
     }
   },
   "include": ["src"],
+  "exclude": ["marketing-website"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }

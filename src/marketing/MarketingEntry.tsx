@@ -1,6 +1,6 @@
-// Re-export the marketing site landing page
-import Landing from '../pages/landing';
+// Import the actual marketing website app
+import MarketingApp from '../../marketing-website/src/app';
 
 export default function MarketingEntry() {
-  return <Landing />;
+  return <MarketingApp />;
 }
