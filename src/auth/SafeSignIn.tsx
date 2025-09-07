@@ -1,4 +1,5 @@
 // src/auth/SafeSignIn.tsx
+import { SignInButton, SignUpButton } from '@clerk/clerk-react';
 import { isAppHost } from '../utils/isAppHost';
 
 export function SafeSignIn({ children = 'Sign in' }: { children?: React.ReactNode }) {
@@ -13,8 +14,6 @@ export function SafeSignIn({ children = 'Sign in' }: { children?: React.ReactNod
     );
   }
   
-  // Only import when rendered on .app
-  const { SignInButton } = require('@clerk/clerk-react');
   return <SignInButton mode="modal">{children}</SignInButton>;
 }
 
@@ -30,7 +29,5 @@ export function SafeSignUp({ children = 'Start free' }: { children?: React.React
     );
   }
   
-  // Only import when rendered on .app
-  const { SignUpButton } = require('@clerk/clerk-react');
   return <SignUpButton mode="modal">{children}</SignUpButton>;
 }
