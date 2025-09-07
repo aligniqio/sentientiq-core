@@ -4,24 +4,7 @@ import { CheckCircle, Brain } from 'lucide-react';
 import PageHeader from '../components/PageHeader';
 // import { useUser } from '@clerk/clerk-react';
 import { useTrackUsage, useSubscription } from '../hooks/useSubscription';
-
-const SAGE_API = import.meta.env.VITE_SAGE_API_URL || 'http://localhost:8004';
-
-// Mapping between UI IDs and backend agent keys
-const AGENT_MAPPING: Record<string, string> = {
-  'cmo': 'strategic',
-  'psychology': 'emotion', 
-  'data': 'pattern',
-  'identity': 'identity',
-  'creative': 'chaos',
-  'budget': 'roi',
-  'competitive': 'warfare',
-  'channel': 'omni',
-  'onboarding': 'first',
-  'attribution': 'truth',
-  'sage': 'brutal',
-  'learning': 'context'
-};
+import { ssePost } from '../utils/ssePost';
 
 // The 12 PhD Faculty
 const PHD_FACULTY = [
@@ -311,6 +294,7 @@ const PhDCollective: React.FC = () => {
 
     setIsAnalyzing(true);
     setShowResults(false);
+    setDebateResults(null);
 
     // Track usage (all users are authenticated)
     await trackQuestion();
@@ -322,56 +306,66 @@ const PhDCollective: React.FC = () => {
       timestamp: new Date().toISOString()
     };
     
-    // setConversationHistory(prev => [...prev, newQuestion]);
-    
     // Clear the input field
     setQuestion('');
 
     try {
-      // Map UI IDs to backend agent names
-      const agents = Array.from(selectedPhDs).map(id => AGENT_MAPPING[id] || id);
-      
-      // Include business context in the question
-      const contextualQuestion = `
-Context: You are advising ${businessContext.company}, a ${businessContext.industry} company currently ${businessContext.stage}.
-Previous discussions included: ${businessContext.insideJokes.join(', ')}.
-
-Question: ${question}
-
-Provide strategic advice from your area of expertise.`;
-      
-      const response = await fetch(`${SAGE_API}/api/sage/debate`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          message: contextualQuestion,
-          agents,
-          context: businessContext
-        })
+      // Map selected PhD IDs to their persona names for the boardroom
+      const personas = Array.from(selectedPhDs).map(id => {
+        const phd = PHD_FACULTY.find(p => p.id === id);
+        return phd ? phd.name.replace('Dr. ', '') : id;
       });
-
-      const data = await response.json();
-      console.log('API Response:', data); // Debug log
-      if (data.success) {
-        setDebateResults(data.debate);
-        setShowAnnouncement(true);
-        setTimeout(() => {
-          setShowAnnouncement(false);
-          setShowResults(true);
-        }, 2500); // Show announcement for 2.5 seconds
-        console.log('Debate results set:', data.debate); // Debug log
-        
-        // Add response to history
-        const newResponse = {
-          type: 'response',
-          content: data.debate,
-          timestamp: new Date().toISOString()
-        };
-        // setConversationHistory(prev => [...prev, newResponse]);
-        
-        // Store in Supabase for persistence
-        storeConversation(newQuestion, newResponse);
-      }
+      
+      // Build streaming response
+      let synthesis = '';
+      const panels: Record<string, string> = {};
+      
+      await ssePost(`/api/sage/debate`, {
+        prompt: question,
+        personas: personas.length > 0 ? personas : undefined, // Let server default if none selected
+        topK: 4
+      }, ({ event, data }) => {
+        if (event === 'accepted') {
+          console.log('SSE connection accepted');
+          return;
+        }
+        if (event === 'delta') {
+          // Append text to the specific persona's panel
+          const label = data.label;
+          panels[label] = (panels[label] || '') + data.text;
+          // Update the display with accumulated text
+          synthesis = Object.entries(panels)
+            .map(([persona, text]) => `**${persona}:**\n${text}`)
+            .join('\n\n---\n\n');
+          setDebateResults({ collective_synthesis: synthesis });
+          return;
+        }
+        if (event === 'phase') {
+          console.log('Phase update:', data);
+          return;
+        }
+        if (event === 'error') {
+          console.error('SSE error:', data);
+          return;
+        }
+        if (event === 'done') {
+          console.log('SSE stream complete');
+          setShowAnnouncement(true);
+          setTimeout(() => {
+            setShowAnnouncement(false);
+            setShowResults(true);
+          }, 2500);
+          return;
+        }
+      });
+      
+      // Store in Supabase for persistence
+      const newResponse = {
+        type: 'response',
+        content: { collective_synthesis: synthesis },
+        timestamp: new Date().toISOString()
+      };
+      storeConversation(newQuestion, newResponse);
     } catch (error) {
       console.error('Advisory session failed:', error);
     } finally {

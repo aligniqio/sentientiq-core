@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Shield, AlertTriangle, Trash2, Send, Search, Brain } from 'lucide-react';
 import PageHeader from '../components/PageHeader';
 
-const API_BASE = import.meta.env.VITE_SAGE_API_URL || 'http://localhost:8004';
+// API calls are now proxied through Netlify edge
 
 interface SageAnalysis {
   bullshit_score: number;
@@ -36,7 +36,7 @@ const SageInbox: React.FC = () => {
 
     setIsAnalyzing(true);
     try {
-      const response = await fetch(`${API_BASE}/api/sage/analyze`, {
+      const response = await fetch(`/api/sage/analyze`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
