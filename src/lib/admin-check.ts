@@ -3,6 +3,7 @@
 
 export const SUPER_ADMIN_EMAILS: string[] = [
   'matt@sentientiq.ai',
+  'info@sentientiq.ai',  // You!
 ];
 
 export const ADMIN_USER_IDS: string[] = [
