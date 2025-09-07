@@ -1,4 +1,3 @@
-import React from 'react';
 import SEO from './components/SEO';
 import Navbar from './components/NavBar';
 import Hero from './components/Hero';
