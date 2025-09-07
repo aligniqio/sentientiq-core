@@ -1,11 +1,9 @@
 import { Suspense, lazy } from 'react';
+import { isAppHost } from './utils/isAppHost';
 
 // Lazy chunks so the other side never loads
 const Marketing = lazy(() => import('./marketing/MarketingEntry'));
 const ProductApp = lazy(() => import('./product/App'));
-
-const isAppHost = (h: string) =>
-  h === 'localhost' || /\.sentientiq\.app$/i.test(h);
 
 export default function DomainRouter() {
   const host = typeof window !== 'undefined' ? window.location.hostname : '';

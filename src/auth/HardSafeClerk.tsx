@@ -1,7 +1,5 @@
 import React from 'react';
-
-const isAppHost = (h: string) =>
-  h === 'localhost' || /\.sentientiq\.app$/i.test(h);
+import { isAppHost } from '../utils/isAppHost';
 
 export default function HardSafeClerk({ children }: { children: React.ReactNode }) {
   try {

@@ -1,7 +1,9 @@
 // src/auth/SafeSignIn.tsx
+import { isAppHost } from '../utils/isAppHost';
+
 export function SafeSignIn({ children = 'Sign in' }: { children?: React.ReactNode }) {
   const host = typeof window !== 'undefined' ? window.location.hostname : '';
-  const isApp = host === 'localhost' || /\.sentientiq\.app$/i.test(host);
+  const isApp = isAppHost(host);
   
   if (!isApp) {
     return (
@@ -18,7 +20,7 @@ export function SafeSignIn({ children = 'Sign in' }: { children?: React.ReactNod
 
 export function SafeSignUp({ children = 'Start free' }: { children?: React.ReactNode }) {
   const host = typeof window !== 'undefined' ? window.location.hostname : '';
-  const isApp = host === 'localhost' || /\.sentientiq\.app$/i.test(host);
+  const isApp = isAppHost(host);
   
   if (!isApp) {
     return (
