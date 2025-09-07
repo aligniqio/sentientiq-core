@@ -453,11 +453,12 @@ const PhDCollective: React.FC = () => {
           )}
         </div>
 
-        <div className="flex pb-8 flex-col lg:flex-row gap-4 lg:gap-6" style={{ height: 'calc(100vh - 10rem)' }}>
+        <div className="flex pb-8 flex-col lg:flex-row gap-6" style={{ height: 'calc(100vh - 10rem)' }}>
         
-        {/* PhD Cards Grid - LEFT SIDE */}
-        <div className="flex-1 lg:flex-[2] flex flex-col overflow-hidden">
-          <div className="mb-3 flex gap-3 relative z-50">
+        {/* LEFT SIDE - PhD Cards Grid + Input */}
+        <div className="lg:w-[600px] flex flex-col gap-4">
+          {/* Selection Buttons */}
+          <div className="flex gap-3 relative z-50">
             <button
               onClick={() => {
                 console.log('BUTTON CLICKED - Summon All');
@@ -477,7 +478,9 @@ const PhDCollective: React.FC = () => {
               Clear Selection
             </button>
           </div>
-          <div className="grid grid-cols-3 gap-2 overflow-y-auto overflow-x-hidden p-1">
+          
+          {/* PhD Cards Grid */}
+          <div className="grid grid-cols-3 gap-2 overflow-y-auto overflow-x-hidden p-1 flex-1">
           {PHD_FACULTY.map((phd) => {
             const isSelected = selectedPhDs.has(phd.id);
             
@@ -521,17 +524,54 @@ const PhDCollective: React.FC = () => {
             );
           })}
           </div>
+          
+          {/* Input Field - Below Grid, Full Width */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-white/5 backdrop-blur-xl rounded-xl p-4 relative z-50"
+          >
+            <textarea
+              placeholder="e.g., 'Should we launch before Black Friday?'"
+              value={question}
+              onChange={(e) => setQuestion(e.target.value)}
+              rows={3}
+              className="w-full px-4 py-3 bg-black/30 rounded-lg text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none mb-3"
+            />
+
+            <div className="flex items-center justify-between">
+              <button
+                onClick={() => {
+                  console.log('SUBMIT CLICKED!');
+                  console.log('Question:', question);
+                  console.log('Selected PhDs:', Array.from(selectedPhDs));
+                  console.log('Selected PhDs size:', selectedPhDs.size);
+                  console.log('Is Analyzing:', isAnalyzing);
+                  askAdvisors();
+                }}
+                disabled={isAnalyzing || selectedPhDs.size === 0 || !question.trim()}
+                className="flex-1 px-6 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-lg font-medium hover:from-purple-700 hover:to-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                title={`Analyzing: ${isAnalyzing}, PhDs: ${selectedPhDs.size}, Question: ${question ? question.length : 0} chars`}
+              >
+                {isAnalyzing ? 'Analyzing...' : 'Start a Debate'}
+              </button>
+              
+              <div className="ml-4 text-xs text-white/40">
+                Tip: Cmd + Enter to ask
+              </div>
+            </div>
+          </motion.div>
         </div>
 
-        {/* RIGHT SIDE - Maximum Output Area */}
-        <div className="flex-1 lg:max-w-[600px] relative z-20">
-          <div className="flex flex-col gap-4 h-full">
+        {/* RIGHT SIDE - Full Height Output Area */}
+        <div className="flex-1 relative z-20">
+          <div className="h-full">
             
-            {/* TOP SECTION - Output (Always visible) */}
+            {/* Full Height Output Area */}
             <motion.div
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
-              className="flex-1 bg-white/5 backdrop-blur-xl rounded-xl p-6 overflow-y-auto"
+              className="h-full bg-white/5 backdrop-blur-xl rounded-xl p-6 overflow-y-auto"
             >
               {showAnnouncement ? (
                 <motion.div
@@ -620,41 +660,6 @@ const PhDCollective: React.FC = () => {
                   )}
                 </div>
               )}
-            </motion.div>
-            
-            {/* BOTTOM SECTION - Input */}
-            <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              className="bg-white/5 backdrop-blur-xl rounded-xl p-6 relative z-50"
-            >
-              <textarea
-                placeholder="e.g., 'Should we launch before Black Friday?'"
-                value={question}
-                onChange={(e) => setQuestion(e.target.value)}
-                rows={3}
-                className="w-full px-4 py-3 bg-black/30 rounded-lg text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none mb-4"
-              />
-
-              <button
-                onClick={() => {
-                  console.log('SUBMIT CLICKED!');
-                  console.log('Question:', question);
-                  console.log('Selected PhDs:', Array.from(selectedPhDs));
-                  console.log('Selected PhDs size:', selectedPhDs.size);
-                  console.log('Is Analyzing:', isAnalyzing);
-                  askAdvisors();
-                }}
-                disabled={isAnalyzing || selectedPhDs.size === 0 || !question.trim()}
-                className="w-full px-6 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-lg font-medium hover:from-purple-700 hover:to-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-                title={`Analyzing: ${isAnalyzing}, PhDs: ${selectedPhDs.size}, Question: ${question ? question.length : 0} chars`}
-              >
-                {isAnalyzing ? 'Analyzing...' : 'Start a Debate'}
-              </button>
-              
-              <div className="mt-3 text-xs text-white/40">
-                Tip: Cmd + Enter to ask
-              </div>
             </motion.div>
           </div>
         </div>
