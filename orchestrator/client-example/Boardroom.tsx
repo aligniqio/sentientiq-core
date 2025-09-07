@@ -94,7 +94,7 @@ export function Boardroom() {
 
       <div className="personas-grid">
         {Object.values(personas).map((persona) => (
-          <div key={persona.label} className={`persona-card ${persona.status}`}>
+          <div key={persona.label} className={`persona-card ${persona.status} instant-vibe`}>
             <h3>{persona.label}</h3>
             <div className="persona-content">
               {persona.content || '...'}

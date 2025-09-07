@@ -7,10 +7,10 @@ export const DEFAULT_PERSONAS = [
   'Brand Strategist',
   'UX Researcher',
   'Data Skeptic',
-  'Compliance Counsel',
   'Social Strategist',
   'Customer Success',
-  'CEO Provocateur'
+  'CEO Provocateur',
+  'Compliance Counsel'
 ];
 
 export function personaSystem(persona: string) {
@@ -31,7 +31,10 @@ export function personaSystem(persona: string) {
     'Compliance Counsel': base + '\nFlag privacy, accessibility, and claims risk. Offer compliant wording.',
     'Social Strategist': base + '\nTurn insight into content hooks and distribution.',
     'Customer Success': base + '\nReduce anxiety; propose onboarding/education steps.',
-    'CEO Provocateur': base + '\nChallenge defaults; pick one bet and push for speed.'
+    'CEO Provocateur': base + '\nChallenge defaults; pick one bet and push for speed.',
+    'Attribution Analyst': base + '\nTrack multi-touch journeys. Assign credit to channels and campaigns.',
+    'Strategic': base + '\nConnect tactical moves to long-term vision. Identify strategic moats.',
+    'Identity': base + '\nExplore self-concept and social identity. How does this affect who users think they are?'
   };
 
   return tweaks[persona] || base;

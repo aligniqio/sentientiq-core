@@ -18,13 +18,7 @@ import {
   Target,
   Crown
 } from 'lucide-react';
-import { createClient } from '@supabase/supabase-js';
 import { useUser } from '@clerk/clerk-react';
-
-const supabase = createClient(
-  import.meta.env.VITE_SUPABASE_URL,
-  import.meta.env.VITE_SUPABASE_ANON_KEY
-);
 
 interface Tenant {
   id: string;
@@ -44,6 +38,7 @@ export default function SuperAdmin() {
   const [showAddTenant, setShowAddTenant] = useState(false);
   const [stats, setStats] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [supabase, setSupabase] = useState<any>(null);
   const [newTenant, setNewTenant] = useState({
     company_name: '',
     email: '',
@@ -51,8 +46,29 @@ export default function SuperAdmin() {
     commission_rate: 20 // Default 20% for MLM
   });
 
+  // Initialize Supabase client lazily
+  useEffect(() => {
+    const initSupabase = async () => {
+      try {
+        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+        const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+        
+        if (supabaseUrl && supabaseKey) {
+          const { createClient } = await import('@supabase/supabase-js');
+          const client = createClient(supabaseUrl, supabaseKey);
+          setSupabase(client);
+        }
+      } catch (error) {
+        console.error('Failed to initialize Supabase:', error);
+      }
+    };
+    
+    initSupabase();
+  }, []);
+
   // Zeus-level stats for the empire
   const fetchStats = async () => {
+    if (!supabase) return; // Skip if no Supabase client
     try {
       // Fetch all the metrics
       const [tenantsData, usersData, usageData] = await Promise.all([
@@ -62,12 +78,12 @@ export default function SuperAdmin() {
       ]);
 
       const totalTenants = tenantsData.data?.length || 0;
-      const agencyTenants = tenantsData.data?.filter(t => t.is_white_label).length || 0;
+      const agencyTenants = tenantsData.data?.filter((t: any) => t.is_white_label).length || 0;
       const totalUsers = usersData.data?.length || 0;
-      const totalQuestions = usageData.data?.filter(u => u.action === 'phd_question').length || 0;
+      const totalQuestions = usageData.data?.filter((u: any) => u.action === 'phd_question').length || 0;
       
       // Calculate MRR
-      const mrr = tenantsData.data?.reduce((sum, t) => {
+      const mrr = tenantsData.data?.reduce((sum: number, t: any) => {
         const tierPrices: Record<string, number> = { free: 0, starter: 99, professional: 499, enterprise: 2000, agency: 999 };
         return sum + (tierPrices[t.subscription_tier] || 0);
       }, 0) || 0;
@@ -98,6 +114,7 @@ export default function SuperAdmin() {
   };
 
   const handleAddTenant = async () => {
+    if (!supabase) return; // Skip if no Supabase client
     // Extract domain from email
     const domain = newTenant.email.split('@')[1];
     
@@ -147,6 +164,7 @@ export default function SuperAdmin() {
   };
 
   const fetchTenants = async () => {
+    if (!supabase) return; // Skip if no Supabase client
     try {
       const { data, error } = await supabase
         .from('tenants')
@@ -173,6 +191,7 @@ export default function SuperAdmin() {
     const isSuperAdmin = user?.emailAddresses?.[0]?.emailAddress === 'truth@sentientiq.ai' || 
                         user?.emailAddresses?.[0]?.emailAddress === 'admin@sentientiq.ai' ||
                         user?.emailAddresses?.[0]?.emailAddress?.includes('kiselstein') ||
+                        user?.emailAddresses?.[0]?.emailAddress === 'info@sentientiq.ai' ||
                         true; // Temporarily allowing all for testing
     
     if (!isSuperAdmin) {
@@ -180,13 +199,16 @@ export default function SuperAdmin() {
       return;
     }
     
-    fetchTenants();
-    fetchStats();
-    
-    // Refresh stats every 30 seconds
-    const interval = setInterval(fetchStats, 30000);
-    return () => clearInterval(interval);
-  }, [user]);
+    // Only fetch data when supabase is ready
+    if (supabase) {
+      fetchTenants();
+      fetchStats();
+      
+      // Refresh stats every 30 seconds
+      const interval = setInterval(fetchStats, 30000);
+      return () => clearInterval(interval);
+    }
+  }, [user, supabase]);
 
   return (
     <div className="min-h-screen bg-black relative overflow-hidden">

@@ -1,24 +1,24 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
-import { ClerkProvider } from '@clerk/clerk-react'
+import { HelmetProvider } from 'react-helmet-async'
+import HardSafeClerk from './auth/HardSafeClerk'
 import App from './App'
 import './index.css'
 import { captureUtms } from "./lib/utm";
-captureUtms();
 
-const clerkPubKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY
-
-// Only wrap with ClerkProvider if we have a key (allows landing page to work without auth)
-const AppWrapper = clerkPubKey ? (
-  <ClerkProvider publishableKey={clerkPubKey}>
-    <App />
-  </ClerkProvider>
-) : (
-  <App />
-)
+// Defensive UTM capture
+try {
+  captureUtms();
+} catch (e) {
+  console.warn('UTM capture failed:', e);
+}
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    {AppWrapper}
+    <HelmetProvider>
+      <HardSafeClerk>
+        <App />
+      </HardSafeClerk>
+    </HelmetProvider>
   </React.StrictMode>
 )

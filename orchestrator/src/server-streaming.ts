@@ -3,9 +3,9 @@ import express, { Request, Response } from 'express';
 import cors from 'cors';
 import { z } from 'zod';
 import pLimit from 'p-limit';
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { claudeStream } from './streaming.js';
 import { DEFAULT_PERSONAS, personaSystem } from './personas.js';
+import { retrieveContext, supabase } from './retrieveContext.js';
 
 // ---------- Env ----------
 const PORT = Number(process.env.PORT || 8787);
@@ -22,10 +22,6 @@ const openaiPool = pLimit(Number(process.env.OPENAI_CONCURRENCY || 20));
 const anthropicPool = pLimit(Number(process.env.ANTHROPIC_CONCURRENCY || 20));
 const groqPool = pLimit(Number(process.env.GROQ_CONCURRENCY || 50));
 
-const supabase: SupabaseClient | null =
-  process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY
-    ? createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY)
-    : null;
 
 // ---------- Helpers ----------
 const sleep = (ms: number) => new Promise(res => setTimeout(res, ms));
@@ -52,20 +48,6 @@ function packContext(snips: string[], maxChars = 6000) {
   return out;
 }
 
-// ---------- Retrieval (pgvector via Supabase RPC or fallback) ----------
-async function retrieveContext(query: string, topK = 6): Promise<string[]> {
-  if (!supabase) return [];
-  try {
-    const { data, error } = await supabase.rpc('match_documents', {
-      query_text: query,
-      match_count: topK
-    });
-    if (error || !Array.isArray(data)) return [];
-    return data.map((r: any) => r.content || r.text || '').filter(Boolean);
-  } catch {
-    return [];
-  }
-}
 
 // ---------- Non-streaming helpers (Groq/OpenAI/Claude) ----------
 async function callGroq(system: string, user: string): Promise<string> {
@@ -118,12 +100,12 @@ const PLANNER_SYS = 'You are Planner. Output a short, numbered plan (max 6 bulle
 const PRIMARY_SYS = 'You are the Primary Strategist. Use the plan and context to produce the best answer with evidence.';
 const REFINER_SYS = 'You are the Refiner. Tighten, keep facts, output clear CTAs.';
 
-async function runChain(prompt: string, topK: number, res: Response, strategy: 'default'|'claude_primary' = 'default') {
+async function runChain(prompt: string, topK: number, res: Response, strategy: 'default'|'claude_primary' = 'default', tenantId?: string) {
   sseWrite(res, 'start', { ok: true });
 
-  // Retrieval
+  // Retrieval (tenant-aware)
   sseWrite(res, 'phase', { label: 'retrieval', status: 'begin' });
-  const snippets = await retrieveContext(prompt, topK);
+  const snippets = await retrieveContext(prompt, topK, tenantId);
   sseWrite(res, 'phase', { label: 'retrieval', status: 'end', hits: snippets.length });
 
   const clipped = packContext(snippets);
@@ -198,18 +180,24 @@ app.post('/v1/debate', async (req: Request, res: Response) => {
     return res.end();
   }
   const { prompt, topK, strategy } = parsed.data;
+  const tenantId = (req.headers['x-tenant-id'] || req.headers['x-user-id']) as string | undefined;
 
-  try { await runChain(prompt, topK, res, strategy); }
+  try { await runChain(prompt, topK, res, strategy, tenantId); }
   catch (e: any) { sseWrite(res, 'error', { message: String(e?.message || e) }); }
   finally { res.end(); }
 });
 
 // NEW: Boardroom – parallel Claude personas with true streaming
 const BoardroomBody = z.object({
-  prompt: z.string().min(3),
+  prompt: z.string().min(3).max(800),
+  tenantId: z.string().uuid().optional(),
+  userId: z.string().uuid().optional(),
   personas: z.array(z.string()).optional(),
-  topK: z.number().int().min(0).max(20).optional().default(6),
-  temperature: z.number().min(0).max(1).optional().default(0.2)
+  topK: z.number().int().min(0).max(20).optional().default(3),
+  temperature: z.number().min(0).max(1).optional().default(0.2),
+  title: z.string().optional(),
+  contextHint: z.string().optional(),
+  idempotencyKey: z.string().optional()
 });
 
 app.post('/v1/boardroom', async (req: Request, res: Response) => {
@@ -226,12 +214,16 @@ app.post('/v1/boardroom', async (req: Request, res: Response) => {
     return res.end();
   }
 
-  const { prompt, personas, topK, temperature } = parsed.data;
+  const { prompt, personas, topK, temperature, tenantId: bodyTenantId, userId, title, contextHint, idempotencyKey } = parsed.data;
+  // Prefer body tenantId, fallback to headers
+  const tenantId = bodyTenantId || (req.headers['x-tenant-id'] || req.headers['x-user-id'] || 'anonymous') as string;
+  
   sseWrite(res, 'start', { ok: true, personas: personas?.length || DEFAULT_PERSONAS.length });
 
-  // Retrieval once, shared
+  // Retrieval once, shared (tenant-aware with optional context hint)
   sseWrite(res, 'phase', { label: 'retrieval', status: 'begin' });
-  const ctx = await retrieveContext(prompt, topK);
+  const retrievalQuery = contextHint ? `${prompt} ${contextHint}` : prompt;
+  const ctx = await retrieveContext(retrievalQuery, topK, tenantId);
   sseWrite(res, 'phase', { label: 'retrieval', status: 'end', hits: ctx.length });
 
   const clipped = packContext(ctx);
@@ -242,6 +234,35 @@ app.post('/v1/boardroom', async (req: Request, res: Response) => {
   const list = (!personas || personas.length === 0 ? DEFAULT_PERSONAS : personas).slice(0, 12);
   let finished = 0;
   const total = list.length;
+  const responses: Record<string, string> = {};
+  
+  // Save debate to Supabase
+  let debateId: string | null = null;
+  if (supabase) {
+    try {
+      const { data, error } = await supabase
+        .from('debates')
+        .insert({
+          tenant_id: tenantId,
+          user_id: userId,
+          prompt,
+          title: title || prompt.substring(0, 100),
+          personas: list,
+          status: 'in_progress',
+          idempotency_key: idempotencyKey,
+          created_at: new Date().toISOString()
+        })
+        .select('id')
+        .single();
+      
+      if (!error && data) {
+        debateId = data.id;
+        sseWrite(res, 'meta', { debateId, tenantId, userId });
+      }
+    } catch (e) {
+      console.error('Failed to save debate:', e);
+    }
+  }
 
   // Kick off streams (respect anthropicPool)
   await Promise.all(list.map(p =>
@@ -257,11 +278,72 @@ app.post('/v1/boardroom', async (req: Request, res: Response) => {
         system: sys,
         user,
         temperature,
-        onDelta: (txt) => sseWrite(res, 'delta', { label: p, text: txt }),
-        onDone: () => {
+        onDelta: (txt) => {
+          sseWrite(res, 'delta', { label: p, text: txt });
+          responses[p] = (responses[p] || '') + txt;
+        },
+        onDone: async () => {
           sseWrite(res, 'phase', { label: p, status: 'end' });
           finished += 1;
-          if (finished === total) sseWrite(res, 'done', { ok: true });
+          
+          if (finished === total) {
+            // Conditional Moderator synthesis
+            const shouldMerge = list.length > 1;
+            if (shouldMerge) {
+              sseWrite(res, 'phase', { label: 'Moderator', status: 'begin' });
+              
+              const mergeSystem = `You are the Moderator. Synthesize the panel's perspectives into a unified executive recommendation.`;
+              const mergeUser = `The panel discussed: "${prompt}"
+
+Here are their perspectives:
+${Object.entries(responses).map(([k,v]) => `${k}:\n${v}`).join('\n\n')}
+
+Synthesize: Key consensus points, divergent views, and final recommendation with 3 prioritized CTAs.`;
+              
+              await claudeStream({
+                apiKey: ANTHROPIC_API_KEY,
+                model: ANTHROPIC_MODEL,
+                system: mergeSystem,
+                user: mergeUser,
+                temperature: 0.1,
+                onDelta: (txt) => sseWrite(res, 'delta', { label: 'Moderator', text: txt }),
+                onDone: async () => {
+                  sseWrite(res, 'phase', { label: 'Moderator', status: 'end' });
+                  
+                  // Update debate status
+                  if (supabase && debateId) {
+                    await supabase
+                      .from('debates')
+                      .update({ 
+                        status: 'completed',
+                        responses,
+                        completed_at: new Date().toISOString()
+                      })
+                      .eq('id', debateId);
+                  }
+                  
+                  sseWrite(res, 'done', { ok: true });
+                },
+                onError: (err) => {
+                  sseWrite(res, 'error', { label: 'Moderator', message: String(err?.message || err) });
+                  sseWrite(res, 'done', { ok: true });
+                }
+              });
+            } else {
+              // Single persona, no merge needed
+              if (supabase && debateId) {
+                await supabase
+                  .from('debates')
+                  .update({ 
+                    status: 'completed',
+                    responses,
+                    completed_at: new Date().toISOString()
+                  })
+                  .eq('id', debateId);
+              }
+              sseWrite(res, 'done', { ok: true });
+            }
+          }
           resolve();
         },
         onError: async (err) => {
@@ -270,11 +352,46 @@ app.post('/v1/boardroom', async (req: Request, res: Response) => {
           try {
             const once = await callAnthropicOnce(sys, user);
             sseWrite(res, 'delta', { label: p, text: once });
+            responses[p] = once;
           } catch (e2) {
             sseWrite(res, 'error', { label: p, message: `fallback failed: ${String(e2)}` });
           }
           finished += 1;
-          if (finished === total) sseWrite(res, 'done', { ok: true });
+          if (finished === total) {
+            // Same conditional moderator logic for error path
+            const shouldMerge = list.length > 1;
+            if (shouldMerge && Object.keys(responses).length > 0) {
+              // Run moderator synthesis if we have any responses
+              sseWrite(res, 'phase', { label: 'Moderator', status: 'begin' });
+              const mergeSystem = `You are the Moderator. Synthesize the panel's perspectives into a unified executive recommendation.`;
+              const mergeUser = `The panel discussed: "${prompt}"
+
+Here are their perspectives:
+${Object.entries(responses).map(([k,v]) => `${k}:\n${v}`).join('\n\n')}
+
+Synthesize: Key consensus points, divergent views, and final recommendation with 3 prioritized CTAs.`;
+              
+              try {
+                const moderatorResponse = await callAnthropicOnce(mergeSystem, mergeUser);
+                sseWrite(res, 'delta', { label: 'Moderator', text: moderatorResponse });
+                sseWrite(res, 'phase', { label: 'Moderator', status: 'end' });
+              } catch (modErr) {
+                sseWrite(res, 'error', { label: 'Moderator', message: String(modErr) });
+              }
+            }
+            
+            if (supabase && debateId) {
+              await supabase
+                .from('debates')
+                .update({ 
+                  status: 'completed',
+                  responses,
+                  completed_at: new Date().toISOString()
+                })
+                .eq('id', debateId);
+            }
+            sseWrite(res, 'done', { ok: true });
+          }
           resolve();
         }
       });
@@ -282,6 +399,43 @@ app.post('/v1/boardroom', async (req: Request, res: Response) => {
   ));
 
   res.end();
+});
+
+// Save debate brief to tenant
+app.post('/v1/debate/save-brief', async (req: Request, res: Response) => {
+  const { debateId, title, summary } = req.body;
+  const tenantId = (req.headers['x-tenant-id'] || req.headers['x-user-id']) as string;
+  
+  if (!supabase) {
+    return res.status(503).json({ error: 'Storage unavailable' });
+  }
+  
+  if (!debateId || !tenantId) {
+    return res.status(400).json({ error: 'Missing required fields' });
+  }
+  
+  try {
+    // Save to recommendations table for tenant
+    const { data, error } = await supabase
+      .from('recommendations')
+      .insert({
+        tenant_id: tenantId,
+        debate_id: debateId,
+        title: title || 'Boardroom Debate',
+        summary: summary || 'AI collective intelligence analysis',
+        category: 'boardroom',
+        created_at: new Date().toISOString()
+      })
+      .select()
+      .single();
+    
+    if (error) throw error;
+    
+    res.json({ ok: true, id: data.id });
+  } catch (e: any) {
+    console.error('Save brief error:', e);
+    res.status(500).json({ error: e.message });
+  }
 });
 
 app.get('/health', (_req: Request, res: Response) => res.json({ ok: true }));

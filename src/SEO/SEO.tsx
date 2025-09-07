@@ -1,5 +1,6 @@
 import React from 'react';
 import { Helmet } from 'react-helmet-async';
+import { normalizeOrigin, abs } from '../utils/url';
 
 type Breadcrumb = { name: string; url: string };
 type QA = { question: string; answer: string };
@@ -37,15 +38,15 @@ interface SEOProps {
 
 const SEO: React.FC<SEOProps> = ({
   title = 'SentientIQ – Emotional Intelligence for Digital Commerce',
-  description = 'Measure real human emotions from real behavior. Replace “intent” guesses with Plutchik-grade emotional intelligence.',
-  image = '/og-image.png',
+  description = 'Measure real human emotions from real behavior. Replace "intent" guesses with Plutchik-grade emotional intelligence.',
+  image = '/og-image.svg',
   imageAlt = 'SentientIQ emotional intelligence visualization',
   path = '/',
   canonical,
   noindex = false,
   locale = 'en_US',
   type = 'website',
-  siteUrl = (import.meta as any)?.env?.VITE_SITE_URL || process.env.NEXT_PUBLIC_SITE_URL || 'https://sentientiq.ai',
+  siteUrl = import.meta.env.VITE_SITE_URL || 'https://sentientiq.ai',
   siteName = 'SentientIQ',
   twitterSite = '@sentientiq',
   twitterCreator = '@sentientiq',
@@ -56,15 +57,16 @@ const SEO: React.FC<SEOProps> = ({
   product,
   preconnectStripe = false
 }) => {
-  const canonicalUrl = canonical || new URL(path, siteUrl).toString();
-  const absoluteImage = image.startsWith('http') ? image : new URL(image, siteUrl).toString();
+  const base = normalizeOrigin(siteUrl);
+  const canonicalUrl = canonical || abs(base, path || '/');
+  const absoluteImage = image && /^https?:\/\//i.test(image) ? image : abs(base, image || '/og-image.svg');
   const robots = noindex
     ? 'noindex, nofollow, noimageindex, noarchive, nosnippet'
     : 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1';
 
-  // --- JSON-LD graphs ---
-  const orgId = `${siteUrl}#organization`;
-  const websiteId = `${siteUrl}#website`;
+  // --- JSON-LD graphs --- NO new URL() anywhere!
+  const orgId = base + '#organization';
+  const websiteId = base + '#website';
   const webPageId = `${canonicalUrl}#webpage`;
 
   const organizationSchema = {
@@ -72,8 +74,8 @@ const SEO: React.FC<SEOProps> = ({
     '@type': 'Organization',
     '@id': orgId,
     name: siteName,
-    url: siteUrl,
-    logo: new URL('/logo.png', siteUrl).toString(),
+    url: base,
+    logo: abs(base, '/logo.svg'),
     sameAs: ['https://twitter.com/sentientiq', 'https://www.linkedin.com/company/sentientiq']
   };
 
@@ -81,12 +83,12 @@ const SEO: React.FC<SEOProps> = ({
     '@context': 'https://schema.org',
     '@type': 'WebSite',
     '@id': websiteId,
-    url: siteUrl,
+    url: base,
     name: siteName,
     publisher: { '@id': orgId },
     potentialAction: [{
       '@type': 'SearchAction',
-      target: `${siteUrl}/search?q={search_term_string}`,
+      target: base + '/search?q={search_term_string}',
       'query-input': 'required name=search_term_string'
     }]
   };
@@ -196,11 +198,10 @@ const SEO: React.FC<SEOProps> = ({
       <meta name="twitter:image:alt" content={imageAlt} />
 
       {/* Useful, modern-only meta */}
-      <meta name="theme-color" content="#000000" />
+      <meta name="theme-color" content="#667eea" />
       <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5" />
-      <link rel="icon" href="/favicon-32x32.png" sizes="32x32" />
-      <link rel="icon" href="/favicon-16x16.png" sizes="16x16" />
-      <link rel="apple-touch-icon" href="/apple-touch-icon.png" sizes="180x180" />
+      <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+      <link rel="apple-touch-icon" href="/logo.svg" />
       <link rel="manifest" href="/site.webmanifest" />
 
       {/* Optional preconnects (gate with prop to avoid wasted sockets) */}

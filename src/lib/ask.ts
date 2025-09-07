@@ -20,11 +20,15 @@ export type AskOptions = {
 function readUtms(): Record<string, string> | null {
   if (typeof window === "undefined") return null;
   try {
-    const url = new URL(window.location.href);
+    // Defensive URL parsing - use URLSearchParams directly without new URL()
+    const search = window.location.search;
+    if (!search) return null;
+    
+    const params = new URLSearchParams(search);
     const keys = ["utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content"];
     const found: Record<string, string> = {};
     for (const k of keys) {
-      const v = url.searchParams.get(k);
+      const v = params.get(k);
       if (v) found[k] = v;
     }
     if (Object.keys(found).length) {

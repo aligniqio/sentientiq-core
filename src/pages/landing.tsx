@@ -68,7 +68,10 @@ export default function Landing() {
 
   return (
     <>
-      <SEO />
+      <SEO 
+        image="/og-image.svg" 
+        path={typeof window !== 'undefined' ? window.location.pathname : '/'} 
+      />
       <div className="relative min-h-screen bg-[#0a0a12] text-white overflow-hidden">
         <MatrixRain />
         

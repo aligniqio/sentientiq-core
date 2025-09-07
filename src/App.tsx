@@ -1,3 +1,4 @@
+import React from 'react'
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import { SignedIn, SignedOut } from '@clerk/clerk-react'
 import { HelmetProvider } from 'react-helmet-async'
@@ -16,7 +17,8 @@ import IntelligenceMonitor from './pages/intelligence-monitor'
 import SageInbox from './pages/sage-inbox'
 import PhDCollective from './pages/phd-collective'
 import Onboarding from './pages/onboarding'
-import SuperAdmin from './pages/super-admin'
+// Lazy load SuperAdmin to prevent Supabase initialization on landing page
+const SuperAdmin = React.lazy(() => import('./pages/super-admin'))
 import DynamicRecommendations from './pages/dynamic-recommendations'
 import AdminRoute from './components/AdminRoute'
 
@@ -160,7 +162,9 @@ function App() {
             <>
               <SignedIn>
                 <AdminRoute>
-                  <SuperAdmin />
+                  <React.Suspense fallback={<div>Loading admin panel...</div>}>
+                    <SuperAdmin />
+                  </React.Suspense>
                 </AdminRoute>
               </SignedIn>
               <SignedOut>
