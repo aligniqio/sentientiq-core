@@ -1,15 +1,107 @@
+headersOrigin = "config"
+redirectsOrigin = "config"
+plugins = []
+
+[functions]
+
+[functions."*"]
+
 [build]
-  command = "npm run build"
-  publish = "dist"
-  functions = "netlify/functions"
+publish = "/Users/matthewkiselstein/projects/sentientiq-core/marketing-website/dist"
+publishOrigin = "config"
+commandOrigin = "config"
+base = "/Users/matthewkiselstein/projects/sentientiq-core/marketing-website"
+command = "npm install && npm run build"
+
+[build.environment]
+NODE_VERSION = "18"
+
+[build.processing]
+
+[build.processing.css]
+
+[build.processing.html]
+
+[build.processing.images]
+
+[build.processing.js]
+
+[build.services]
+
+[[headers]]
+for = "/*"
+
+[headers.values]
+Referrer-Policy = "strict-origin-when-cross-origin"
+X-Content-Type-Options = "nosniff"
+X-Frame-Options = "DENY"
+Permissions-Policy = "camera=(), microphone=(), geolocation=(), payment=()"
+Strict-Transport-Security = "max-age=31536000; includeSubDomains; preload"
+
+[[headers]]
+for = "/*"
+
+[headers.values]
+X-Frame-Options = "DENY"
+X-Content-Type-Options = "nosniff"
+Referrer-Policy = "strict-origin-when-cross-origin"
 
 [[redirects]]
-  from = "https://www.sentientiq.ai/*"
-  to   = "https://sentientiq.ai/:splat"
-  status = 301
-  force = true
+from = "https://www.sentientiq.ai/*"
+to = "https://sentientiq.ai/:splat"
+status = 301.0
+force = true
+
+[redirects.query]
+
+[redirects.conditions]
+
+[redirects.headers]
 
 [[redirects]]
-  from = "/sitemap.xml"
-  to   = "/.netlify/functions/sitemap"
-  status = 200
+from = "/app"
+to = "https://sentientiq.app"
+status = 301.0
+force = true
+
+[redirects.query]
+
+[redirects.conditions]
+
+[redirects.headers]
+
+[[redirects]]
+from = "/login"
+to = "https://sentientiq.app/auth"
+status = 301.0
+force = true
+
+[redirects.query]
+
+[redirects.conditions]
+
+[redirects.headers]
+
+[[redirects]]
+from = "/signup"
+to = "https://sentientiq.app/auth?mode=signup"
+status = 301.0
+force = true
+
+[redirects.query]
+
+[redirects.conditions]
+
+[redirects.headers]
+
+[[redirects]]
+from = "/*"
+to = "/index.html"
+status = 200.0
+force = false
+
+[redirects.query]
+
+[redirects.conditions]
+
+[redirects.headers]

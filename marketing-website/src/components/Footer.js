@@ -1,0 +1,4 @@
+import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
+export default function Footer() {
+    return (_jsxs("footer", { className: "section py-12 text-sm text-white/60", children: [_jsxs("div", { className: "flex flex-col md:flex-row items-center md:items-start justify-between gap-6", children: [_jsxs("div", { className: "flex items-center gap-2", children: [_jsx("img", { src: "/logo.png", className: "h-6 w-6", alt: "SentientIQ" }), _jsx("span", { children: "SentientIQ" })] }), _jsxs("nav", { className: "flex gap-6", children: [_jsx("a", { href: "/legal/terms", children: "Terms" }), _jsx("a", { href: "/legal/privacy", children: "Privacy" }), _jsx("a", { href: "https://sentientiq.app/login", children: "Sign in" })] })] }), _jsxs("p", { className: "mt-6 text-xs", children: ["\u00A9 ", new Date().getFullYear(), " SentientIQ. All rights reserved."] })] }));
+}
