@@ -4,26 +4,26 @@ import { SignedIn, SignedOut } from '@clerk/clerk-react'
 import { HelmetProvider } from 'react-helmet-async'
 
 // The ONLY pages that matter
-import Layout from './components/Layout'
-import Auth from './pages/auth'
-import HowItWorks from './pages/how-it-works'
-import AlwaysOnFaculty from './pages/always-on-faculty'
-import Ask from './pages/ask'
-import Settings from './pages/settings'
-import Pricing from './pages/pricing'
-import Billing from './pages/billing'
-import Landing from './pages/landing'
-import IntelligenceMonitor from './pages/intelligence-monitor'
-import SageInbox from './pages/sage-inbox'
-import PhDCollective from './pages/phd-collective'
-import Onboarding from './pages/onboarding'
+import Layout from '../components/Layout'
+import Auth from '../pages/auth'
+import HowItWorks from '../pages/how-it-works'
+import AlwaysOnFaculty from '../pages/always-on-faculty'
+import Ask from '../pages/ask'
+import Settings from '../pages/settings'
+import Pricing from '../pages/pricing'
+import Billing from '../pages/billing'
+import Landing from '../pages/landing'
+import IntelligenceMonitor from '../pages/intelligence-monitor'
+import SageInbox from '../pages/sage-inbox'
+import PhDCollective from '../pages/phd-collective'
+import Onboarding from '../pages/onboarding'
 // Lazy load SuperAdmin to prevent Supabase initialization on landing page
-const SuperAdmin = React.lazy(() => import('./pages/super-admin'))
-import DynamicRecommendations from './pages/dynamic-recommendations'
-import AdminRoute from './components/AdminRoute'
+const SuperAdmin = React.lazy(() => import('../pages/super-admin'))
+import DynamicRecommendations from '../pages/dynamic-recommendations'
+import AdminRoute from '../components/AdminRoute'
 
 // Candy Kit UI enhancements
-import { SenseiCandyProvider } from './components/ui/SenseiCandy'
+import { SenseiCandyProvider } from '../components/ui/SenseiCandy'
 
 function App() {
   return (

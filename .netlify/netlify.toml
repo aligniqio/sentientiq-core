@@ -52,6 +52,18 @@ force = true
 [redirects.headers]
 
 [[redirects]]
+from = "/api/boardroom/save-brief"
+to = "https://api.sentientiq.app/v1/debate/save-brief"
+status = 200.0
+force = true
+
+[redirects.query]
+
+[redirects.conditions]
+
+[redirects.headers]
+
+[[redirects]]
 from = "/api/sage/analyze"
 to = "https://api.sentientiq.app/v1/analyze"
 status = 200.0

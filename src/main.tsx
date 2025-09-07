@@ -1,9 +1,9 @@
-import React from 'react'
-import ReactDOM from 'react-dom/client'
-import { HelmetProvider } from 'react-helmet-async'
-import HardSafeClerk from './auth/HardSafeClerk'
-import App from './App'
-import './index.css'
+import React from 'react';
+import { createRoot } from 'react-dom/client';
+import { HelmetProvider } from 'react-helmet-async';
+import HardSafeClerk from './auth/HardSafeClerk';
+import DomainRouter from './DomainRouter';
+import './index.css';
 import { captureUtms } from "./lib/utm";
 
 // Defensive UTM capture
@@ -13,12 +13,12 @@ try {
   console.warn('UTM capture failed:', e);
 }
 
-ReactDOM.createRoot(document.getElementById('root')!).render(
+createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <HelmetProvider>
       <HardSafeClerk>
-        <App />
+        <DomainRouter />
       </HardSafeClerk>
     </HelmetProvider>
   </React.StrictMode>
-)
+);

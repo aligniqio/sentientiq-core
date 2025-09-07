@@ -1,25 +1,23 @@
-// src/auth/HardSafeClerk.tsx
 import React from 'react';
-import { ClerkProvider } from '@clerk/clerk-react';
+
+const isAppHost = (h: string) =>
+  h === 'localhost' || /\.sentientiq\.app$/i.test(h);
 
 export default function HardSafeClerk({ children }: { children: React.ReactNode }) {
-  const pk = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY?.trim();
-  
-  // If no publishable key, render without Clerk
-  if (!pk) {
-    console.warn('Clerk publishable key not found, rendering without authentication');
+  try {
+    const host = typeof window !== 'undefined' ? window.location.hostname : '';
+    if (!isAppHost(host)) return <>{children}</>; // no auth on .ai
+
+    const pk = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY?.trim();
+    if (!pk) return <>{children}</>;
+
+    const { ClerkProvider } = require('@clerk/clerk-react');
+    const rawProxy = import.meta.env.VITE_CLERK_PROXY_URL?.trim();
+    const proxyUrl = rawProxy && /^https?:\/\//i.test(rawProxy) ? rawProxy : undefined;
+
+    return <ClerkProvider publishableKey={pk} {...(proxyUrl ? { proxyUrl } : {})}>{children}</ClerkProvider>;
+  } catch (e) {
+    console.error('Clerk init skipped:', e);
     return <>{children}</>;
   }
-  
-  const rawProxy = import.meta.env.VITE_CLERK_PROXY_URL?.trim();
-  const proxyUrl = rawProxy && /^https?:\/\//i.test(rawProxy) ? rawProxy : undefined;
-  
-  return (
-    <ClerkProvider 
-      publishableKey={pk} 
-      {...(proxyUrl ? { proxyUrl } : {})}
-    >
-      {children}
-    </ClerkProvider>
-  );
 }

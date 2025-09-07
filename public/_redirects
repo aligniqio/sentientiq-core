@@ -1,7 +1,8 @@
 # Proxy orchestrator API calls (SSE streaming)
-/api/sage/debate   https://api.sentientiq.app/v1/boardroom   200!
-/api/sage/analyze  https://api.sentientiq.app/v1/analyze     200!
-/api/usage/track   https://api.sentientiq.app/v1/usage/track 200!
+/api/sage/debate           https://api.sentientiq.app/v1/boardroom           200!
+/api/boardroom/save-brief  https://api.sentientiq.app/v1/debate/save-brief   200!
+/api/sage/analyze          https://api.sentientiq.app/v1/analyze             200!
+/api/usage/track           https://api.sentientiq.app/v1/usage/track         200!
 
 # Legacy EC2 backend proxies - DISABLED (returning empty responses)
 # /api/posts/*  http://3.15.29.138:8002/api/posts/:splat  200
