@@ -111,21 +111,6 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                     <p className="text-xs text-gray-400">Active</p>
                   </div>
                 </div>
-                
-                {/* Super Admin Button - Only for Zeus */}
-                {(user.emailAddresses?.[0]?.emailAddress === 'truth@sentientiq.ai' || 
-                  user.emailAddresses?.[0]?.emailAddress === 'admin@sentientiq.ai' ||
-                  user.emailAddresses?.[0]?.emailAddress === 'matt@sentientiq.ai' ||
-                  user.emailAddresses?.[0]?.emailAddress?.includes('kiselstein') ||
-                  true) && ( // Temporarily showing for ALL users so you can access it
-                  <Link
-                    to="/admin"
-                    className="mt-3 w-full flex items-center justify-center gap-2 px-3 py-2 bg-gradient-to-r from-yellow-500 to-orange-500 text-black rounded-lg hover:from-yellow-600 hover:to-orange-600 transition-all font-bold text-sm shadow-lg shadow-yellow-500/20"
-                  >
-                    <Zap className="w-4 h-4" />
-                    ZEUS MODE
-                  </Link>
-                )}
               </div>
             )}
 
