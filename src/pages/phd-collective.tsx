@@ -531,14 +531,14 @@ const PhDCollective: React.FC = () => {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="bg-white/5 backdrop-blur-xl rounded-xl p-4 relative z-50"
+            className="bg-white/5 backdrop-blur-xl rounded-xl p-3 relative z-50"
           >
             <textarea
               placeholder="e.g., 'Should we launch before Black Friday?'"
               value={question}
               onChange={(e) => setQuestion(e.target.value)}
-              rows={3}
-              className="w-full px-4 py-3 bg-black/30 rounded-lg text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none mb-3"
+              rows={2}
+              className="w-full px-3 py-2 bg-black/30 rounded-lg text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none mb-2"
             />
 
             <div className="flex items-center justify-between">
@@ -552,7 +552,7 @@ const PhDCollective: React.FC = () => {
                   askAdvisors();
                 }}
                 disabled={isAnalyzing || selectedPhDs.size === 0 || !question.trim()}
-                className="flex-1 px-6 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-lg font-medium hover:from-purple-700 hover:to-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                className="flex-1 px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-lg font-medium hover:from-purple-700 hover:to-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                 title={`Analyzing: ${isAnalyzing}, PhDs: ${selectedPhDs.size}, Question: ${question ? question.length : 0} chars`}
               >
                 {isAnalyzing ? 'Analyzing...' : 'Start a Debate'}
