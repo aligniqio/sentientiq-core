@@ -53,6 +53,14 @@ const EVIMonitor: React.FC = () => {
         }
       } catch (error) {
         console.error('Failed to fetch EVI:', error);
+        // Set default data on error
+        setEviData({
+          score: 0,
+          condition: 'NEUTRAL',
+          signal: 'Data unavailable',
+          dominantEmotion: 'neutral',
+          timestamp: new Date().toISOString()
+        });
       } finally {
         setLoading(false);
       }

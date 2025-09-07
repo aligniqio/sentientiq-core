@@ -1,11 +1,9 @@
 functionsDirectory = "/Users/matthewkiselstein/projects/sentientiq-core/netlify/functions"
-functionsDirectoryOrigin = "ui"
+functionsDirectoryOrigin = "default"
 redirectsOrigin = "config"
 plugins = []
-headers = []
 
 [build]
-edge_functions = "/Users/matthewkiselstein/projects/sentientiq-core/netlify/edge-functions"
 publish = "/Users/matthewkiselstein/projects/sentientiq-core/dist"
 publishOrigin = "config"
 commandOrigin = "ui"
@@ -30,11 +28,22 @@ functions = "/Users/matthewkiselstein/projects/sentientiq-core/netlify/functions
 
 [functions."*"]
 
+[[headers]]
+for = "/*"
+
+[headers.values]
+Referrer-Policy = "strict-origin-when-cross-origin"
+X-Content-Type-Options = "nosniff"
+X-Frame-Options = "DENY"
+Permissions-Policy = "camera=(), microphone=(), geolocation=()"
+Strict-Transport-Security = "max-age=31536000; includeSubDomains; preload"
+Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.clerk.accounts.dev https://*.clerk.com https://clerk.sentientiq.app; worker-src 'self' blob:; child-src 'self' blob:; img-src 'self' data: https:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; connect-src 'self' https://api.sentientiq.app https://*.supabase.co wss://*.supabase.co https://*.clerk.accounts.dev https://*.clerk.com https://clerk.sentientiq.app https://yaujc8n853.execute-api.us-east-2.amazonaws.com; frame-src https://*.clerk.com https://*.clerk.accounts.dev; base-uri 'self'; form-action 'self';"
+
 [[redirects]]
-from = "/api/posts/*"
-to = "http://3.15.29.138:8002/api/posts/:splat"
+from = "/api/sage/debate"
+to = "https://api.sentientiq.app/v1/boardroom"
 status = 200.0
-force = false
+force = true
 
 [redirects.query]
 
@@ -43,10 +52,22 @@ force = false
 [redirects.headers]
 
 [[redirects]]
-from = "/api/swarm/*"
-to = "http://3.15.29.138:8003/api/swarm/:splat"
+from = "/api/sage/analyze"
+to = "https://api.sentientiq.app/v1/analyze"
 status = 200.0
-force = false
+force = true
+
+[redirects.query]
+
+[redirects.conditions]
+
+[redirects.headers]
+
+[[redirects]]
+from = "/api/usage/track"
+to = "https://api.sentientiq.app/v1/usage/track"
+status = 200.0
+force = true
 
 [redirects.query]
 
@@ -69,6 +90,30 @@ force = true
 [[redirects]]
 from = "/api/swarm/*"
 to = "http://3.15.29.138:8003/api/swarm/:splat"
+status = 200.0
+force = true
+
+[redirects.query]
+
+[redirects.conditions]
+
+[redirects.headers]
+
+[[redirects]]
+from = "/api/stripe/webhook"
+to = "http://3.15.29.138:8005/webhook"
+status = 200.0
+force = true
+
+[redirects.query]
+
+[redirects.conditions]
+
+[redirects.headers]
+
+[[redirects]]
+from = "/api/evi/*"
+to = "http://3.15.29.138:8001/api/evi/:splat"
 status = 200.0
 force = true
 
