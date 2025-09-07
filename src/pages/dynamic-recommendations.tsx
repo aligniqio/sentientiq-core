@@ -128,29 +128,20 @@ const DynamicRecommendations: React.FC = () => {
       if (!user) return;
       
       try {
-        const response = await fetch(`http://localhost:8004/api/recommendations/${user.id}`);
-        const data = await response.json();
-        
-        if (data.recommendations && data.recommendations.length > 0) {
-          // Apply free tier locking to non-critical recommendations
-          const processedRecs = data.recommendations.map((rec: Recommendation, index: number) => ({
-            ...rec,
-            locked: subscription.tier === 'free' && rec.priority !== 'critical' && index > 1
-          }));
-          setRecommendations(processedRecs);
-        } else if (data.message) {
-          // No analysis yet - show call to action
-          setRecommendations([{
-            id: 'no-analysis',
-            priority: 'high',
-            category: 'Get Started',
-            title: 'Run Your First Analysis',
-            description: data.message || 'No site analysis found. Visit the onboarding page to analyze your site.',
-            impact: 'Unlock personalized recommendations',
-            effort: 'low',
-            locked: false
-          }]);
-        }
+        // DEAD: const response = await fetch(`http://localhost:8004/api/recommendations/${user.id}`);
+        // DEAD: const data = await response.json();
+        // NO MORE LOCALHOST CALLS - Show placeholder message
+        setRecommendations([{
+          id: 'no-analysis',
+          priority: 'high',
+          category: 'Get Started',
+          title: 'Run Your First Analysis',
+          description: 'No site analysis found. Visit the onboarding page to analyze your site.',
+          impact: 'Unlock personalized recommendations',
+          effort: 'low',
+          locked: false
+        }]);
+        return;
       } catch (error) {
         console.error('Failed to fetch recommendations:', error);
         // On error, show message to run analysis

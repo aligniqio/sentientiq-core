@@ -3,7 +3,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Activity, Users, AlertCircle, CheckCircle2, Clock, Zap } from 'lucide-react';
 import PageHeader from '../components/PageHeader';
 import SwarmAnalysisPanel from '../components/SwarmAnalysisPanel';
-import { API_CONFIG } from '../config/api';
 
 // Plutchik's Wheel of Emotions - 8 primary emotions
 const PLUTCHIK_EMOTIONS = {
@@ -165,10 +164,10 @@ const PostCard = React.forwardRef<HTMLDivElement, { post: SocialPost; index: num
 PostCard.displayName = 'PostCard';
 
 const IntelligenceMonitor: React.FC = () => {
-  const [posts, setPosts] = useState<SocialPost[]>([]);
-  const [eviMetrics, setEviMetrics] = useState<EVIMetrics | null>(null);
-  const [moatMetrics, setMoatMetrics] = useState<MoatMetrics | null>(null);
-  const [isConnected, setIsConnected] = useState(false);
+  const [posts] = useState<SocialPost[]>([]);
+  const [eviMetrics] = useState<EVIMetrics | null>(null);
+  const [moatMetrics] = useState<MoatMetrics | null>(null);
+  const [isConnected] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [analyzingPost, setAnalyzingPost] = useState<SocialPost | null>(null);
   const eventSourceRef = useRef<EventSource | null>(null);
@@ -180,54 +179,9 @@ const IntelligenceMonitor: React.FC = () => {
     const connectToStream = async () => {
       try {
         // Use configured API endpoint
-        const apiUrl = `${API_CONFIG.POSTS_API}/api/pulse`;
-        
-        eventSourceRef.current = new EventSource(apiUrl, {
-          withCredentials: true
-        });
-
-        eventSourceRef.current.onopen = () => {
-          setIsConnected(true);
-          setError(null);
-          console.log('Connected to SSE stream');
-        };
-
-        eventSourceRef.current.onmessage = (event) => {
-          try {
-            const data = JSON.parse(event.data);
-            
-            // Handle different event types
-            if (data.type === 'post' && data.post) {
-              setPosts(prev => {
-                // Filter out duplicates based on ID
-                const exists = prev.some(p => p.id === data.post.id);
-                if (exists) return prev;
-                
-                const newPosts = [data.post, ...prev].slice(0, 30);
-                return newPosts;
-              });
-            } else if (data.type === 'evi' && data.metrics) {
-              setEviMetrics(data.metrics);
-            } else if (data.type === 'moat' && data.metrics) {
-              setMoatMetrics(data.metrics);
-            }
-          } catch (parseError) {
-            console.error('Error parsing SSE data:', parseError);
-          }
-        };
-
-        eventSourceRef.current.onerror = (error) => {
-          console.error('SSE error:', error);
-          setIsConnected(false);
-          setError('Reconnecting to stream...');
-          
-          // Close the connection and retry
-          if (eventSourceRef.current) {
-            eventSourceRef.current.close();
-          }
-          
-          reconnectTimeout = setTimeout(connectToStream, 5000);
-        };
+        // DEAD: const apiUrl = `${API_CONFIG.POSTS_API}/api/pulse`;
+        // DEAD: All SSE connection code removed
+        return; // EXIT IMMEDIATELY - NO CONNECTION
       } catch (err) {
         setError('Failed to connect to intelligence stream');
         console.error('Stream connection error:', err);
@@ -235,28 +189,11 @@ const IntelligenceMonitor: React.FC = () => {
       }
     };
 
-    // Fetch initial data
-    const fetchInitialData = async () => {
-      try {
-        const response = await fetch(`${API_CONFIG.POSTS_API}/api/posts/recent`);
-        if (response.ok) {
-          const data = await response.json();
-          // Deduplicate posts by ID
-          const uniquePosts = data.posts ? 
-            data.posts.filter((post: SocialPost, index: number, self: SocialPost[]) =>
-              index === self.findIndex((p) => p.id === post.id)
-            ) : [];
-          setPosts(uniquePosts);
-          setEviMetrics(data.evi || null);
-          setMoatMetrics(data.moat || null);
-        }
-      } catch (err) {
-        console.error('Failed to fetch initial data:', err);
-      }
-    };
+    // KILLED: Fetch initial data - all API calls removed
 
-    connectToStream();
-    fetchInitialData();
+    // DEAD CONNECTIONS REMOVED - No more localhost:8002 calls!
+    // connectToStream();  // KILLED
+    // fetchInitialData();  // EXECUTED
 
     return () => {
       if (reconnectTimeout) {
