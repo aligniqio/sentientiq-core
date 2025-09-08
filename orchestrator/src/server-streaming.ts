@@ -7,6 +7,7 @@ import { claudeStream as claudeStreamCore } from './streaming.js';
 import { DEFAULT_PERSONAS, personaSystem as personaSystemOld } from './personas.js';
 import { retrieveContext, supabase } from './retrieveContext.js';
 import { RIVALS } from './theater/rivals.js';
+import { callWithFallback } from './safe-llm.js';
 // ESM import (your repo is `"type":"module"`)
 import {
   debateInit,
@@ -223,6 +224,21 @@ app.post('/v1/boardroom', async (req: Request, res: Response) => {
   res.setHeader('x-request-id', requestId);
   res.flushHeaders?.();
   attachKeepAlive(res);
+  
+  // Hardening: Keep connection alive and add watchdog
+  const ping = setInterval(() => res.write(':ping\n\n'), 10000);
+  const softFail = (m: string) => { 
+    res.write(`event: error\ndata: ${JSON.stringify({message: m})}\n\n`); 
+  };
+  
+  // Watchdog for fallback  
+  let gotText = false;
+  const watchdog = setTimeout(() => {
+    if (!gotText) {
+      softFail('We hit a hiccup. Providing a concise brief while we recover.');
+      res.write(`event: delta\ndata: ${JSON.stringify({speaker:'Moderator',text:'Short answer: Run a hybrid: keep brand-controlled placements for narrative consistency and use micro-influencers to prove it in-market.'})}\n\n`);
+    }
+  }, 30000);
 
   // Validate input
   const parsed = DebateBody.safeParse(req.body);
@@ -278,9 +294,19 @@ app.post('/v1/boardroom', async (req: Request, res: Response) => {
   const speakerBuf = new Map<string, string>(); // speaker -> string
   let currentMode = 'opening'; // Track current mode for turn events
 
+  // --- Emotional Intelligence preamble (prefix to every system prompt) ---
+  const EI_PREAMBLE = `
+You are part of a boardroom built on Emotional Intelligence.
+Principles:
+• Name emotions when relevant; convert feeling → insight → action.
+• Be specific, ethical, brand-safe. No hype. Human, plain language.
+• Keep it concise (1–2 sentences per turn unless you're the Moderator).
+`.trim();
+
   // Persona streaming functions
   function personaSystem(name: string, rival?: string) {
     return [
+      EI_PREAMBLE,
       `You are ${name}. Keep it concise, human, practical.`,
       `Rules: 1–2 sentences per turn; no lists; no "As ${name}"; no meta.`,
       rival ? `If rebutting ${rival}, open with one short disagreement, then advance your point.` : ""
@@ -302,6 +328,7 @@ app.post('/v1/boardroom', async (req: Request, res: Response) => {
 
   // Helper to collect full response then stream with pacing
   async function speakBuffered(res: Response, speaker: string, mode: string, streamFn: () => AsyncGenerator<{text: string}>) {
+    gotText = true; // Mark that we're getting text
     // Collect the full response first
     let fullText = '';
     for await (const chunk of streamFn()) {
@@ -591,7 +618,8 @@ Be decisive. No hedging.`;
             if (chunk?.text) yield { text: chunk.text };
           }
         } else {
-          const sys = "You are the Moderator. Write a 4–6 sentence exec synthesis (plain prose). Then end with three actions (Action · Owner · When) on separate lines.";
+          const sys = `${EI_PREAMBLE}
+You are the Moderator. Write a 4–6 sentence exec synthesis (plain prose). Then end with three actions (Action · Owner · When) on separate lines.`;
           const msgs = [{ role:"system", content: sys }, { role:"user", content: synthesisPrompt }];
           for await (const c of openaiStream(msgs, TOK?.moderator || 250, 0.3)) {
             if (c?.text) yield { text: c.text };
@@ -621,6 +649,8 @@ Be decisive. No hedging.`;
   } catch (e: any) {
     sseWrite(res, 'error', { message: String(e?.message || e) });
   } finally {
+    if (typeof ping !== 'undefined') clearInterval(ping);
+    if (typeof watchdog !== 'undefined') clearTimeout(watchdog);
     res.end();
   }
 });

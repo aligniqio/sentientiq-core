@@ -15,6 +15,16 @@ export async function exportBriefHandler(req: Request, res: Response) {
   }
   try {
     const s = getDebate(requestId);
+    
+    // Hardening: Extract CTAs from summary if missing
+    if ((!s?.ctas || !s.ctas.length) && s?.summary) {
+      const lines = s.summary.split(/\n+/).filter(Boolean);
+      s.ctas = lines.filter(l => /^(\d+\.|-|•)/.test(l)).slice(0, 3).map(l => {
+        const action = l.replace(/^(\d+\.|-|•)\s*/, '');
+        return { action, owner: 'Owner TBD', when: '2–3 weeks' };
+      });
+    }
+    
     if (!s || !s.summary || !s.ctas) {
       return res.status(409).json({ ok: false, error: 'debate_not_ready', message: 'Summary/CTAs missing or requestId expired' });
     }
