@@ -20,7 +20,6 @@ const PhDCollective = () => {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [debateResults, setDebateResults] = useState<any>(null);
   const [showResults, setShowResults] = useState(false);
-  const [showAnnouncement, setShowAnnouncement] = useState(false);
   const [flashAll, setFlashAll] = useState(false);
   // const [freeQuestionsRemaining, setFreeQuestionsRemaining] = useState<number>(() => {
   //   const stored = localStorage.getItem('free_questions_remaining');
@@ -262,11 +261,7 @@ const PhDCollective = () => {
           setDebateResults({ collective_synthesis: synthesis });
         }
         if (event === 'done') {
-          setShowAnnouncement(true);
-          setTimeout(() => {
-            setShowAnnouncement(false);
-            setShowResults(true);
-          }, 2500);
+          setShowResults(true);
         }
       });
       
@@ -419,33 +414,7 @@ const PhDCollective = () => {
               animate={{ opacity: 1, x: 0 }}
               className="h-full bg-white/5 backdrop-blur-xl rounded-xl p-6 overflow-y-auto"
             >
-              {showAnnouncement ? (
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.8 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, y: -20 }}
-                  className="flex items-center justify-center h-full"
-                >
-                  <div className="text-center">
-                    <motion.div
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.3 }}
-                      className="text-3xl font-bold bg-gradient-to-r from-purple-400 to-indigo-400 bg-clip-text text-transparent mb-2"
-                    >
-                      The Collective Has Spoken
-                    </motion.div>
-                    <motion.div
-                      initial={{ scale: 0 }}
-                      animate={{ scale: 1 }}
-                      transition={{ delay: 0.6, type: "spring" }}
-                      className="text-white/60 text-sm"
-                    >
-                      Preparing wisdom...
-                    </motion.div>
-                  </div>
-                </motion.div>
-              ) : showResults && debateResults ? (
+              {showResults && debateResults ? (
                 <>
                   <motion.div
                     initial={{ opacity: 0, y: 10 }}
