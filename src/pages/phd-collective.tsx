@@ -367,8 +367,8 @@ const PhDCollective = () => {
       <div className="max-w-[1600px] mx-auto w-full px-4 md:px-6 lg:px-8">
         <div className="pt-8">
           <PageHeader 
-            title="PhD Collective™" 
-            subtitle="The $5.4 Million Payroll You'll Never Have to Pay"
+            title="The Collective" 
+            subtitle="12 expert personas. One decisive answer."
           />
           
         </div>
