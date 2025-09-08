@@ -3,15 +3,225 @@
 @tailwind utilities;
 
 :root { 
-  color-scheme: dark; 
+  color-scheme: dark;
+  --primary: 59 130 246;
+  --primary-dark: 29 78 216;
+  --accent: 168 85 247;
 }
 
-.prose :where(h1,h2,h3){ 
-  margin-block:.4rem .4rem; 
+@layer base {
+  body {
+    @apply bg-black text-white antialiased;
+  }
 }
-.prose :where(ul,ol){ 
-  margin-block:.25rem .25rem; 
+
+@layer components {
+  /* Section Container */
+  .section {
+    @apply container mx-auto px-4 sm:px-6 lg:px-8;
+  }
+
+  /* Typography */
+  .kicker {
+    @apply text-sm font-medium tracking-wider uppercase text-blue-400;
+  }
+
+  .gradient-text {
+    @apply bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent;
+  }
+
+  /* Buttons */
+  .btn-primary {
+    @apply inline-flex items-center justify-center rounded-lg bg-blue-600 px-5 py-2.5 
+           font-medium text-white shadow-lg transition-all duration-200
+           hover:bg-blue-700 hover:shadow-xl hover:scale-105 
+           focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-black
+           disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100;
+  }
+
+  .btn-ghost {
+    @apply inline-flex items-center justify-center rounded-lg border border-white/20 
+           bg-white/5 px-5 py-2.5 font-medium text-white backdrop-blur-sm 
+           transition-all duration-200 hover:bg-white/10 hover:border-white/30
+           focus:outline-none focus:ring-2 focus:ring-white/20 focus:ring-offset-2 focus:ring-offset-black;
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center justify-center rounded-lg bg-gray-800 px-5 py-2.5 
+           font-medium text-white transition-all duration-200
+           hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-600 
+           focus:ring-offset-2 focus:ring-offset-black;
+  }
+
+  /* Cards */
+  .card {
+    @apply rounded-xl border border-white/10 bg-white/5 p-6 backdrop-blur-sm
+           transition-all duration-200 hover:bg-white/[0.07] hover:border-white/20;
+  }
+
+  .card-dark {
+    @apply rounded-xl border border-gray-800 bg-gray-900/50 p-6 backdrop-blur-sm;
+  }
+
+  /* Form Elements */
+  .input {
+    @apply w-full rounded-lg border border-white/10 bg-white/5 px-4 py-2.5
+           text-white placeholder-white/40 backdrop-blur-sm transition-all duration-200
+           focus:border-blue-500 focus:bg-white/10 focus:outline-none focus:ring-2 
+           focus:ring-blue-500/20;
+  }
+
+  .textarea {
+    @apply w-full rounded-lg border border-white/10 bg-white/5 px-4 py-2.5
+           text-white placeholder-white/40 backdrop-blur-sm transition-all duration-200
+           focus:border-blue-500 focus:bg-white/10 focus:outline-none focus:ring-2 
+           focus:ring-blue-500/20 resize-none;
+  }
+
+  /* Animations */
+  @keyframes fade-in {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes slide-up {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes pulse-glow {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+
+  .animate-fade-in {
+    animation: fade-in 0.5s ease-out;
+  }
+
+  .animate-slide-up {
+    animation: slide-up 0.6s ease-out;
+  }
+
+  .animate-pulse-glow {
+    animation: pulse-glow 2s ease-in-out infinite;
+  }
+
+  /* Badge */
+  .badge {
+    @apply inline-flex items-center rounded-full bg-blue-500/10 px-3 py-1 
+           text-xs font-medium text-blue-400 ring-1 ring-inset ring-blue-500/20;
+  }
+
+  .badge-success {
+    @apply bg-green-500/10 text-green-400 ring-green-500/20;
+  }
+
+  /* Divider */
+  .divider {
+    @apply my-8 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent;
+  }
+
+  /* Loading States */
+  .skeleton {
+    @apply animate-pulse rounded bg-white/10;
+  }
+
+  .spinner {
+    @apply inline-block h-4 w-4 animate-spin rounded-full border-2 border-white/20 border-t-white;
+  }
+
+  /* Glass morphism effects */
+  .glass {
+    @apply bg-white/5 backdrop-blur-md;
+  }
+
+  .glass-dark {
+    @apply bg-black/20 backdrop-blur-md;
+  }
+
+  /* Prose styling */
+  .prose {
+    @apply text-white/80;
+  }
+
+  .prose h1 {
+    @apply text-3xl font-bold text-white mb-4;
+  }
+
+  .prose h2 {
+    @apply text-2xl font-semibold text-white mb-3 mt-6;
+  }
+
+  .prose h3 {
+    @apply text-xl font-semibold text-white mb-2 mt-4;
+  }
+
+  .prose p {
+    @apply mb-4 leading-relaxed;
+  }
+
+  .prose ul, .prose ol {
+    @apply mb-4 ml-6 space-y-2;
+  }
+
+  .prose li {
+    @apply text-white/80;
+  }
+
+  .prose a {
+    @apply text-blue-400 hover:text-blue-300 underline;
+  }
+
+  .prose strong {
+    @apply font-semibold text-white;
+  }
+
+  .prose code {
+    @apply rounded bg-white/10 px-1.5 py-0.5 text-sm font-mono text-blue-300;
+  }
+
+  .prose pre {
+    @apply rounded-lg bg-gray-900 p-4 overflow-x-auto;
+  }
+
+  .prose blockquote {
+    @apply border-l-4 border-blue-500 pl-4 italic text-white/70;
+  }
+
+  /* Utility classes */
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
 }
-.prose :where(li){ 
-  margin-block:.125rem .125rem; 
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-black;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-white/20 rounded;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-white/30;
+}
+
+/* Focus visible outline */
+:focus-visible {
+  @apply outline-none ring-2 ring-blue-500 ring-offset-2 ring-offset-black;
 }

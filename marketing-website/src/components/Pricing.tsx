@@ -61,7 +61,7 @@ export default function Pricing() {
             <li>• Edit & publish personas</li>
             <li>• Team collaboration</li>
           </ul>
-          <button className="btn-primary mt-6" onClick={() => startCheckout(import.meta.env.VITE_STRIPE_PRICE_ID || '')}>
+          <button className="btn-primary mt-6" onClick={() => startCheckout(import.meta.env.VITE_STRIPE_PRO_PRICE_ID || '')}>
             Upgrade to Pro
           </button>
           <p className="mt-2 text-xs text-white/50">Hosted Stripe Checkout</p>
