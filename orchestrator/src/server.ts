@@ -70,12 +70,13 @@ function attachKeepAlive(res: Response) {
   res.on('close', () => clearInterval(int));
 }
 
-// Streaming endpoint (direct execution)
-app.post('/v1/debate', async (req: Request, res: Response) => {
+// Main boardroom/debate handler - single source of truth
+const boardroomHandler = async (req: Request, res: Response) => {
   // SSE headers
   res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
   res.setHeader('Cache-Control', 'no-cache, no-transform');
   res.setHeader('Connection', 'keep-alive');
+  res.setHeader('X-Accel-Buffering', 'no'); // Nginx buffering bypass
   res.flushHeaders?.();
 
   attachKeepAlive(res);
@@ -121,10 +122,17 @@ app.post('/v1/debate', async (req: Request, res: Response) => {
   } finally {
     res.end();
   }
-});
+};
 
-// Queued endpoint (for async processing)
-app.post('/v1/debate/queue', async (req: Request, res: Response) => {
+// All possible routes that might be called - boring redundancy is GOOD
+app.post('/v1/debate', boardroomHandler);
+app.post('/v1/boardroom', boardroomHandler);
+app.post('/api/v1/debate', boardroomHandler);
+app.post('/api/v1/boardroom', boardroomHandler);
+app.post('/api/sage/debate', boardroomHandler); // legacy route
+
+// Queued endpoint handler
+const queueHandler = async (req: Request, res: Response) => {
   const parsed = DebateBody.safeParse(req.body);
   if (!parsed.success) {
     return res.status(400).json({ error: parsed.error.message });
@@ -139,9 +147,43 @@ app.post('/v1/debate/queue', async (req: Request, res: Response) => {
   } catch (e: any) {
     res.status(500).json({ error: String(e?.message || e) });
   }
-});
+};
 
-app.get('/health', (_req: Request, res: Response) => res.json({ ok: true }));
+// Queue routes - all variations
+app.post('/v1/debate/queue', queueHandler);
+app.post('/v1/boardroom/queue', queueHandler);
+app.post('/api/v1/debate/queue', queueHandler);
+app.post('/api/v1/boardroom/queue', queueHandler);
+
+// Usage tracking handler - simple 204 for now
+const usageHandler = (_req: Request, res: Response) => {
+  // TODO: optionally write to Supabase 'events' table
+  res.status(204).end();
+};
+
+// Usage tracking routes - all variations someone might try
+app.post('/v1/usage/track', express.json(), usageHandler);
+app.post('/api/usage/track', express.json(), usageHandler);
+app.post('/api/v1/usage/track', express.json(), usageHandler);
+app.post('/v1/track', express.json(), usageHandler); // short version
+
+// Health check - multiple paths because why not
+const healthHandler = (_req: Request, res: Response) => {
+  res.json({ 
+    ok: true, 
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    memory: process.memoryUsage().heapUsed / 1024 / 1024,
+    version: process.env.npm_package_version || '0.1.0'
+  });
+};
+
+app.get('/health', healthHandler);
+app.get('/healthz', healthHandler);  // k8s style
+app.get('/ping', healthHandler);     // classic
+app.get('/api/health', healthHandler);
+app.get('/api/ping', healthHandler);
+app.get('/', healthHandler);         // root check
 
 app.listen(PORT, () => {
   console.log(`orchestrator listening on :${PORT}`);

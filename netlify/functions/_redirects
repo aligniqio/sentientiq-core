@@ -1,0 +1,4 @@
+/api/v1/debate    https://api.sentientiq.app/v1/boardroom   200!
+/api/sage/debate  https://api.sentientiq.app/v1/boardroom   200!
+/api/usage/track  https://api.sentientiq.app/v1/usage/track 200!
+/*                /index.html                               200

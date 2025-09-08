@@ -1,4 +1,5 @@
 # Proxy orchestrator API calls (SSE streaming)
+/api/v1/debate             https://api.sentientiq.app/v1/boardroom           200!
 /api/sage/debate           https://api.sentientiq.app/v1/boardroom           200!
 /api/boardroom/save-brief  https://api.sentientiq.app/v1/debate/save-brief   200!
 /api/sage/analyze          https://api.sentientiq.app/v1/analyze             200!

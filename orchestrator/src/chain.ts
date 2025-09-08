@@ -108,10 +108,17 @@ async function callAnthropic(system: string, user: string): Promise<string> {
       max_tokens: 400,
       temperature: 0.2,
       system,
-      messages: [{ role: 'user', content: user }]
+      messages: [{ 
+        role: 'user', 
+        content: [{ type: 'text', text: user }] 
+      }]
     })
   });
-  if (!res.ok) throw new Error(`Anthropic ${res.status} ${res.statusText}`);
+  if (!res.ok) {
+    const errorBody = await res.text();
+    console.error('Anthropic API error:', res.status, errorBody);
+    throw new Error(`Anthropic ${res.status} ${res.statusText}: ${errorBody}`);
+  }
   const j = await res.json();
   const parts = j.content || [];
   const txt = Array.isArray(parts) ? parts.map((p: any) => p.text || '').join('') : '';

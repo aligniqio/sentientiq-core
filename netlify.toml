@@ -26,8 +26,20 @@
   force = true
 
 [[redirects]]
-  from = "/api/v1/*"
-  to = "http://98.87.12.130/v1/:splat"
+  from = "/api/v1/debate"
+  to = "https://api.sentientiq.app/v1/boardroom"
+  status = 200
+  force = true
+  
+[[redirects]]
+  from = "/api/sage/debate"
+  to = "https://api.sentientiq.app/v1/boardroom"
+  status = 200
+  force = true
+  
+[[redirects]]
+  from = "/api/usage/track"
+  to = "https://api.sentientiq.app/v1/usage/track"
   status = 200
   force = true
 

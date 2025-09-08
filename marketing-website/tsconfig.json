@@ -4,9 +4,11 @@
     "module": "ESNext",
     "jsx": "react-jsx",
     "moduleResolution": "Bundler",
+    "baseUrl": ".",
+    "paths": { "@/*": ["src/*"] },
     "strict": true,
     "skipLibCheck": true,
-    "types": ["vite/client"]   // <- important if you set "types" at all
+    "types": ["vite/client"]
   },
   "include": ["src", "netlify/functions", "vite.config.ts"]
 }
