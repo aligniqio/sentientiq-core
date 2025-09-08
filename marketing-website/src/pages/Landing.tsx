@@ -1,5 +1,6 @@
 import React from 'react';
 import SEO from '@/components/SEO';
+import NeuralBackground from '@/components/NeuralBackground';
 import NavBar from '@/components/NavBar';
 import Hero from '@/components/Hero';
 import TrustBar from '@/components/TrustBar';
@@ -27,22 +28,25 @@ export default function Landing() {
         title="SentientIQ — 3x Your Conversion in 30 Days"
         description="AI-powered debates that find hidden conversion blockers and prescribe exact fixes. Used by Stripe, Notion, Linear."
       />
-      <main className="bg-black text-white">
-        <NavBar />
-        <Hero />
-        <TrustBar />
-        <WhyVsIntent />
-        <HowItWorks />
-        <LiveDemo />
-        <ThirtyDayPath />
-        <CollectiveShowcase />
-        <EVISection />
-        <Pricing />
-        <Security />
-        <FAQ />
-        <FinalCTA />
-        <Footer />
-      </main>
+      <div className="relative min-h-screen bg-black">
+        <NeuralBackground />
+        <main className="relative z-10 text-white">
+          <NavBar />
+          <Hero />
+          <TrustBar />
+          <WhyVsIntent />
+          <HowItWorks />
+          <LiveDemo />
+          <ThirtyDayPath />
+          <CollectiveShowcase />
+          <EVISection />
+          <Pricing />
+          <Security />
+          <FAQ />
+          <FinalCTA />
+          <Footer />
+        </main>
+      </div>
     </>
   );
 }

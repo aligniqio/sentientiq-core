@@ -1,5 +1,6 @@
 import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from "react/jsx-runtime";
 import SEO from '@/components/SEO';
+import NeuralBackground from '@/components/NeuralBackground';
 import NavBar from '@/components/NavBar';
 import Hero from '@/components/Hero';
 import TrustBar from '@/components/TrustBar';
@@ -17,5 +18,5 @@ import Footer from '@/components/Footer';
 export default function Landing() {
     const siteUrl = import.meta?.env?.VITE_SITE_URL ||
         (typeof window !== 'undefined' ? window.location.origin : 'https://sentientiq.ai');
-    return (_jsxs(_Fragment, { children: [_jsx(SEO, { siteUrl: siteUrl, path: "/", title: "SentientIQ \u2014 3x Your Conversion in 30 Days", description: "AI-powered debates that find hidden conversion blockers and prescribe exact fixes. Used by Stripe, Notion, Linear." }), _jsxs("main", { className: "bg-black text-white", children: [_jsx(NavBar, {}), _jsx(Hero, {}), _jsx(TrustBar, {}), _jsx(WhyVsIntent, {}), _jsx(HowItWorks, {}), _jsx(LiveDemo, {}), _jsx(ThirtyDayPath, {}), _jsx(CollectiveShowcase, {}), _jsx(EVISection, {}), _jsx(Pricing, {}), _jsx(Security, {}), _jsx(FAQ, {}), _jsx(FinalCTA, {}), _jsx(Footer, {})] })] }));
+    return (_jsxs(_Fragment, { children: [_jsx(SEO, { siteUrl: siteUrl, path: "/", title: "SentientIQ \u2014 3x Your Conversion in 30 Days", description: "AI-powered debates that find hidden conversion blockers and prescribe exact fixes. Used by Stripe, Notion, Linear." }), _jsxs("div", { className: "relative min-h-screen bg-black", children: [_jsx(NeuralBackground, {}), _jsxs("main", { className: "relative z-10 text-white", children: [_jsx(NavBar, {}), _jsx(Hero, {}), _jsx(TrustBar, {}), _jsx(WhyVsIntent, {}), _jsx(HowItWorks, {}), _jsx(LiveDemo, {}), _jsx(ThirtyDayPath, {}), _jsx(CollectiveShowcase, {}), _jsx(EVISection, {}), _jsx(Pricing, {}), _jsx(Security, {}), _jsx(FAQ, {}), _jsx(FinalCTA, {}), _jsx(Footer, {})] })] })] }));
 }
