@@ -24,12 +24,13 @@ export function AgentCard({
       className={[
         'agent-card agent-tint group w-full text-left min-h-[160px]',
         selected ? 'ring-1 ring-white/35 selected-tint' : '',
-        disabled ? 'opacity-50 cursor-not-allowed' : 'hover:translate-y-[-1px]'
+        disabled ? 'opacity-50 cursor-not-allowed' : 'hover:translate-y-[-1px]',
+        flashAll && selected ? 'flash-green' : ''
       ].join(' ')}
       style={{ ['--tint' as any]: tint }}
       aria-pressed={!!selected}
     >
-      <div className={`p-4 h-full flex flex-col ${flashAll && selected ? 'flash-green' : ''}`}>
+      <div className="p-4 h-full flex flex-col">
         {/* Title pinned top */}
         <div className="agent-title">
           <div className="text-[16px] font-semibold truncate">{p.name}</div>
