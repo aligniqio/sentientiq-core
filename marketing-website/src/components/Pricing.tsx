@@ -154,7 +154,7 @@ export default function Pricing() {
               </div>
             )}
             
-            <div className="p-6">
+            <div className="p-6 flex flex-col h-full">
               <h3 className="text-xl font-bold">{tier.name}</h3>
               <p className="mt-2 text-sm text-purple-400 font-medium">{tier.tagline}</p>
               
@@ -163,7 +163,7 @@ export default function Pricing() {
                 <span className="text-white/60">{tier.period}</span>
               </div>
               
-              <ul className="mt-6 space-y-3">
+              <ul className="mt-6 space-y-3 flex-grow">
                 {tier.features.map((feature, i) => (
                   <li key={i} className="flex items-start gap-2">
                     <svg className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
