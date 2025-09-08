@@ -23,7 +23,7 @@ export function AgentCard({
       disabled={disabled}
       className={[
         'agent-card agent-tint group w-full text-left min-h-[160px]',
-        selected ? 'ring-1 ring-white/35 selected-tint' : '',
+        selected ? 'ring-1 ring-green-400/35 selected-tint' : '',
         disabled ? 'opacity-50 cursor-not-allowed' : 'hover:translate-y-[-1px]',
         flashAll && selected ? 'flash-green' : ''
       ].join(' ')}
@@ -63,7 +63,7 @@ export function AgentCard({
         {/* Selection indicator */}
         <div className="absolute top-3 right-3">
           <div className={`h-3 w-3 rounded-full border transition-all ${
-            selected ? 'bg-white border-white' : 'border-white/30'
+            selected ? 'bg-green-400 border-green-400' : 'border-white/30'
           }`} />
         </div>
       </div>
