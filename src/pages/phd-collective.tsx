@@ -177,8 +177,8 @@ const PhDCollective = () => {
     setShowResults(false);
     setDebateResults(null);
     
-    // Track usage
-    await trackQuestion();
+    // Track usage (don't block on this)
+    trackQuestion().catch(console.log);
     
     const newQuestion = {
       type: 'question',
@@ -218,20 +218,28 @@ const PhDCollective = () => {
   };
 
   const runDebate = async () => {
-    if (!question.trim() || selectedPhDs.size < 2) return;
+    if (!question.trim() || selectedPhDs.size < 2) {
+      console.log('Debate validation failed:', { question: question.trim(), selectedCount: selectedPhDs.size });
+      return;
+    }
+    
+    console.log('Starting debate with:', { question, selectedPhDs: Array.from(selectedPhDs) });
     
     setIsAnalyzing(true);
     setShowResults(false);
     setDebateResults(null);
     
-    // Track usage
-    await trackQuestion();
+    // Track usage (don't block on this)
+    trackQuestion().catch(console.log);
     
     const newQuestion = {
       type: 'question',
       content: question,
       timestamp: new Date().toISOString()
     };
+    
+    // Store question before clearing
+    const questionToSend = question;
     
     // Clear input
     setQuestion('');
@@ -246,12 +254,15 @@ const PhDCollective = () => {
         return persona ? persona.name.replace('Dr. ', '') : id;
       });
       
+      console.log('Sending SSE request with:', { prompt: questionToSend, personas, mode: 'debate' });
+      
       await ssePost(`/api/sage/debate`, {
-        prompt: question,
+        prompt: questionToSend,
         personas: personas,
         mode: 'debate',
         topK: 3
       }, ({ event, data }) => {
+        console.log('SSE event:', event, data);
         if (event === 'delta') {
           const label = data.label;
           panels[label] = (panels[label] || '') + data.text;
@@ -268,6 +279,9 @@ const PhDCollective = () => {
       storeConversation(newQuestion, { type: 'response', content: { collective_synthesis: synthesis }});
     } catch (error) {
       console.error('Debate failed:', error);
+      alert('Debate failed to start. Please try again.');
+      setDebateResults({ collective_synthesis: 'Error: Could not start debate. Please try again.' });
+      setShowResults(true);
     } finally {
       setIsAnalyzing(false);
     }
