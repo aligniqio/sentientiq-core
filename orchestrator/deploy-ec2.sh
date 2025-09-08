@@ -61,22 +61,13 @@ cat > ecosystem.config.js << 'EOF'
 module.exports = {
   apps: [
     {
-      name: 'orchestrator-api',
-      script: 'dist/server.js',
+      name: 'orchestrator-streaming',
+      script: 'dist/server-streaming.js',
       instances: 1,
       exec_mode: 'fork',
       env: {
         NODE_ENV: 'production',
         PORT: 8787
-      }
-    },
-    {
-      name: 'orchestrator-worker',
-      script: 'dist/worker.js',
-      instances: 2,
-      exec_mode: 'fork',
-      env: {
-        NODE_ENV: 'production'
       }
     }
   ]

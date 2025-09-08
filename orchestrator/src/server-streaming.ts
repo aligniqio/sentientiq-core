@@ -431,53 +431,103 @@ app.post('/v1/boardroom', async (req: Request, res: Response) => {
       : 'Context: (none provided)';
 
     if (mode === 'answer') {
-      // Answer mode: Moderator only
-      sseWrite(res, 'phase', { label: 'moderator', status: 'begin' });
+      // Answer mode: Selected agents provide perspectives, then moderator synthesizes
+      sseWrite(res, 'phase', { label: 'answer', status: 'begin' });
       
-      const moderatorPrompt = `You are the Moderator. Synthesize the challenge into 3 decisive CTAs.
+      // Get agent-specific system prompts with bias
+      function getAgentBias(name: string) {
+        const biases: Record<string, string> = {
+          Emotion:  "Champion human impact and trust. Tease ROI as 'cold' when relevant.",
+          ROI:      "Unit economics (CAC/LTV/payback). Call out hand-wavy claims.",
+          Strategic:"Moat, positioning, 6–24mo horizon. Challenge blitz tactics.",
+          Identity: "Aspirational self; brand truth; long-term equity.",
+          Context:  "Market forces; second-order effects; constraints.",
+          Pattern:  "Cohorts, correlations, retention curves; be evidence-led.",
+          Omni:     "Experiments, funnels, instrumentation; propose AB tests.",
+          First:    "Frame problem and propose a first-draft plan (3 bullets)."
+        };
+        return biases[name] || "Provide balanced perspective.";
+      }
       
-Format:
-- [Action] — Owner: [Role] — When: [Timeframe]
-
-Challenge: ${prompt}
-
-${contextBlock}`;
-
-      sseWrite(res, 'turn', { speaker: 'Moderator', start: true });
+      // Use selected agents or default to top 3
+      const activeAgents = roster.length > 0 ? roster : DEFAULT_PERSONAS.slice(0, 3);
       
-      // Use buffered streaming for answer mode too
-      async function* answerStream() {
-        if (ANTHROPIC_API_KEY && provider === 'anthropic') {
-          for await (const chunk of claudeStream(moderatorPrompt, 400)) {
-            if (chunk?.text) yield { text: chunk.text };
-          }
-        } else {
-          // Use OpenAI for answer mode
-          const sys = "You are the Moderator. Provide 3 decisive action items.";
-          const msgs = [{ role: "system", content: sys }, { role: "user", content: moderatorPrompt }];
-          for await (const c of openaiStream(msgs, 400, 0.3)) {
+      // Send meta with actual agents being used
+      sseWrite(res, 'meta', { requestId, subject: prompt.slice(0, 120), personas: activeAgents });
+      
+      // Collect quick perspectives from each selected agent
+      const perspectives: Record<string, string> = {};
+      
+      for (const agent of activeAgents) {
+        sseWrite(res, 'turn', { speaker: agent, start: true });
+        
+        const agentBias = getAgentBias(agent);
+        const agentPrompt = `Question: ${prompt}\n${contextBlock}\n\nGive your perspective in 1-2 sentences.`;
+        
+        async function* agentStream() {
+          const sys = `You are ${agent}. ${agentBias} Be decisive and show your bias. 1-2 sentences only.`;
+          const msgs = [{ role: "system", content: sys }, { role: "user", content: agentPrompt }];
+          for await (const c of openaiStream(msgs, 80, 0.5)) {
             if (c?.text) yield { text: c.text };
           }
         }
+        
+        await speakBuffered(res, agent, 'answer', agentStream);
+        perspectives[agent] = speakerBuf.get(agent) || '';
+        await pause(180); // Brief pause between agents
       }
       
-      await speakBuffered(res, 'Moderator', 'answer', answerStream);
+      // Now moderator synthesizes with the structured format
+      const moderatorContract = `Write in this exact structure—no headings beyond those shown:
+
+Short answer:
+<one decisive sentence that answers the user's question directly. If it depends, state the decision rule.>
+
+Why:
+• <bullet 1 — concrete, business-relevant>
+• <bullet 2>
+• <bullet 3>
+
+When this would be wrong:
+• <edge case 1>
+• <edge case 2>
+
+What to test next (7–21 days):
+• <test 1 — metric + success threshold>
+• <test 2 — metric + threshold>
+• <test 3 — metric + threshold>
+
+CTAs:
+1) <Action> — Owner: <Role> — When: <Timebox>
+2) <Action> — Owner: <Role> — When: <Timebox>
+3) <Action> — Owner: <Role> — When: <Timebox>`;
+      
+      const moderatorPrompt = `Question: ${prompt}
+
+Agent Perspectives:
+${Object.entries(perspectives).map(([agent, view]) => `${agent}: ${view}`).join('\n')}
+
+${moderatorContract}`;
+      
+      sseWrite(res, 'turn', { speaker: 'Moderator', start: true });
+      
+      async function* moderatorStream() {
+        const sys = "You are the Moderator. Synthesize agent perspectives using the EXACT structure provided. Answer the question directly.";
+        const msgs = [{ role: "system", content: sys }, { role: "user", content: moderatorPrompt }];
+        for await (const c of openaiStream(msgs, 500, 0.3)) {
+          if (c?.text) yield { text: c.text };
+        }
+      }
+      
+      await speakBuffered(res, 'Moderator', 'answer', moderatorStream);
       
       // Extract and save synthesis
       const synthesisText = (speakerBuf.get('Moderator') || '').trim();
       const ctas = normalizeCTAs(synthesisText);
       debateSetSynthesis(requestId, { summary: synthesisText, ctas });
-      sseWrite(res, 'synth', { title: 'Collective Synthesis', bullets: ctas });
+      sseWrite(res, 'synth', { synthesis: synthesisText, ctas, personas: activeAgents, perspectives });
       
-      // Sanity checks
-      if (!synthesisText) {
-        sseWrite(res, 'error', { code: 'NO_SYNTH', message: 'Synthesis missing' });
-      }
-      if (!ctas?.length) {
-        sseWrite(res, 'warn', { code: 'NO_CTAS', message: 'No actionable CTAs parsed' });
-      }
-      
-      sseWrite(res, 'phase', { label: 'moderator', status: 'end' });
+      sseWrite(res, 'phase', { label: 'answer', status: 'end' });
       
     } else {
       // Debate mode: Full theatrical experience

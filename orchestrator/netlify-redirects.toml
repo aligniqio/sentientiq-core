@@ -1,0 +1,40 @@
+# Netlify Redirects Configuration
+# Add these to your app's netlify.toml file
+
+[[redirects]]
+  from = "/api/sage/debate"
+  to = "https://api.sentientiq.app/v1/boardroom"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/api/boardroom/sse"
+  to = "https://api.sentientiq.app/v1/boardroom/sse"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/api/debate/export"
+  to = "https://api.sentientiq.app/v1/debate/export"
+  status = 200
+  force = true
+
+# If you need to proxy EventSource with query params
+[[redirects]]
+  from = "/api/boardroom/sse/*"
+  to = "https://api.sentientiq.app/v1/boardroom/sse/:splat"
+  status = 200
+  force = true
+
+# Headers for SSE/EventSource support
+[[headers]]
+  for = "/api/boardroom/sse"
+  [headers.values]
+    Cache-Control = "no-cache, no-transform"
+    X-Accel-Buffering = "no"
+
+[[headers]]
+  for = "/api/sage/debate"
+  [headers.values]
+    Cache-Control = "no-cache, no-transform"
+    X-Accel-Buffering = "no"

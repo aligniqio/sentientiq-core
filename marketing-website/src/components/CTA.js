@@ -1,4 +1,0 @@
-import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
-export default function CTA() {
-    return (_jsx("section", { className: "section py-20", children: _jsxs("div", { className: "card text-center", children: [_jsx("p", { className: "kicker", children: "Ready when you are" }), _jsx("h2", { className: "mt-2 text-3xl font-semibold", children: "Get your emotional fingerprint in minutes." }), _jsx("p", { className: "mt-3 text-white/70", children: "Free to start. No scripts. No cookies. Just answers." }), _jsxs("div", { className: "mt-6 flex items-center justify-center gap-3", children: [_jsx("a", { className: "btn-primary", href: "https://sentientiq.app/signup", children: "Start free" }), _jsx("a", { className: "btn-ghost", href: "#how", children: "See how it works" })] })] }) }));
-}

@@ -8,6 +8,7 @@
     "paths": { "@/*": ["src/*"] },
     "strict": true,
     "skipLibCheck": true,
+    "noEmit": true,
     "types": ["vite/client"]
   },
   "include": ["src", "netlify/functions", "vite.config.ts"]
