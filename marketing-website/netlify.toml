@@ -1,42 +1,59 @@
-# Netlify configuration for sentientiq-marketing
-# Deploy this to sentientiq.ai
-
 [build]
-  # Build command for marketing site
-  command = "npm install && npm run build"
-  
-  # Directory to deploy
+  command = "npm run build"
   publish = "dist"
+  # remove functions line if marketing doesn't use Netlify Functions
+  # functions = "netlify/functions"
 
-# Environment variables
-[build.environment]
-  NODE_VERSION = "18"
-
-# Custom domain
 [[headers]]
   for = "/*"
   [headers.values]
-    X-Frame-Options = "DENY"
-    X-Content-Type-Options = "nosniff"
     Referrer-Policy = "strict-origin-when-cross-origin"
+    X-Content-Type-Options = "nosniff"
+    X-Frame-Options = "DENY"
+    Permissions-Policy = "camera=(), microphone=(), geolocation=()"
+    Strict-Transport-Security = "max-age=31536000; includeSubDomains; preload"
+    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.clerk.accounts.dev https://*.clerk.com https://clerk.sentientiq.app https://js.stripe.com; worker-src 'self' blob:; child-src 'self' blob:; img-src 'self' data: https:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; connect-src 'self' https://api.sentientiq.app https://*.supabase.co wss://*.supabase.co https://*.clerk.accounts.dev https://*.clerk.com https://clerk.sentientiq.app https://yaujc8n853.execute-api.us-east-2.amazonaws.com https://api.stripe.com; frame-src https://*.clerk.com https://*.clerk.accounts.dev https://js.stripe.com https://hooks.stripe.com; base-uri 'self'; form-action 'self';"
 
-# Redirects for marketing site
 [[redirects]]
-  from = "/app"
-  to = "https://sentientiq.app"
-  status = 301
+  from = "/api/posts/*"
+  to = "http://3.15.29.138:8002/api/posts/:splat"
+  status = 200
   force = true
 
 [[redirects]]
-  from = "/login"
-  to = "https://sentientiq.app/auth"
-  status = 301
+  from = "/api/swarm/*"
+  to = "http://3.15.29.138:8003/api/swarm/:splat"
+  status = 200
   force = true
 
 [[redirects]]
-  from = "/signup"
-  to = "https://sentientiq.app/auth?mode=signup"
-  status = 301
+  from = "/api/stripe/webhook"
+  to = "http://3.15.29.138:8005/webhook"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/api/evi/*"
+  to = "http://3.15.29.138:8001/api/evi/:splat"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/api/v1/debate"
+  to = "https://api.sentientiq.app/v1/boardroom"
+  status = 200
+  force = true
+  
+[[redirects]]
+  from = "/api/sage/debate"
+  to = "https://api.sentientiq.app/v1/boardroom"
+  status = 200
+  force = true
+  
+[[redirects]]
+  from = "/api/usage/track"
+  to = "https://api.sentientiq.app/v1/usage/track"
+  status = 200
   force = true
 
 # SPA fallback
