@@ -18,6 +18,7 @@ const PhDCollective = () => {
   const [question, setQuestion] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [debateResults, setDebateResults] = useState<any>(null);
+  const [debateLines, setDebateLines] = useState<Array<{id: string, speaker: string, text: string}>>([]);
   const [showResults, setShowResults] = useState(false);
   const [flashAll, setFlashAll] = useState(false);
   // const [freeQuestionsRemaining, setFreeQuestionsRemaining] = useState<number>(() => {
@@ -175,6 +176,7 @@ const PhDCollective = () => {
     setIsAnalyzing(true);
     setShowResults(false);
     setDebateResults(null);
+    setDebateLines([]); // Clear previous lines for new answer
     
     // Track usage (don't block on this)
     track('question_submitted', { personas: selectedPhDs.size, mode: 'answer' });
@@ -189,8 +191,6 @@ const PhDCollective = () => {
     setQuestion('');
     
     try {
-      let synthesis = '';
-      
       await ssePost(`/api/v1/debate`, {
         prompt: question,
         mode: 'answer',
@@ -199,16 +199,30 @@ const PhDCollective = () => {
         if (event === 'meta') {
           console.log('Answer mode meta:', data);
         }
-        if (event === 'delta' && data.label === 'Answer') {
-          synthesis += data.text;
-          setDebateResults({ collective_synthesis: synthesis });
+        if (event === 'delta') {
+          // Stream answers line by line just like debates
+          const speaker = data.speaker || data.label || 'Answer';
+          const text = data.text || '';
+          if (text.trim()) {
+            setDebateLines(prev => [...prev, {
+              id: `${Date.now()}-${Math.random()}`,
+              speaker: speaker,
+              text: text
+            }]);
+          }
+        }
+        if (event === 'synth') {
+          // Handle synthesis if provided
+          setDebateResults(data);
         }
         if (event === 'done') {
           setShowResults(true);
         }
       });
       
-      storeConversation(newQuestion, { type: 'response', content: { collective_synthesis: synthesis }});
+      // Store the streamed lines as conversation
+      const fullDebate = debateLines.map(line => `${line.speaker}: ${line.text}`).join('\n');
+      storeConversation(newQuestion, { type: 'response', content: { collective_synthesis: fullDebate }});
     } catch (error) {
       console.error('Answer failed:', error);
     } finally {
@@ -252,8 +266,7 @@ const PhDCollective = () => {
     setQuestion('');
     
     try {
-      let synthesis = '';
-      const panels: Record<string, string> = {};
+      // No longer buffering - streaming directly to UI
       
       // Map selected PhD IDs to persona names
       const personas = Array.from(selectedPhDs).map(id => {
@@ -263,6 +276,10 @@ const PhDCollective = () => {
       
       console.log('Sending SSE request with:', { prompt: questionToSend, personas, mode: 'debate' });
       
+      // Clear previous debate lines
+      setDebateLines([]);
+      setShowResults(true); // Show results immediately to see streaming
+      
       await ssePost(`/api/v1/debate`, {
         prompt: questionToSend,
         personas: personas,
@@ -271,19 +288,30 @@ const PhDCollective = () => {
       }, ({ event, data }) => {
         console.log('SSE event:', event, data);
         if (event === 'delta') {
-          const label = data.label;
-          panels[label] = (panels[label] || '') + data.text;
-          synthesis = Object.entries(panels)
-            .map(([persona, text]) => `**${persona}:**\n${text}`)
-            .join('\n\n---\n\n');
-          setDebateResults({ collective_synthesis: synthesis });
+          // Add each sentence as a new line immediately
+          const speaker = data.speaker || data.label || 'System';
+          const text = data.text || '';
+          if (text.trim()) {
+            setDebateLines(prev => [...prev, {
+              id: `${Date.now()}-${Math.random()}`,
+              speaker: speaker,
+              text: text
+            }]);
+          }
+        }
+        if (event === 'synth') {
+          // Handle synthesis separately if needed
+          setDebateResults(data);
         }
         if (event === 'done') {
-          setShowResults(true);
+          // Debate complete
+          console.log('Debate complete');
         }
       });
       
-      storeConversation(newQuestion, { type: 'response', content: { collective_synthesis: synthesis }});
+      // Store the streamed lines as conversation
+      const fullDebate = debateLines.map(line => `${line.speaker}: ${line.text}`).join('\n');
+      storeConversation(newQuestion, { type: 'response', content: { collective_synthesis: fullDebate }});
     } catch (error) {
       console.error('Debate failed:', error);
       alert('Debate failed to start. Please try again.');
@@ -435,7 +463,7 @@ const PhDCollective = () => {
               animate={{ opacity: 1, x: 0 }}
               className="h-full bg-white/5 backdrop-blur-xl rounded-xl p-6 overflow-y-auto"
             >
-              {showResults && debateResults ? (
+              {showResults ? (
                 <>
                   <motion.div
                     initial={{ opacity: 0, y: 10 }}
@@ -444,20 +472,52 @@ const PhDCollective = () => {
                   >
                     COLLECTIVE SYNTHESIS
                   </motion.div>
-                  <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: 0.2 }}
-                    className="text-white/90 text-sm leading-relaxed"
-                  >
-                    {debateResults.collective_synthesis || 
-                     debateResults.synthesis || 
-                     debateResults.message || 
-                     JSON.stringify(debateResults, null, 2)}
-                  </motion.div>
+                  
+                  {/* Stream debate lines as they arrive */}
+                  <div className="space-y-3">
+                    {debateLines.map((line, index) => (
+                      <motion.div
+                        key={line.id}
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: index * 0.05 }}
+                        className="text-white/90 text-sm"
+                      >
+                        <span className="font-semibold text-purple-400">
+                          {line.speaker}:
+                        </span>{' '}
+                        <span className="leading-relaxed">
+                          {line.text}
+                        </span>
+                      </motion.div>
+                    ))}
+                  </div>
+                  
+                  {/* Show final synthesis if available */}
+                  {debateResults && (
+                    <motion.div
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      className="mt-6 pt-6 border-t border-white/10"
+                    >
+                      {debateResults.collective_synthesis || 
+                       debateResults.synthesis || 
+                       debateResults.message || 
+                       (debateResults.title && debateResults.bullets && (
+                         <div>
+                           <h3 className="text-purple-400 font-semibold mb-2">{debateResults.title}</h3>
+                           <ul className="list-disc list-inside space-y-1">
+                             {debateResults.bullets.map((bullet: string, i: number) => (
+                               <li key={i} className="text-white/80">{bullet}</li>
+                             ))}
+                           </ul>
+                         </div>
+                       ))}
+                    </motion.div>
+                  )}
                   
                   {/* Emotional State Badge */}
-                  {(debateResults.debate?.analysis?.emotional_state || 
+                  {debateResults && (debateResults.debate?.analysis?.emotional_state || 
                     debateResults.debate?.perspectives?.[0]?.analysis?.emotional_state) && (
                     <motion.div
                       initial={{ opacity: 0, y: 20 }}

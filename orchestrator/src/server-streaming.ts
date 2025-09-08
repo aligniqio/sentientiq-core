@@ -4,8 +4,9 @@ import cors from 'cors';
 import { z } from 'zod';
 import pLimit from 'p-limit';
 import { claudeStream as claudeStreamCore } from './streaming.js';
-import { DEFAULT_PERSONAS, personaSystem } from './personas.js';
+import { DEFAULT_PERSONAS, personaSystem as personaSystemOld } from './personas.js';
 import { retrieveContext, supabase } from './retrieveContext.js';
+import { RIVALS } from './theater/rivals.js';
 // ESM import (your repo is `"type":"module"`)
 import {
   debateInit,
@@ -13,6 +14,23 @@ import {
   debateSetSynthesis
 } from './services/brief/store.js';
 import { exportBriefHandler } from './services/brief/exportBrief.js';
+import OpenAI from "openai";
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const OPENAI_MODEL = process.env.OPENAI_MODEL || "gpt-4o-mini";
+
+export async function* openaiStream(messages: any[], max_tokens = 220, temperature = 0.4) {
+  const resp = await openai.chat.completions.create({
+    model: OPENAI_MODEL,
+    stream: true,
+    temperature,
+    max_tokens,
+    messages,
+  });
+  for await (const part of resp) {
+    const t = part?.choices?.[0]?.delta?.content;
+    if (t) yield { text: t };
+  }
+}
 
 // ---------- Env ----------
 const PORT = Number(process.env.PORT || 8787);
@@ -20,8 +38,6 @@ const PORT = Number(process.env.PORT || 8787);
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY || '';
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY || '';
 const GROQ_API_KEY = process.env.GROQ_API_KEY || '';
-
-const OPENAI_MODEL = process.env.OPENAI_MODEL || 'gpt-4.1';
 const ANTHROPIC_MODEL = process.env.ANTHROPIC_MODEL || 'claude-3-5-sonnet-20240620';
 const GROQ_MODEL = process.env.GROQ_MODEL || 'llama3-8b-8192';
 
@@ -35,6 +51,7 @@ const sleep = (ms: number) => new Promise(res => setTimeout(res, ms));
 function sseWrite(res: Response, event: string, data: any) {
   res.write(`event: ${event}\n`);
   res.write(`data: ${JSON.stringify(data)}\n\n`);
+  (res as any).flush?.(); // Force flush after EVERY write
 }
 function attachKeepAlive(res: Response) {
   const int = setInterval(() => res.write(': keep-alive\n\n'), 15000);
@@ -187,6 +204,14 @@ const app = express();
 app.use(cors());
 app.use(express.json({ limit: '1mb' }));
 
+// Disable compression for streaming routes
+app.use((req, res, next) => {
+  if (req.path.startsWith("/v1/boardroom")) {
+    (res as any).flush = (res as any).flush || (() => {});
+  }
+  next();
+});
+
 // Main boardroom handler with streaming
 app.post('/v1/boardroom', async (req: Request, res: Response) => {
   // SSE headers
@@ -211,6 +236,9 @@ app.post('/v1/boardroom', async (req: Request, res: Response) => {
   }
 
   const { prompt, topK, tenantId, personas, mode } = parsed.data;
+  
+  // Send meta information to client
+  sseWrite(res, 'meta', { requestId, subject: prompt.slice(0, 120) });
   const debateId = `debate-${Date.now()}`;
   
   // Get tenant plan and enforce caps
@@ -250,20 +278,127 @@ app.post('/v1/boardroom', async (req: Request, res: Response) => {
   const speakerBuf = new Map<string, string>(); // speaker -> string
   let currentMode = 'opening'; // Track current mode for turn events
 
+  // Persona streaming functions
+  function personaSystem(name: string, rival?: string) {
+    return [
+      `You are ${name}. Keep it concise, human, practical.`,
+      `Rules: 1–2 sentences per turn; no lists; no "As ${name}"; no meta.`,
+      rival ? `If rebutting ${rival}, open with one short disagreement, then advance your point.` : ""
+    ].join(" ");
+  }
+
+  async function* personaOpeningStream(name: string, prompt: string, maxTok=120) {
+    const sys = personaSystem(name, RIVALS?.[name]);
+    const msgs = [{ role:"system", content: sys }, { role:"user", content: prompt }];
+    for await (const c of openaiStream(msgs, maxTok, 0.4)) yield c;
+  }
+
+  async function* personaRebuttalStream(name: string, rival: string, prompt: string, maxTok=60) {
+    const sys = personaSystem(name, rival);
+    const user = `Rebut ${rival} briefly, then add one crisp point on: ${prompt}`;
+    const msgs = [{ role:"system", content: sys }, { role:"user", content: user }];
+    for await (const c of openaiStream(msgs, maxTok, 0.5)) yield c;
+  }
+
+  // Helper to collect full response then stream with pacing
+  async function speakBuffered(res: Response, speaker: string, mode: string, streamFn: () => AsyncGenerator<{text: string}>) {
+    // Collect the full response first
+    let fullText = '';
+    for await (const chunk of streamFn()) {
+      if (chunk?.text) fullText += chunk.text;
+    }
+    
+    // Clean up the text
+    fullText = sanitizePersonaText(speaker, fullText);
+    
+    // Better sentence splitting for synthesis and lists
+    let sentences: string[] = [];
+    
+    if (speaker === 'Moderator' && fullText.includes('—')) {
+      // Special handling for Moderator's action items
+      // Split by newlines first, then by sentence endings
+      sentences = fullText
+        .split(/\n+/)
+        .filter(s => s.trim())
+        .flatMap(line => {
+          // If it's an action item (contains —), keep it whole
+          if (line.includes('—')) return [line];
+          // Otherwise split normally
+          return line.match(/[^.!?]+[.!?]+/g) || [line];
+        })
+        .map(s => s.trim())
+        .filter(s => s.length > 0);
+    } else {
+      // Regular sentence splitting for personas
+      const basicSentences = sentenceSplit(fullText)[0];
+      sentences = basicSentences.length > 0 ? basicSentences : [fullText];
+    }
+    
+    for (let i = 0; i < sentences.length; i++) {
+      const sentence = sentences[i].trim();
+      if (!sentence) continue;
+      
+      // Send sentence
+      console.log(`[STREAM] Sending sentence ${i+1}/${sentences.length} for ${speaker}: "${sentence.slice(0, 50)}..."`);
+      sseWrite(res, 'delta', { speaker, text: sentence + ' ' });
+      debateMaybeQuote?.(requestId, speaker, sentence);
+      
+      // Natural pacing: vary based on sentence length and position
+      const wordCount = sentence.split(/\s+/).length;
+      const basePause = 50; // Base pause
+      const perWordPause = 10; // Additional pause per word
+      const pauseTime = Math.min(basePause + (wordCount * perWordPause), 200); // Cap at 200ms
+      
+      console.log(`[STREAM] Pausing ${pauseTime}ms before next sentence`);
+      await pause(pauseTime);
+    }
+    
+    await onTurnEnd(speaker);
+  }
+  
+  // Keep original speak function for backwards compatibility
+  async function speak(res: Response, speaker: string, mode: string, streamFn: () => AsyncGenerator<{text: string}>) {
+    for await (const chunk of streamFn()) {
+      if (chunk?.text) await onDelta(speaker, chunk.text);
+    }
+    await onTurnEnd(speaker);
+  }
+  
+  // Natural pacing between turns
+  const pause = (ms: number) => new Promise(r => setTimeout(r, ms));
+
+  // Sanitize persona text before splitting
+  function sanitizePersonaText(speaker: string, raw: string) {
+    if (!raw) return "";
+    let s = String(raw);
+
+    // Remove meta like "Opening position (100 tokens):"
+    s = s.replace(/^\s*(opening\s+position.*?:)\s*/i, "");
+
+    // Remove self-identification "As Emotion, ..."
+    const name = speaker.replace(/^Dr\s+/i, "");
+    const re = new RegExp("^\\s*(as\\s+(dr\\s+)?"+name+")\\s*[,:\\-–—]+\\s*", "i");
+    s = s.replace(re, "");
+
+    // Collapse triple dots to a normal ellipsis vibe
+    s = s.replace(/\.\.\.+/g, "… ");
+
+    return s;
+  }
+
   // Stream handlers
   async function onDelta(speaker: string, text: string) {
-    const prev = speakerBuf.get(speaker) || '';
-    const next = prev + (text || '');
+    const clean = sanitizePersonaText(speaker, text);
+    const prev = speakerBuf.get(speaker) || "";
+    const next = prev + (clean || "");
     const [sents, rem] = sentenceSplit(next);
     speakerBuf.set(speaker, rem);
 
     for (const s of sents) {
       const line = s.trim();
       if (!line) continue;
-      // 1) send to UI
-      sseWrite(res, 'delta', { speaker, text: line + ' ' });
-      // 2) remember punchy lines for the brief
-      debateMaybeQuote(requestId, speaker, line);
+      sseWrite(res, "delta", { speaker, text: line + " " });
+      debateMaybeQuote?.(requestId, speaker, line);
     }
   }
 
@@ -310,17 +445,23 @@ ${contextBlock}`;
 
       sseWrite(res, 'turn', { speaker: 'Moderator', start: true });
       
-      if (ANTHROPIC_API_KEY && provider === 'anthropic') {
-        for await (const chunk of claudeStream(moderatorPrompt, 400)) {
-          if (chunk?.text) await onDelta('Moderator', chunk.text);
+      // Use buffered streaming for answer mode too
+      async function* answerStream() {
+        if (ANTHROPIC_API_KEY && provider === 'anthropic') {
+          for await (const chunk of claudeStream(moderatorPrompt, 400)) {
+            if (chunk?.text) yield { text: chunk.text };
+          }
+        } else {
+          // Use OpenAI for answer mode
+          const sys = "You are the Moderator. Provide 3 decisive action items.";
+          const msgs = [{ role: "system", content: sys }, { role: "user", content: moderatorPrompt }];
+          for await (const c of openaiStream(msgs, 400, 0.3)) {
+            if (c?.text) yield { text: c.text };
+          }
         }
-      } else {
-        // Fallback to OpenAI or mock
-        const mockText = `Based on the analysis:\n\n1. Implement immediate solution — Owner: Engineering — When: 48 hours\n2. Monitor key metrics — Owner: Analytics — When: Daily\n3. Iterate based on data — Owner: Product — When: Weekly`;
-        await onDelta('Moderator', mockText);
       }
       
-      await onTurnEnd('Moderator');
+      await speakBuffered(res, 'Moderator', 'answer', answerStream);
       
       // Extract and save synthesis
       const synthesisText = (speakerBuf.get('Moderator') || '').trim();
@@ -342,36 +483,22 @@ ${contextBlock}`;
       // Debate mode: Full theatrical experience
       
       // 1) Roll call
-      sseWrite(res, 'scene', { step: 'rollcall' });
-      await onDelta('Moderator', `Roll call: ${roster.join(', ')}.`);
+      sseWrite(res, "scene", { step: "rollcall" });
+      sseWrite(res, "delta", { speaker: "Moderator", text: `Roll call: ${roster.join(", ")}.` });
       await onTurnEnd('Moderator');
       
       // 2) Opening statements
       sseWrite(res, 'scene', { step: 'openings' });
       currentMode = 'opening';
       
-      for (const persona of roster) {
-        sseWrite(res, 'turn', { speaker: persona, start: true, mode: 'opening' });
-        
-        const openingPrompt = `${personaSystem(persona)}
-
-Challenge: ${prompt}
-
-${contextBlock}
-
-Provide your opening position in 100 tokens or less. Be decisive and specific.`;
-
-        if (ANTHROPIC_API_KEY && provider === 'anthropic') {
-          for await (const chunk of claudeStream(openingPrompt, 120)) {
-            if (chunk?.text) await onDelta(persona, chunk.text);
-          }
-        } else {
-          // Mock response
-          await onDelta(persona, `As ${persona}, I believe we should focus on practical solutions that deliver immediate value.`);
-        }
-        
-        await onTurnEnd(persona);
-        await sleep(100); // Pacing
+      const TOK = { persona: 120, reply: 60, moderator: 250 }; // Token limits
+      const ACTIVE = roster; // Active personas
+      
+      for (const p of ACTIVE) {
+        sseWrite(res, 'turn', { speaker: p, start: true, mode: 'opening' });
+        const openingPrompt = `Challenge: ${prompt}\n\n${contextBlock}`;
+        await speakBuffered(res, p, 'opening', () => personaOpeningStream(p, openingPrompt, TOK?.persona || 120));
+        await pause(250); // Natural pause between different speakers
       }
       
       // 3) Crossfire (if we have rival pairs)
@@ -383,15 +510,13 @@ Provide your opening position in 100 tokens or less. Be decisive and specific.`;
         currentMode = 'rebuttal';
         
         for (const [a, b] of activePairs) {
-          // A rebuts B
           sseWrite(res, 'turn', { speaker: a, start: true, mode: 'rebuttal' });
-          await slowSay(a, `I disagree with ${b}'s approach. We need to consider the human element here.`, 50);
-          await onTurnEnd(a);
-          
-          // B rebuts A
+          await speakBuffered(res, a, 'rebuttal', () => personaRebuttalStream(a, b, prompt, TOK?.reply || 60));
+          await pause(200); // Quick pause between rebuttals
+
           sseWrite(res, 'turn', { speaker: b, start: true, mode: 'rebuttal' });
-          await slowSay(b, `While ${a} makes valid points, the data tells a different story.`, 50);
-          await onTurnEnd(b);
+          await speakBuffered(res, b, 'rebuttal', () => personaRebuttalStream(b, a, prompt, TOK?.reply || 60));
+          await pause(300); // Slightly longer pause between pairs
         }
       }
       
@@ -409,20 +534,22 @@ Challenge: ${prompt}
 
 Be decisive. No hedging.`;
 
-      if (ANTHROPIC_API_KEY && provider === 'anthropic') {
-        for await (const chunk of claudeStream(synthesisPrompt, 300)) {
-          if (chunk?.text) await onDelta('Moderator', chunk.text);
+      // Use buffered approach for synthesis too
+      async function* synthesisStream() {
+        if (provider === "anthropic" && ANTHROPIC_API_KEY) {
+          for await (const chunk of claudeStream(synthesisPrompt, TOK?.moderator || 250)) {
+            if (chunk?.text) yield { text: chunk.text };
+          }
+        } else {
+          const sys = "You are the Moderator. Write a 4–6 sentence exec synthesis (plain prose). Then end with three actions (Action · Owner · When) on separate lines.";
+          const msgs = [{ role:"system", content: sys }, { role:"user", content: synthesisPrompt }];
+          for await (const c of openaiStream(msgs, TOK?.moderator || 250, 0.3)) {
+            if (c?.text) yield { text: c.text };
+          }
         }
-      } else {
-        const mockSynthesis = `After hearing all perspectives, here are the 3 critical actions:
-
-1. Launch MVP experiment — Owner: Product — When: 2 weeks
-2. Set up analytics pipeline — Owner: Engineering — When: 72 hours  
-3. Run user interviews — Owner: Research — When: This week`;
-        await onDelta('Moderator', mockSynthesis);
       }
       
-      await onTurnEnd('Moderator');
+      await speakBuffered(res, 'Moderator', 'synthesis', synthesisStream);
       
       // Extract and save synthesis
       const synthesisText = (speakerBuf.get('Moderator') || '').trim();
