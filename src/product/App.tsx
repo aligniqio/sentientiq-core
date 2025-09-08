@@ -16,6 +16,10 @@ import PhDCollective from '../pages/phd-collective'
 import Onboarding from '../pages/onboarding'
 import DynamicRecommendations from '../pages/dynamic-recommendations'
 
+// Admin pages
+import TenantsPage from './admin/TenantsPage'
+import InvitesPage from './admin/InvitesPage'
+
 // Candy Kit UI enhancements
 import { SenseiCandyProvider } from '../components/ui/SenseiCandy'
 
@@ -160,6 +164,29 @@ function App() {
             <>
               <SignedIn>
                 <DynamicRecommendations />
+              </SignedIn>
+              <SignedOut>
+                <Navigate to="/auth" replace />
+              </SignedOut>
+            </>
+          } />
+          
+          {/* Admin routes */}
+          <Route path="/admin/tenants" element={
+            <>
+              <SignedIn>
+                <TenantsPage />
+              </SignedIn>
+              <SignedOut>
+                <Navigate to="/auth" replace />
+              </SignedOut>
+            </>
+          } />
+          
+          <Route path="/admin/invites" element={
+            <>
+              <SignedIn>
+                <InvitesPage />
               </SignedIn>
               <SignedOut>
                 <Navigate to="/auth" replace />

@@ -1,139 +1,20 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { CheckCircle, Brain } from 'lucide-react';
+import { Brain } from 'lucide-react';
 import PageHeader from '../components/PageHeader';
 // import { useUser } from '@clerk/clerk-react';
-import { useTrackUsage, useSubscription } from '../hooks/useSubscription';
+import { useTrackUsage } from '../hooks/useSubscription';
 import { ssePost } from '../utils/ssePost';
+import { AgentCard } from '../components/AgentCard';
+import { PERSONA_META } from '../personas/meta';
 
-// The 12 PhD Faculty
-const PHD_FACULTY = [
-  {
-    id: 'cmo',
-    name: 'Dr. Strategic',
-    title: 'Chief Marketing Officer',
-    degree: 'PhD Marketing Strategy, Wharton',
-    specialty: 'Market orchestration & resource allocation',
-    icon: '👔',
-    catchphrase: 'Revenue is a lagging indicator of emotion',
-    color: 'from-purple-900 to-indigo-900'
-  },
-  {
-    id: 'psychology',
-    name: 'Dr. Emotion',
-    title: 'Consumer Psychology',
-    degree: 'PhD Behavioral Economics, Stanford',
-    specialty: 'Emotional triggers & decision architecture',
-    icon: '🧠',
-    catchphrase: 'They buy feelings, not features',
-    color: 'from-pink-600 to-rose-600'
-  },
-  {
-    id: 'data',
-    name: 'Dr. Pattern',
-    title: 'Data Science Lead',
-    degree: 'PhD Machine Learning, MIT',
-    specialty: 'Predictive modeling & anomaly detection',
-    icon: '📊',
-    catchphrase: 'The data never lies, but it often misleads',
-    color: 'from-blue-600 to-cyan-600'
-  },
-  {
-    id: 'identity',
-    name: 'Dr. Identity',
-    title: 'CDP Architect',
-    degree: 'PhD Information Systems, Carnegie Mellon',
-    specialty: 'Identity resolution & data unification',
-    icon: '🔍',
-    catchphrase: 'One customer, infinite signals',
-    color: 'from-green-600 to-emerald-600'
-  },
-  {
-    id: 'creative',
-    name: 'Dr. Chaos',
-    title: 'Creative Mutation',
-    degree: 'PhD Cognitive Science, Berkeley',
-    specialty: 'Creative optimization & A/B evolution',
-    icon: '🎨',
-    catchphrase: 'Best practices are where innovation goes to die',
-    color: 'from-orange-600 to-yellow-600'
-  },
-  {
-    id: 'budget',
-    name: 'Dr. ROI',
-    title: 'Budget Optimization',
-    degree: 'PhD Financial Engineering, Chicago',
-    specialty: 'Resource allocation & efficiency metrics',
-    icon: '💰',
-    catchphrase: 'Every dollar has an emotion attached',
-    color: 'from-yellow-600 to-amber-600'
-  },
-  {
-    id: 'competitive',
-    name: 'Dr. Warfare',
-    title: 'Competitive Intelligence',
-    degree: 'PhD Strategic Management, INSEAD',
-    specialty: 'Market dynamics & competitive positioning',
-    icon: '⚔️',
-    catchphrase: 'Your competition is already using AI wrong',
-    color: 'from-red-600 to-red-800'
-  },
-  {
-    id: 'channel',
-    name: 'Dr. Omni',
-    title: 'Channel Optimizer',
-    degree: 'PhD Media Studies, Northwestern',
-    specialty: 'Cross-channel orchestration & attribution',
-    icon: '📡',
-    catchphrase: 'Channels are dead, experiences are forever',
-    color: 'from-teal-600 to-blue-600'
-  },
-  {
-    id: 'onboarding',
-    name: 'Dr. First',
-    title: 'Onboarding Intelligence',
-    degree: 'PhD User Experience, Michigan',
-    specialty: 'First impressions & activation metrics',
-    icon: '🚀',
-    catchphrase: 'You have 3 seconds to matter',
-    color: 'from-indigo-600 to-purple-600'
-  },
-  {
-    id: 'attribution',
-    name: 'Dr. Truth',
-    title: 'Attribution Science',
-    degree: 'PhD Statistical Analysis, Harvard',
-    specialty: 'Multi-touch attribution & causality',
-    icon: '🎯',
-    catchphrase: 'Last-click attribution is astrology for marketers',
-    color: 'from-gray-600 to-gray-800'
-  },
-  {
-    id: 'sage',
-    name: 'Dr. Brutal',
-    title: 'Sage Intelligence',
-    degree: 'PhD Philosophy of Mind, Oxford',
-    specialty: 'Uncomfortable truths & reality checks',
-    icon: '🔮',
-    catchphrase: 'Your KPIs are lying to make you feel better',
-    color: 'from-purple-800 to-pink-800'
-  },
-  {
-    id: 'learning',
-    name: 'Dr. Context',
-    title: 'Learning Engine',
-    degree: 'PhD Neural Networks, Toronto',
-    specialty: 'Pattern learning & adaptation',
-    icon: '🧬',
-    catchphrase: 'Every interaction teaches us who you really are',
-    color: 'from-emerald-600 to-teal-600'
-  }
-];
+// Get persona IDs from metadata
+const PERSONA_IDS = Object.keys(PERSONA_META);
 
-const PhDCollective: React.FC = () => {
+const PhDCollective = () => {
   // const user = useUser();
   const { trackQuestion } = useTrackUsage();
-  const subscription = useSubscription();
+  // const subscription = useSubscription();
   const [selectedPhDs, setSelectedPhDs] = useState<Set<string>>(new Set()); // Start with none selected
   const [question, setQuestion] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -270,7 +151,7 @@ const PhDCollective: React.FC = () => {
 
   const selectAll = () => {
     console.log('Selecting all PhDs');
-    const allIds = PHD_FACULTY.map(phd => phd.id);
+    const allIds = PERSONA_IDS;
     console.log('All IDs:', allIds);
     const newSet = new Set(allIds);
     console.log('New Set size:', newSet.size);
@@ -358,8 +239,8 @@ const PhDCollective: React.FC = () => {
       
       // Map selected PhD IDs to persona names
       const personas = Array.from(selectedPhDs).map(id => {
-        const phd = PHD_FACULTY.find(p => p.id === id);
-        return phd ? phd.name.replace('Dr. ', '') : id;
+        const persona = PERSONA_META[id];
+        return persona ? persona.name.replace('Dr. ', '') : id;
       });
       
       await ssePost(`/api/sage/debate`, {
@@ -393,100 +274,6 @@ const PhDCollective: React.FC = () => {
     }
   };
 
-  const askAdvisors = async () => {
-    if (!question.trim() || selectedPhDs.size === 0) return;
-
-    // Check subscription limits (all users must be authenticated)
-    if (!subscription.canAsk) {
-      if (subscription.tier === 'free') {
-        alert('You\'ve used all 20 free questions! Upgrade to Pro for unlimited access.');
-      } else {
-        alert(`You've reached your monthly limit of ${subscription.questionsLimit} questions. Please upgrade your plan to continue.`);
-      }
-      window.location.href = '/billing';
-      return;
-    }
-
-    setIsAnalyzing(true);
-    setShowResults(false);
-    setDebateResults(null);
-
-    // Track usage (all users are authenticated)
-    await trackQuestion();
-
-    // Add to conversation history
-    const newQuestion = {
-      type: 'question',
-      content: question,
-      timestamp: new Date().toISOString()
-    };
-    
-    // Clear the input field
-    setQuestion('');
-
-    try {
-      // Map selected PhD IDs to their persona names for the boardroom
-      const personas = Array.from(selectedPhDs).map(id => {
-        const phd = PHD_FACULTY.find(p => p.id === id);
-        return phd ? phd.name.replace('Dr. ', '') : id;
-      });
-      
-      // Build streaming response
-      let synthesis = '';
-      const panels: Record<string, string> = {};
-      
-      await ssePost(`/api/sage/debate`, {
-        prompt: question,
-        personas: personas.length > 0 ? personas : undefined, // Let server default if none selected
-        topK: 4
-      }, ({ event, data }) => {
-        if (event === 'accepted') {
-          console.log('SSE connection accepted');
-          return;
-        }
-        if (event === 'delta') {
-          // Append text to the specific persona's panel
-          const label = data.label;
-          panels[label] = (panels[label] || '') + data.text;
-          // Update the display with accumulated text
-          synthesis = Object.entries(panels)
-            .map(([persona, text]) => `**${persona}:**\n${text}`)
-            .join('\n\n---\n\n');
-          setDebateResults({ collective_synthesis: synthesis });
-          return;
-        }
-        if (event === 'phase') {
-          console.log('Phase update:', data);
-          return;
-        }
-        if (event === 'error') {
-          console.error('SSE error:', data);
-          return;
-        }
-        if (event === 'done') {
-          console.log('SSE stream complete');
-          setShowAnnouncement(true);
-          setTimeout(() => {
-            setShowAnnouncement(false);
-            setShowResults(true);
-          }, 2500);
-          return;
-        }
-      });
-      
-      // Store in Supabase for persistence
-      const newResponse = {
-        type: 'response',
-        content: { collective_synthesis: synthesis },
-        timestamp: new Date().toISOString()
-      };
-      storeConversation(newQuestion, newResponse);
-    } catch (error) {
-      console.error('Advisory session failed:', error);
-    } finally {
-      setIsAnalyzing(false);
-    }
-  };
 
   const storeConversation = async (question: any, response: any) => {
     // TODO: Store in Supabase for context persistence
@@ -566,50 +353,15 @@ const PhDCollective: React.FC = () => {
           
           {/* PhD Cards Grid */}
           <div className="grid grid-cols-3 gap-4 overflow-y-auto overflow-x-hidden p-2 flex-1">
-          {PHD_FACULTY.map((phd) => {
-            const isSelected = selectedPhDs.has(phd.id);
-            
-            return (
-              <motion.div
-                key={phd.id}
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={() => togglePhD(phd.id)}
-                className={`relative cursor-pointer rounded-lg transition-all ${
-                  isSelected 
-                    ? 'ring-2 ring-green-500 ring-offset-2 ring-offset-black/50' 
-                    : 'ring-1 ring-white/10'
-                }`}
-              >
-                <div className="backdrop-blur-xl bg-white/5 rounded-lg p-3 relative overflow-hidden h-[150px]">
-                  {/* Selection Indicator */}
-                  <div className="absolute top-2 right-2 z-20">
-                    {isSelected ? (
-                      <CheckCircle className="h-5 w-5 text-green-400" />
-                    ) : (
-                      <div className="h-5 w-5 border border-white/30 rounded-full" />
-                    )}
-                  </div>
-
-                  {/* PhD Info - Ultra Compressed */}
-                  <div className="relative z-10 h-full flex flex-col">
-                    <div className="flex items-start gap-1.5">
-                      <div className="text-xl leading-none">{phd.icon}</div>
-                      <div className="flex-1 min-w-0">
-                        <h3 className="text-white font-bold text-xs truncate pr-4">{phd.name}</h3>
-                        <p className="text-white/50 text-[10px] truncate">{phd.title}</p>
-                      </div>
-                    </div>
-                    
-                    {/* Specialty - Bottom */}
-                    <div className="mt-auto pt-1 border-t border-white/10">
-                      <p className="text-white/60 text-[10px] leading-snug line-clamp-2">{phd.specialty}</p>
-                    </div>
-                  </div>
-                </div>
-              </motion.div>
-            );
-          })}
+            {PERSONA_IDS.map((id) => (
+              <AgentCard
+                key={id}
+                id={id}
+                selected={selectedPhDs.has(id)}
+                disabled={false}
+                onToggle={(personaId) => togglePhD(personaId)}
+              />
+            ))}
           </div>
           
           {/* Input Field - Below Grid, Full Width */}

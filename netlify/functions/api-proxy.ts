@@ -3,7 +3,7 @@
 // Works with Clerk cookies or Authorization header. Streams SSE cleanly.
 
 export default async (request: Request, context: any) => {
-  const apiOrigin = Deno.env.get("API_ORIGIN") ?? "http://localhost:8000";
+  const apiOrigin = Deno.env.get("API_ORIGIN") ?? "http://98.87.12.130";
 
   // Build target URL: /api/foo -> ${API_ORIGIN}/foo
   const url = new URL(request.url);
