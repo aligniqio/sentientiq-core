@@ -1,9 +1,14 @@
 # Environment variables
 .env
+.env.*
 .env.local
 .env.production
 backend/.env
 backend/.env.*
+marketing-website/.env
+marketing-website/.env.*
+orchestrator/.env
+orchestrator/.env.*
 
 # Dependencies
 node_modules/
