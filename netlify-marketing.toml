@@ -1,6 +1,9 @@
+# Deploy this with: netlify deploy --site YOUR_MARKETING_SITE_ID --prod
+# Or set as build config in Netlify UI for marketing site
 [build]
+  base = "marketing-website"
   command = "npm run build"
-  publish = "dist"
+  publish = "marketing-website/dist"
 
 [[headers]]
   for = "/*"
