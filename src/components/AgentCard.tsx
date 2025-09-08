@@ -22,38 +22,40 @@ export function AgentCard({
       onClick={() => !disabled && onToggle?.(id)}
       disabled={disabled}
       className={[
-        'agent-card agent-tint group w-full text-left',
+        'agent-card agent-tint group w-full text-left min-h-[160px]',
         selected ? 'ring-1 ring-white/35 selected-tint' : '',
         disabled ? 'opacity-50 cursor-not-allowed' : 'hover:translate-y-[-1px]'
       ].join(' ')}
       style={{ ['--tint' as any]: tint }}
       aria-pressed={!!selected}
     >
-      <div className={`p-4 ${flashAll && selected ? 'flash-green' : ''}`}>
+      <div className={`p-4 h-full flex flex-col ${flashAll && selected ? 'flash-green' : ''}`}>
         {/* Title pinned top */}
         <div className="agent-title">
           <div className="text-[16px] font-semibold truncate">{p.name}</div>
           <div className="text-[12.5px] text-white/65 truncate">{p.role}</div>
         </div>
 
-        {/* Chips (max 2) */}
-        <div className="mt-1.5 flex flex-wrap gap-1.5">
-          {p.creds.slice(0, 2).map(c => (
-            <span
-              key={c}
-              className="agent-chip text-white/90"
-              style={{
-                background: rgba(color, 0.12),
-                borderColor: rgba(color, 0.35)
-              }}
-            >
-              {c}
-            </span>
-          ))}
+        {/* Chips float in middle */}
+        <div className="flex-1 flex items-center">
+          <div className="flex flex-wrap gap-1.5">
+            {p.creds.slice(0, 2).map(c => (
+              <span
+                key={c}
+                className="agent-chip text-white/90"
+                style={{
+                  background: rgba(color, 0.12),
+                  borderColor: rgba(color, 0.35)
+                }}
+              >
+                {c}
+              </span>
+            ))}
+          </div>
         </div>
 
-        {/* Voice line (2 lines clamp) */}
-        <div className="mt-2 text-[12px] leading-snug text-white/75 line-clamp-2">
+        {/* Voice line anchored to bottom */}
+        <div className="text-[12px] leading-snug text-white/75 line-clamp-2 mt-2">
           {p.voice}
         </div>
 
