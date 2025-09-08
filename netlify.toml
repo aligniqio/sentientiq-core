@@ -25,6 +25,12 @@
   status = 200
   force = true
 
+[[redirects]]
+  from = "/api/v1/*"
+  to = "http://98.87.12.130/v1/:splat"
+  status = 200
+  force = true
+
 # SPA fallback
 [[redirects]]
   from = "/*"
