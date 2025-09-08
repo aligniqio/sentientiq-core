@@ -218,7 +218,7 @@ const PhDCollective = () => {
   };
 
   const runDebate = async () => {
-    if (!question.trim() || selectedPhDs.size === 0) return;
+    if (!question.trim() || selectedPhDs.size < 2) return;
     
     setIsAnalyzing(true);
     setShowResults(false);
