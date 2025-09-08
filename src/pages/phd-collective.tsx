@@ -21,6 +21,7 @@ const PhDCollective = () => {
   const [debateResults, setDebateResults] = useState<any>(null);
   const [showResults, setShowResults] = useState(false);
   const [showAnnouncement, setShowAnnouncement] = useState(false);
+  const [flashAll, setFlashAll] = useState(false);
   // const [freeQuestionsRemaining, setFreeQuestionsRemaining] = useState<number>(() => {
   //   const stored = localStorage.getItem('free_questions_remaining');
   //   return stored ? parseInt(stored, 10) : 20;
@@ -156,6 +157,9 @@ const PhDCollective = () => {
     const newSet = new Set(allIds);
     console.log('New Set size:', newSet.size);
     setSelectedPhDs(newSet);
+    // Trigger flash animation
+    setFlashAll(true);
+    setTimeout(() => setFlashAll(false), 900);
     // Force a check after state update
     setTimeout(() => {
       console.log('Selected PhDs after update:', selectedPhDs.size);
@@ -360,6 +364,7 @@ const PhDCollective = () => {
                 selected={selectedPhDs.has(id)}
                 disabled={false}
                 onToggle={(personaId) => togglePhD(personaId)}
+                flashAll={flashAll}
               />
             ))}
           </div>

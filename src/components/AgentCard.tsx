@@ -1,55 +1,69 @@
 import { PERSONA_META } from '../personas/meta';
+import { PERSONA_COLOR } from '../personas/colors';
+import { rgba } from '../ui/color';
 
 export function AgentCard({
-  id, selected, disabled, onToggle
-}: { id: string; selected?: boolean; disabled?: boolean; onToggle?: (id:string)=>void }) {
+  id, selected, disabled, onToggle, flashAll
+}: {
+  id: string;
+  selected?: boolean;
+  disabled?: boolean;
+  onToggle?: (id: string) => void;
+  flashAll?: boolean;  // pass true for ~1s after "Summon Entire Collective"
+}) {
   const p = PERSONA_META[id];
   if (!p) return null;
+  
+  const color = PERSONA_COLOR[p.name] || '#64748b';
+  const tint = rgba(color, 0.14);
 
   return (
     <button
-      onClick={()=>!disabled && onToggle?.(id)}
+      onClick={() => !disabled && onToggle?.(id)}
       disabled={disabled}
       className={[
-        'group relative w-full text-left rounded-2xl border transition-all duration-200',
-        selected ? 'border-white/40 bg-white/10 shadow-xl shadow-purple-500/10' : 'border-white/12 bg-white/[0.03] hover:bg-white/[0.06]',
-        disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
+        'agent-card agent-tint group w-full text-left',
+        selected ? 'ring-1 ring-white/35 selected-tint' : '',
+        disabled ? 'opacity-50 cursor-not-allowed' : 'hover:translate-y-[-1px]'
       ].join(' ')}
+      style={{ ['--tint' as any]: tint }}
       aria-pressed={!!selected}
     >
-      <div className="p-4">
-        {/* Title row */}
-        <div className="flex items-center justify-between gap-2">
-          <div className="min-w-0">
-            <div className="text-[15px] md:text-base font-semibold truncate">{p.name}</div>
-            <div className="text-xs md:text-sm text-white/60 truncate">{p.role}</div>
-          </div>
-          <div className={`h-4 w-4 rounded-full border transition-all ${selected ? 'bg-white border-white' : 'border-white/30'}`} />
+      <div className={`p-4 ${flashAll && selected ? 'flash-green' : ''}`}>
+        {/* Title pinned top */}
+        <div className="agent-title">
+          <div className="text-[16px] font-semibold truncate">{p.name}</div>
+          <div className="text-[12.5px] text-white/65 truncate">{p.role}</div>
         </div>
 
-        {/* Credential chips */}
-        <div className="mt-2 flex flex-wrap gap-1.5">
-          {p.creds.slice(0,2).map(c => (
-            <span key={c} className="text-[10px] md:text-xs px-2 py-0.5 rounded-full bg-white/8 border border-white/10 text-white/80">
+        {/* Chips (max 2) */}
+        <div className="mt-1.5 flex flex-wrap gap-1.5">
+          {p.creds.slice(0, 2).map(c => (
+            <span
+              key={c}
+              className="agent-chip text-white/90"
+              style={{
+                background: rgba(color, 0.12),
+                borderColor: rgba(color, 0.35)
+              }}
+            >
               {c}
             </span>
           ))}
         </div>
 
-        {/* Personality line */}
-        <div className="mt-2 text-[11px] md:text-[12px] leading-snug text-white/70 line-clamp-2">
+        {/* Voice line (2 lines clamp) */}
+        <div className="mt-2 text-[12px] leading-snug text-white/75 line-clamp-2">
           {p.voice}
         </div>
-      </div>
 
-      {/* Hover reveal (optional second line) */}
-      {p.alt && (
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 translate-y-2 opacity-0 group-hover:opacity-100 group-hover:translate-y-0 transition">
-          <div className="mx-4 mb-3 rounded-lg bg-black/40 backdrop-blur px-3 py-2 text-[11px] text-white/80">
-            {p.alt}
-          </div>
+        {/* Selection indicator */}
+        <div className="absolute top-3 right-3">
+          <div className={`h-3 w-3 rounded-full border transition-all ${
+            selected ? 'bg-white border-white' : 'border-white/30'
+          }`} />
         </div>
-      )}
+      </div>
     </button>
   );
 }
