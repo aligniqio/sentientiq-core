@@ -1,50 +1,79 @@
 [build]
+  command = "npm run build"
   publish = "dist"
+  # (omit functions here unless this app actually uses Netlify Functions)
+
+# ---------- Security & performance headers ----------
+# Global security headers
+[[headers]]
+  for = "/*"
+  [headers.values]
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    X-Content-Type-Options = "nosniff"
+    X-Frame-Options = "DENY"
+    Permissions-Policy = "camera=(), microphone=(), geolocation=()"
+    Strict-Transport-Security = "max-age=31536000; includeSubDomains; preload"
+    # Adjust CSP sources as needed for your app (Clerk/Supabase/Stripe/API)
+    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.clerk.com https://*.clerk.accounts.dev https://clerk.sentientiq.app https://js.stripe.com; worker-src 'self' blob:; child-src 'self' blob:; img-src 'self' data: https:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; connect-src 'self' https://api.sentientiq.app https://*.supabase.co wss://*.supabase.co https://*.clerk.com https://*.clerk.accounts.dev https://clerk.sentientiq.app https://api.stripe.com; frame-src https://*.clerk.com https://*.clerk.accounts.dev https://js.stripe.com https://hooks.stripe.com; base-uri 'self'; form-action 'self';"
+
+# Strong caching for hashed build assets (Vite-style /assets/*)
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+# Prevent caching for API proxy routes (handy for SSE & telemetry)
+[[headers]]
+  for = "/api/*"
+  [headers.values]
+    Cache-Control = "no-store"
+
+# ---------- API proxies (to orchestrator & other services) ----------
+[[redirects]]
+  from = "/api/v1/debate"
+  to   = "https://api.sentientiq.app/v1/boardroom"
+  status = 200
+  force = true
 
 [[redirects]]
+  from = "/api/sage/debate"
+  to   = "https://api.sentientiq.app/v1/boardroom"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/api/usage/track"
+  to   = "https://api.sentientiq.app/v1/usage/track"
+  status = 200
+  force = true
+
+# Legacy/internal services (keep until you migrate them behind api.sentientiq.app)
+[[redirects]]
   from = "/api/posts/*"
-  to = "http://3.15.29.138:8002/api/posts/:splat"
+  to   = "http://3.15.29.138:8002/api/posts/:splat"
   status = 200
   force = true
 
 [[redirects]]
   from = "/api/swarm/*"
-  to = "http://3.15.29.138:8003/api/swarm/:splat"
+  to   = "http://3.15.29.138:8003/api/swarm/:splat"
   status = 200
   force = true
 
 [[redirects]]
   from = "/api/stripe/webhook"
-  to = "http://3.15.29.138:8005/webhook"
+  to   = "http://3.15.29.138:8005/webhook"
   status = 200
   force = true
 
 [[redirects]]
   from = "/api/evi/*"
-  to = "http://3.15.29.138:8001/api/evi/:splat"
+  to   = "http://3.15.29.138:8001/api/evi/:splat"
   status = 200
   force = true
 
-[[redirects]]
-  from = "/api/v1/debate"
-  to = "https://api.sentientiq.app/v1/boardroom"
-  status = 200
-  force = true
-  
-[[redirects]]
-  from = "/api/sage/debate"
-  to = "https://api.sentientiq.app/v1/boardroom"
-  status = 200
-  force = true
-  
-[[redirects]]
-  from = "/api/usage/track"
-  to = "https://api.sentientiq.app/v1/usage/track"
-  status = 200
-  force = true
-
-# SPA fallback
+# ---------- SPA fallback (must be last) ----------
 [[redirects]]
   from = "/*"
-  to = "/index.html"
+  to   = "/index.html"
   status = 200
