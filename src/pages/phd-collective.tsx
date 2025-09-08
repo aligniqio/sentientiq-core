@@ -220,6 +220,14 @@ const PhDCollective = () => {
   const runDebate = async () => {
     if (!question.trim() || selectedPhDs.size < 2) {
       console.log('Debate validation failed:', { question: question.trim(), selectedCount: selectedPhDs.size });
+      
+      // Easter egg for single agent "debates"
+      if (selectedPhDs.size === 1 && question.trim()) {
+        setDebateResults({ 
+          collective_synthesis: `That's not really a debate, is it? More of a monologue. \n\nTry selecting at least 2 agents so they can actually disagree about something. The whole point is watching them argue - one PhD just agrees with themselves.` 
+        });
+        setShowResults(true);
+      }
       return;
     }
     
