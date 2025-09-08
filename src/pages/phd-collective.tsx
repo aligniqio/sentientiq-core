@@ -192,7 +192,7 @@ const PhDCollective = () => {
     try {
       let synthesis = '';
       
-      await ssePost(`/api/sage/debate`, {
+      await ssePost(`/api/v1/debate`, {
         prompt: question,
         mode: 'answer',
         topK: 3
@@ -256,7 +256,7 @@ const PhDCollective = () => {
       
       console.log('Sending SSE request with:', { prompt: questionToSend, personas, mode: 'debate' });
       
-      await ssePost(`/api/sage/debate`, {
+      await ssePost(`/api/v1/debate`, {
         prompt: questionToSend,
         personas: personas,
         mode: 'debate',
