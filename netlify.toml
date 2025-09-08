@@ -47,6 +47,12 @@
   status = 200
   force = true
 
+[[redirects]]
+  from = "/api/debate/export"
+  to   = "https://api.sentientiq.app/v1/debate/export"
+  status = 200
+  force = true
+
 # Legacy/internal services (keep until you migrate them behind api.sentientiq.app)
 [[redirects]]
   from = "/api/posts/*"

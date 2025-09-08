@@ -15,6 +15,8 @@ import {
   takeTopCTAs,
   TOK 
 } from './theatrical-helpers';
+import { exportBriefHandler } from './services/brief/exportBrief';
+import { debateInit, debateMaybeQuote, debateSetSynthesis } from './services/brief/store';
 
 // ---------- Env ----------
 const PORT = Number(process.env.PORT || 8787);
@@ -137,6 +139,11 @@ const boardroomHandler = async (req: Request, res: Response) => {
     } else {
       // Debate mode: Full theatrical debate with personas
       
+      // Initialize debate state
+      const provider = process.env.PREFER_ANTHROPIC === 'true' ? 'anthropic' : 'openai';
+      const model = provider === 'anthropic' ? process.env.ANTHROPIC_MODEL : process.env.OPENAI_MODEL;
+      debateInit(requestId, { subject: prompt, provider, model });
+      
       // 1) Roll call
       sseWrite(res, "scene", { step: "rollcall" });
       const ACTIVE = pickPersonas(topK ?? 12, process.env.DEMO_MODE === 'true'); // drop Brutal/Warfare/Chaos if not demo
@@ -146,6 +153,10 @@ const boardroomHandler = async (req: Request, res: Response) => {
       global.currentMode = "opening";
       sseWrite(res, "scene", { step: "openings" });
       for (const p of ACTIVE) {
+        const text = await streamPersonaOpening(p, prompt, TOK.persona);
+        // Capture quotes from openings
+        const sentences = text.match(/[^.!?]+[.!?]+/g) || [];
+        sentences.forEach(s => debateMaybeQuote(requestId, p, s.trim()));
         await speak(res, p, () => streamPersonaOpening(p, prompt, TOK.persona));
       }
 
@@ -160,12 +171,29 @@ const boardroomHandler = async (req: Request, res: Response) => {
       // 4) Synthesis
       global.currentMode = "synthesis";
       sseWrite(res, "scene", { step: "synthesis" });
-      await speak(res, "Moderator", () => streamSynthesis(ACTIVE, prompt, TOK.moderator));
-      // Store synthesis for bullet extraction
       const synthesisText = await streamSynthesis(ACTIVE, prompt, TOK.moderator);
+      
+      // Extract CTAs and summary
+      const bullets = takeTopCTAs(synthesisText, 3);
+      const summary = synthesisText.split('\n')[0] || 'The collective has reached consensus.';
+      
+      // Parse CTAs into structured format
+      const ctas = bullets.map(b => {
+        const match = b.match(/(.+?)·\s*Owner:\s*(.+?)·\s*When:\s*(.+)/);
+        if (match) {
+          return { action: match[1].trim(), owner: match[2].trim(), when: match[3].trim() };
+        }
+        return { action: b, owner: 'Team', when: 'ASAP' };
+      });
+      
+      // Store synthesis
+      debateSetSynthesis(requestId, { summary, ctas });
+      
+      // Stream synthesis to client
+      await speak(res, "Moderator", () => streamSynthesis(ACTIVE, prompt, TOK.moderator));
       sseWrite(res, "synth", {
         title: "Collective Synthesis",
-        bullets: takeTopCTAs(synthesisText, 3)
+        bullets: ctas
       });
     }
   } catch (e: any) {
@@ -206,49 +234,27 @@ app.post('/v1/boardroom/queue', queueHandler);
 app.post('/api/v1/debate/queue', queueHandler);
 app.post('/api/v1/boardroom/queue', queueHandler);
 
-// Usage tracking handler - simple 204 for now
-const usageHandler = (_req: Request, res: Response) => {
-  // TODO: optionally write to Supabase 'events' table
-  res.status(204).end();
+// --- Usage tracking (fast 204, accepts GET/POST/OPTIONS/etc) ---
+const usageHandler = (req: Request, res: Response) => {
+  try {
+    const b = (req.body && Object.keys(req.body).length ? req.body : Object.fromEntries(new URLSearchParams(req.url.split('?')[1] || '')));
+    const kind = b.kind || b.action || 'unknown';
+    const page = b.page || b.pathname || '';
+    const meta = b.meta || null;
+    console.log(JSON.stringify({ t: Date.now(), event: 'usage/track', kind, page, meta }));
+  } catch (_) { /* ignore */ }
+  return res.status(204).end();
 };
 
-// Usage tracking routes - all variations someone might try
-app.post('/v1/usage/track', express.json(), usageHandler);
-app.post('/api/usage/track', express.json(), usageHandler);
-app.post('/api/v1/usage/track', express.json(), usageHandler);
-app.post('/v1/track', express.json(), usageHandler); // short version
+// accept all verbs + old paths
+app.all('/v1/usage/track', usageHandler);
+app.all('/api/usage/track', usageHandler);
+app.all('/api/v1/usage/track', usageHandler);
+app.all('/v1/track', usageHandler); // short version
 
-// Export endpoint for email briefs
-const exportHandler = async (req: Request, res: Response) => {
-  const { requestId, email, debateId, bullets } = req.body;
-  
-  if (!email || !bullets) {
-    return res.status(400).json({ error: 'Missing email or bullets' });
-  }
-  
-  // TODO: Implement actual email sending via SES/SendGrid/Postmark
-  // For now, just acknowledge receipt
-  
-  // Save to database if available
-  if (supabase) {
-    try {
-      await supabase.from('briefs').insert({
-        request_id: requestId,
-        debate_id: debateId,
-        email,
-        bullets: bullets,
-        created_at: new Date().toISOString()
-      });
-    } catch (e) {
-      console.error('Failed to save brief:', e);
-    }
-  }
-  
-  res.json({ ok: true, message: 'Brief queued for delivery' });
-};
-
-app.post('/v1/debate/export', express.json(), exportHandler);
-app.post('/api/v1/debate/export', express.json(), exportHandler);
+// Wire up the new export handler
+app.post('/v1/debate/export', express.json(), exportBriefHandler);
+app.post('/api/v1/debate/export', express.json(), exportBriefHandler);
 
 // Admin toggle for provider preference
 const adminToggleHandler = (req: Request, res: Response) => {
