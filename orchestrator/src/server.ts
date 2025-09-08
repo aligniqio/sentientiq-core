@@ -5,6 +5,16 @@ import { z } from 'zod';
 import { runChain, sseWrite } from './chain';
 import { enqueueDebate } from './queue/redis';
 import { createClient } from '@supabase/supabase-js';
+import { 
+  pickPersonas, 
+  rivalPairs, 
+  speak, 
+  streamPersonaOpening, 
+  streamPersonaRebuttal, 
+  streamSynthesis,
+  takeTopCTAs,
+  TOK 
+} from './theatrical-helpers';
 
 // ---------- Env ----------
 const PORT = Number(process.env.PORT || 8787);
@@ -72,18 +82,24 @@ function attachKeepAlive(res: Response) {
 
 // Main boardroom/debate handler - single source of truth
 const boardroomHandler = async (req: Request, res: Response) => {
-  // SSE headers
+  // === PROVENANCE ID & SSE HEADERS (must be before flush) ===
+  const requestId = Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
   res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
   res.setHeader('Cache-Control', 'no-cache, no-transform');
   res.setHeader('Connection', 'keep-alive');
   res.setHeader('X-Accel-Buffering', 'no'); // Nginx buffering bypass
+  res.setHeader('x-request-id', requestId); // set BEFORE flush
   res.flushHeaders?.();
-
   attachKeepAlive(res);
 
+  // Validate input
   const parsed = DebateBody.safeParse(req.body);
   if (!parsed.success) {
-    res.write(`event: error\ndata: ${JSON.stringify({ message: parsed.error.message })}\n\n`);
+    res.write(`event: error\ndata: ${JSON.stringify({
+      code: 'BAD_BODY',
+      message: parsed.error.message,
+      requestId
+    })}\n\n`);
     return res.end();
   }
 
@@ -98,15 +114,20 @@ const boardroomHandler = async (req: Request, res: Response) => {
   const requested = Array.from(new Set(personas ?? []));
   const roster = (requested.length ? requested : DEFAULT4).slice(0, personaCap);
   
-  // Meta for UI
-  sseWrite(res, 'meta', { 
-    mode, 
-    plan, 
-    personaCap, 
-    roster,
-    debateId,
-    tenantId
-  });
+  // Always emit a meta event early so client/UI can show provenance
+  res.write(
+    `event: meta\n` +
+    `data: ${JSON.stringify({ 
+      requestId, 
+      backend: 'orchestrator',
+      mode, 
+      plan, 
+      personaCap, 
+      roster,
+      debateId,
+      tenantId
+    })}\n\n`
+  );
 
   try {
     if (mode === 'answer') {
@@ -114,8 +135,38 @@ const boardroomHandler = async (req: Request, res: Response) => {
       // For now, run normal chain but only stream the Moderator
       await runChain(prompt, topK, res, roster, true); // true = moderatorOnly flag
     } else {
-      // Debate mode: Full visible personas + Moderator
-      await runChain(prompt, topK, res, roster, false);
+      // Debate mode: Full theatrical debate with personas
+      
+      // 1) Roll call
+      sseWrite(res, "scene", { step: "rollcall" });
+      const ACTIVE = pickPersonas(topK ?? 12, process.env.DEMO_MODE === 'true'); // drop Brutal/Warfare/Chaos if not demo
+      sseWrite(res, "delta", { speaker: "Moderator", text: `Roll call: ${ACTIVE.join(", ")}.` + "\n" });
+
+      // 2) Openings
+      global.currentMode = "opening";
+      sseWrite(res, "scene", { step: "openings" });
+      for (const p of ACTIVE) {
+        await speak(res, p, () => streamPersonaOpening(p, prompt, TOK.persona));
+      }
+
+      // 3) Crossfire
+      global.currentMode = "rebuttal";
+      sseWrite(res, "scene", { step: "crossfire" });
+      for (const [a,b] of rivalPairs(ACTIVE)) {
+        await speak(res, a, () => streamPersonaRebuttal(a, b, prompt, TOK.reply));
+        await speak(res, b, () => streamPersonaRebuttal(b, a, prompt, TOK.reply));
+      }
+
+      // 4) Synthesis
+      global.currentMode = "synthesis";
+      sseWrite(res, "scene", { step: "synthesis" });
+      await speak(res, "Moderator", () => streamSynthesis(ACTIVE, prompt, TOK.moderator));
+      // Store synthesis for bullet extraction
+      const synthesisText = await streamSynthesis(ACTIVE, prompt, TOK.moderator);
+      sseWrite(res, "synth", {
+        title: "Collective Synthesis",
+        bullets: takeTopCTAs(synthesisText, 3)
+      });
     }
   } catch (e: any) {
     res.write(`event: error\ndata: ${JSON.stringify({ message: String(e?.message || e) })}\n\n`);
@@ -167,6 +218,60 @@ app.post('/api/usage/track', express.json(), usageHandler);
 app.post('/api/v1/usage/track', express.json(), usageHandler);
 app.post('/v1/track', express.json(), usageHandler); // short version
 
+// Export endpoint for email briefs
+const exportHandler = async (req: Request, res: Response) => {
+  const { requestId, email, debateId, bullets } = req.body;
+  
+  if (!email || !bullets) {
+    return res.status(400).json({ error: 'Missing email or bullets' });
+  }
+  
+  // TODO: Implement actual email sending via SES/SendGrid/Postmark
+  // For now, just acknowledge receipt
+  
+  // Save to database if available
+  if (supabase) {
+    try {
+      await supabase.from('briefs').insert({
+        request_id: requestId,
+        debate_id: debateId,
+        email,
+        bullets: bullets,
+        created_at: new Date().toISOString()
+      });
+    } catch (e) {
+      console.error('Failed to save brief:', e);
+    }
+  }
+  
+  res.json({ ok: true, message: 'Brief queued for delivery' });
+};
+
+app.post('/v1/debate/export', express.json(), exportHandler);
+app.post('/api/v1/debate/export', express.json(), exportHandler);
+
+// Admin toggle for provider preference
+const adminToggleHandler = (req: Request, res: Response) => {
+  const { prefer_anthropic } = req.body;
+  
+  // Simple auth check - you should add proper admin auth
+  const adminToken = req.headers['x-admin-token'];
+  if (adminToken !== process.env.ADMIN_TOKEN) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+  
+  // Toggle the env var (note: this won't persist across restarts)
+  process.env.PREFER_ANTHROPIC = String(prefer_anthropic);
+  
+  res.json({ 
+    ok: true, 
+    prefer_anthropic: process.env.PREFER_ANTHROPIC,
+    provider: process.env.PREFER_ANTHROPIC === 'true' ? 'anthropic' : 'openai'
+  });
+};
+
+app.post('/v1/admin/toggle-provider', express.json(), adminToggleHandler);
+
 // Health check - multiple paths because why not
 const healthHandler = (_req: Request, res: Response) => {
   res.json({ 
@@ -174,7 +279,8 @@ const healthHandler = (_req: Request, res: Response) => {
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
     memory: process.memoryUsage().heapUsed / 1024 / 1024,
-    version: process.env.npm_package_version || '0.1.0'
+    version: process.env.npm_package_version || '0.1.0',
+    provider: process.env.PREFER_ANTHROPIC === 'true' ? 'anthropic' : 'openai'
   });
 };
 

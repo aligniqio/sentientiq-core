@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width">
+<title>Collective Synthesis</title>
+<style>
+  body{margin:0;background:#0b0b0e;color:#e7e7ea;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}
+  .wrap{max-width:720px;margin:0 auto;padding:28px 20px}
+  .card{background:#121219;border:1px solid #22223a;border-radius:14px;padding:24px}
+  h1{margin:0 0 8px;font-size:22px;line-height:1.2;color:#fff}
+  .sub{color:#a1a1b3;font-size:12px;margin-bottom:18px}
+  .pill{display:inline-block;padding:2px 8px;border-radius:999px;background:#1b1b2a;color:#b7b7ff;font-size:11px;border:1px solid #2a2a46}
+  .section{margin-top:18px}
+  .cta-table{width:100%;border-collapse:collapse;margin-top:8px}
+  .cta-table th,.cta-table td{border-bottom:1px solid #24243c;padding:10px 8px;text-align:left;font-size:14px}
+  .cta-table th{color:#bdbdd1;font-weight:600}
+  blockquote{margin:12px 0;padding:10px 12px;border-left:3px solid #7c3aed;background:#161625;color:#ddd;border-radius:6px}
+  .small{color:#9a9ab0;font-size:12px;margin-top:16px}
+  a{color:#b7b7ff;text-decoration:none}
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <span class="pill">Collective Synthesis</span>
+      <h1>{{subject}}</h1>
+      <div class="sub">
+        Request ID: {{requestId}} • {{date}} • Engine: {{engine}} • Provider: {{provider}} • Model: {{model}}
+      </div>
+
+      <div class="section">
+        <strong>Executive Summary</strong>
+        <p style="margin:6px 0 0">{{summary}}</p>
+      </div>
+
+      <div class="section">
+        <strong>Top 3 CTAs</strong>
+        <table class="cta-table" role="presentation" cellspacing="0" cellpadding="0">
+          <thead><tr><th>Action</th><th>Owner</th><th>When</th></tr></thead>
+          <tbody>
+            {{#ctas}}
+            <tr><td>{{action}}</td><td>{{owner}}</td><td>{{when}}</td></tr>
+            {{/ctas}}
+          </tbody>
+        </table>
+      </div>
+
+      <div class="section">
+        <strong>Highlights from the Debate</strong>
+        {{#quotes}}
+        <blockquote><em>{{speaker}}:</em> {{text}}</blockquote>
+        {{/quotes}}
+      </div>
+
+      <div class="small">
+        Saved to your Library: <a href="{{briefUrl}}">{{briefUrl}}</a><br>
+        SentientIQ • This email was generated from your debate at {{appUrl}}
+      </div>
+    </div>
+  </div>
+</body>
+</html>

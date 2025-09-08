@@ -48,7 +48,7 @@ async function retrieveContext(query: string, topK = 6): Promise<string[]> {
 }
 
 // ---------- Providers (simple non-streaming, we stream ourselves) ----------
-async function callGroq(system: string, user: string): Promise<string> {
+export async function callGroq(system: string, user: string): Promise<string> {
   if (!GROQ_API_KEY) return '[planner unavailable]';
   const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
     method: 'POST',
@@ -71,7 +71,7 @@ async function callGroq(system: string, user: string): Promise<string> {
   return j.choices?.[0]?.message?.content ?? '';
 }
 
-async function callOpenAI(system: string, user: string): Promise<string> {
+export async function callOpenAI(system: string, user: string): Promise<string> {
   if (!OPENAI_API_KEY) return '[primary unavailable]';
   const res = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
@@ -94,7 +94,7 @@ async function callOpenAI(system: string, user: string): Promise<string> {
   return j.choices?.[0]?.message?.content ?? '';
 }
 
-async function callAnthropic(system: string, user: string): Promise<string> {
+export async function callAnthropic(system: string, user: string): Promise<string> {
   if (!ANTHROPIC_API_KEY) return '[refiner unavailable]';
   const res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',

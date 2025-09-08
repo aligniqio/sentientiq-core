@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { Brain } from 'lucide-react';
 import PageHeader from '../components/PageHeader';
 // import { useUser } from '@clerk/clerk-react';
-import { useTrackUsage } from '../hooks/useSubscription';
+import { track } from '../lib/track';
 import { ssePost } from '../utils/ssePost';
 import { AgentCard } from '../components/AgentCard';
 import { PERSONA_META } from '../personas/meta';
@@ -13,7 +13,6 @@ const PERSONA_IDS = Object.keys(PERSONA_META);
 
 const PhDCollective = () => {
   // const user = useUser();
-  const { trackQuestion } = useTrackUsage();
   // const subscription = useSubscription();
   const [selectedPhDs, setSelectedPhDs] = useState<Set<string>>(new Set()); // Start with none selected
   const [question, setQuestion] = useState('');
@@ -178,7 +177,7 @@ const PhDCollective = () => {
     setDebateResults(null);
     
     // Track usage (don't block on this)
-    trackQuestion().catch(console.log);
+    track('question_submitted', { personas: selectedPhDs.size, mode: 'answer' });
     
     const newQuestion = {
       type: 'question',
@@ -238,7 +237,7 @@ const PhDCollective = () => {
     setDebateResults(null);
     
     // Track usage (don't block on this)
-    trackQuestion().catch(console.log);
+    track('question_submitted', { personas: selectedPhDs.size, mode: 'answer' });
     
     const newQuestion = {
       type: 'question',

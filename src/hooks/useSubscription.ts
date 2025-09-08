@@ -75,38 +75,37 @@ export function useSubscription(): SubscriptionData {
 export function useTrackUsage() {
   const { user } = useUser();
 
-  const trackQuestion = async () => {
-    if (!user) return;
-
+  const trackQuestion = async (meta?: any) => {
     try {
-      // In production, this would update your database
       await fetch('/api/usage/track', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          userId: user.id,
-          action: 'question',
+          kind: 'question_submitted',
+          page: window.location.pathname,
+          userId: user?.id,
+          meta: meta || {}
         }),
-      });
+      }).catch(() => {}); // Silently fail
     } catch (error) {
-      console.error('Error tracking usage:', error);
+      // Silent fail - don't disrupt user experience
     }
   };
 
-  const trackApiCall = async () => {
-    if (!user) return;
-
+  const trackApiCall = async (meta?: any) => {
     try {
       await fetch('/api/usage/track', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          userId: user.id,
-          action: 'api_call',
+          kind: 'api_call',
+          page: window.location.pathname,
+          userId: user?.id,
+          meta: meta || {}
         }),
-      });
+      }).catch(() => {}); // Silently fail
     } catch (error) {
-      console.error('Error tracking API usage:', error);
+      // Silent fail - don't disrupt user experience
     }
   };
 
