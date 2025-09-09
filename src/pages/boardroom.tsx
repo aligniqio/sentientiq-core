@@ -6,7 +6,7 @@ import { track } from '../lib/track';
 import { ssePost } from '../utils/ssePost';
 import { AgentCard } from '../components/AgentCard';
 import { PERSONA_META } from '../personas/meta';
-import { TypewriterText } from '../components/TypewriterText';
+import { StreamingText } from '../components/StreamingText';
 
 // Get persona IDs from metadata
 const PERSONA_IDS = Object.keys(PERSONA_META);
@@ -39,7 +39,6 @@ const Boardroom = () => {
   const [debateLines, setDebateLines] = useState<Array<{id: string, speaker: string, text: string, completed?: boolean}>>([]);
   const [showResults, setShowResults] = useState(false);
   const [flashAll, setFlashAll] = useState(false);
-  const [currentTypingIndex, setCurrentTypingIndex] = useState<number | null>(null);
   // const [freeQuestionsRemaining, setFreeQuestionsRemaining] = useState<number>(() => {
   //   const stored = localStorage.getItem('free_questions_remaining');
   //   return stored ? parseInt(stored, 10) : 20;
@@ -196,7 +195,6 @@ const Boardroom = () => {
     setShowResults(true); // Show results immediately to see streaming
     setDebateResults(null);
     setDebateLines([]); // Clear previous lines for new answer
-    setCurrentTypingIndex(0); // Start typing from first line
     
     // Track usage (don't block on this)
     track('question_submitted', { personas: selectedPhDs.size, mode: 'answer' });
@@ -235,9 +233,6 @@ const Boardroom = () => {
                 text: text,
                 completed: false
               };
-              const newLineIndex = prev.length;
-              // Set typing index to the new line
-              setTimeout(() => setCurrentTypingIndex(newLineIndex), 0);
               return [...prev, newLine];
             });
           }
@@ -309,8 +304,7 @@ const Boardroom = () => {
       
       // Clear previous debate lines
       setDebateLines([]);
-      setCurrentTypingIndex(0); // Start typing from first line
-      setShowResults(true); // Show results immediately to see streaming
+        setShowResults(true); // Show results immediately to see streaming
       
       await ssePost(`/api/v1/debate`, {
         prompt: questionToSend,
@@ -332,9 +326,6 @@ const Boardroom = () => {
                 text: text,
                 completed: false
               };
-              const newLineIndex = prev.length;
-              // Set typing index to the new line
-              setTimeout(() => setCurrentTypingIndex(newLineIndex), 0);
               return [...prev, newLine];
             });
           }
@@ -503,7 +494,12 @@ const Boardroom = () => {
               animate={{ opacity: 1, x: 0 }}
               className="h-full bg-white/5 backdrop-blur-xl rounded-xl p-6 overflow-y-auto"
             >
-              {showResults ? (
+              {isAnalyzing && debateLines.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-full">
+                  <Brain className="w-12 h-12 text-purple-400/30 mb-4 animate-pulse" />
+                  <div className="text-white/60 text-sm">The experts are thinking...</div>
+                </div>
+              ) : showResults ? (
                 <>
                   {selectedPhDs.size === 12 && (
                     <motion.div
@@ -517,7 +513,7 @@ const Boardroom = () => {
                   
                   {/* Stream debate lines as they arrive */}
                   <div className="space-y-3">
-                    {debateLines.map((line, index) => (
+                    {debateLines.map((line) => (
                       <div
                         key={line.id}
                         className="text-white/90 text-xs mb-3"
@@ -525,28 +521,11 @@ const Boardroom = () => {
                         <span className={`font-semibold ${PERSONA_COLORS[line.speaker] || 'text-purple-400'}`}>
                           {line.speaker}:
                         </span>{' '}
-                        {currentTypingIndex === index || currentTypingIndex === null || index < (currentTypingIndex || 0) ? (
-                          <TypewriterText 
-                            text={line.text}
-                            speed={25}
-                            className="leading-relaxed text-white/80"
-                            onComplete={() => {
-                              setDebateLines(prev => prev.map((l, i) => 
-                                i === index ? { ...l, completed: true } : l
-                              ));
-                              // Move to next line if there is one
-                              if (index < debateLines.length - 1) {
-                                setCurrentTypingIndex(index + 1);
-                              } else {
-                                setCurrentTypingIndex(null);
-                              }
-                            }}
-                          />
-                        ) : (
-                          <span className="leading-relaxed text-white/80 opacity-0">
-                            {line.text}
-                          </span>
-                        )}
+                        <StreamingText 
+                          text={line.text}
+                          speed={15}
+                          className="leading-relaxed text-white/80"
+                        />
                       </div>
                     ))}
                   </div>
