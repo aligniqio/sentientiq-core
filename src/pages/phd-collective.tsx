@@ -475,13 +475,10 @@ const PhDCollective = () => {
                   
                   {/* Stream debate lines as they arrive */}
                   <div className="space-y-3">
-                    {debateLines.map((line, index) => (
-                      <motion.div
+                    {debateLines.map((line) => (
+                      <div
                         key={line.id}
-                        initial={{ opacity: 0, x: -10 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: index * 0.05 }}
-                        className="text-white/90 text-sm"
+                        className="text-white/90 text-sm animate-fadeIn"
                       >
                         <span className="font-semibold text-purple-400">
                           {line.speaker}:
@@ -489,7 +486,7 @@ const PhDCollective = () => {
                         <span className="leading-relaxed">
                           {line.text}
                         </span>
-                      </motion.div>
+                      </div>
                     ))}
                   </div>
                   

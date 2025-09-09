@@ -10,7 +10,6 @@ import {
   Shield,
   Zap
 } from 'lucide-react';
-import EVIWidget from './EVIWidget';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -58,8 +57,6 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-blue-600/10 rounded-full blur-3xl animate-pulse delay-1000" />
       </div>
 
-      {/* EVI Widget - Real-time emotional volatility */}
-      <EVIWidget />
 
       {/* Mobile Menu Button */}
       <button
