@@ -1,13 +1,13 @@
 import { Request, Response } from 'express';
 import { sageWatcher } from '../services/sage-stream';
-import { SageService } from '../../src/services/sage';
+// import { SageService } from '../../src/services/sage';
 
 // API endpoints for Sage
 export class SageAPI {
-  private sage: SageService;
+  private sage: any; // SageService;
   
   constructor() {
-    this.sage = SageService.getInstance();
+    // this.sage = SageService.getInstance();
   }
 
   // Real-time commentary subscription via SSE
@@ -72,7 +72,7 @@ export class SageAPI {
       res.json({
         response,
         analysis,
-        memories: memories.map(m => ({
+        memories: memories.map((m: any) => ({
           content: m.content,
           type: m.memory_type,
           authenticity: m.authenticity_score

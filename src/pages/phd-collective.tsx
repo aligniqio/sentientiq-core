@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { Brain } from 'lucide-react';
 import PageHeader from '../components/PageHeader';
-// import { useUser } from '@clerk/clerk-react';
+import { useUser } from '@clerk/clerk-react';
 import { track } from '../lib/track';
 import { ssePost } from '../utils/ssePost';
 import { AgentCard } from '../components/AgentCard';
@@ -12,7 +12,7 @@ import { PERSONA_META } from '../personas/meta';
 const PERSONA_IDS = Object.keys(PERSONA_META);
 
 const PhDCollective = () => {
-  // const user = useUser();
+  // const { user } = useUser(); // Not needed with hardcoded tenant ID
   // const subscription = useSubscription();
   const [selectedPhDs, setSelectedPhDs] = useState<Set<string>>(new Set()); // Start with none selected
   const [question, setQuestion] = useState('');
@@ -194,7 +194,8 @@ const PhDCollective = () => {
       await ssePost(`/api/v1/debate`, {
         prompt: question,
         mode: 'answer',
-        topK: 3
+        topK: 3,
+        tenantId: '7a6c61c4-95e4-4b15-94b8-02995f81c291' // Your enterprise tenant ID
       }, ({ event, data }) => {
         if (event === 'meta') {
           console.log('Answer mode meta:', data);
@@ -284,7 +285,8 @@ const PhDCollective = () => {
         prompt: questionToSend,
         personas: personas,
         mode: 'debate',
-        topK: 3
+        topK: 3,
+        tenantId: '7a6c61c4-95e4-4b15-94b8-02995f81c291' // Your enterprise tenant ID
       }, ({ event, data }) => {
         console.log('SSE event:', event, data);
         if (event === 'delta') {
