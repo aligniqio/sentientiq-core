@@ -214,12 +214,15 @@ const Boardroom = () => {
         prompt: question,
         mode: 'answer',
         topK: 3,
+        personas: [], // Empty array for answer mode to let backend choose
         tenantId: '7a6c61c4-95e4-4b15-94b8-02995f81c291' // Your enterprise tenant ID
       }, ({ event, data }) => {
+        console.log('SSE Event:', event, data); // Debug all events
         if (event === 'meta') {
           console.log('Answer mode meta:', data);
         }
         if (event === 'delta') {
+          console.log('Delta event received:', data);
           // Stream answers line by line just like debates
           const speaker = data.speaker || data.label || 'Answer';
           const text = data.text || '';
