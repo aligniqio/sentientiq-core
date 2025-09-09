@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { getEVI } from '@/lib/reddit-evi';
 
 export default function EVIWidget() {
