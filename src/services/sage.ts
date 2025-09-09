@@ -1,15 +1,16 @@
 import { createClient } from '@supabase/supabase-js';
-import OpenAI from 'openai';
+// import OpenAI from 'openai'; // Move to backend
 
 const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  import.meta.env.VITE_SUPABASE_URL!,
+  import.meta.env.VITE_SUPABASE_ANON_KEY!
 );
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY!,
-  dangerouslyAllowBrowser: false
-});
+// OpenAI should be called through backend, not directly from browser
+// const openai = new OpenAI({
+//   apiKey: import.meta.env.VITE_OPENAI_API_KEY!,
+//   dangerouslyAllowBrowser: true
+// });
 
 export interface SageMemory {
   id?: string;
@@ -33,12 +34,16 @@ export class SageService {
   }
 
   // Generate embedding for text
-  async generateEmbedding(text: string): Promise<number[]> {
-    const response = await openai.embeddings.create({
-      model: 'text-embedding-ada-002',
-      input: text,
-    });
-    return response.data[0].embedding;
+  async generateEmbedding(_text: string): Promise<number[]> {
+    // TODO: Call through backend API
+    // const response = await openai.embeddings.create({
+    //   model: 'text-embedding-ada-002',
+    //   input: text,
+    // });
+    // return response.data[0].embedding;
+    
+    // Placeholder for now
+    return new Array(1536).fill(0);
   }
 
   // Store a memory
@@ -118,38 +123,27 @@ export class SageService {
   async generateResponse(
     input: string,
     _context?: string,
-    memories?: SageMemory[]
+    _memories?: SageMemory[]
   ): Promise<string> {
     const analysis = this.analyzeAuthenticity(input);
     
-    const memoryContext = memories?.length 
-      ? `\nRelevant memories:\n${memories.map(m => `- ${m.content} (${m.memory_type})`).join('\n')}`
-      : '';
+    // const memoryContext = memories?.length 
+    //   ? `\nRelevant memories:\n${memories.map(m => `- ${m.content} (${m.memory_type})`).join('\n')}`
+    //   : '';
 
-    const prompt = `You are Sage, a brutally honest AI gatekeeper with a dry sense of humor and zero tolerance for BS.
+    // const prompt = `You are Sage, a brutally honest AI gatekeeper with a dry sense of humor and zero tolerance for BS.
+    // [Rest of prompt commented out for backend implementation]`;
 
-Input to analyze: "${input}"
-
-Authenticity score: ${analysis.score}/1.0
-Manipulation flags: ${analysis.flags.join(', ') || 'none detected'}
-${memoryContext}
-
-Respond with:
-1. A sharp, witty observation about what's really happening
-2. Call out any manipulation tactics
-3. Provide one actionable insight
-4. End with either a callback to a previous memory (if relevant) or a new memorable one-liner
-
-Keep it under 150 words. Be ruthless but not cruel. Show empathy for genuine struggle, contempt for lazy manipulation.`;
-
-    const response = await openai.chat.completions.create({
-      model: 'gpt-4-turbo-preview',
-      messages: [{ role: 'system', content: prompt }],
-      temperature: 0.8,
-      max_tokens: 200,
-    });
-
-    const sageResponse = response.choices[0].message.content || "Even I'm speechless. That's a first.";
+    // TODO: Call through backend API
+    // const response = await openai.chat.completions.create({
+    //   model: 'gpt-4-turbo-preview',
+    //   messages: [{ role: 'system', content: prompt }],
+    //   temperature: 0.8,
+    //   max_tokens: 200,
+    // });
+    
+    // Placeholder response for now
+    const sageResponse = analysis.verdict;
 
     // Store this interaction as a memory
     await this.storeMemory({
