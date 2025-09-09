@@ -7,6 +7,7 @@ import { ssePost } from '../utils/ssePost';
 import { AgentCard } from '../components/AgentCard';
 import { PERSONA_META } from '../personas/meta';
 import { StreamingText } from '../components/StreamingText';
+import { checkInterruptionTrigger, generateInterruption } from '../personas/rivalries';
 
 interface DebateLine {
   id: string;
@@ -14,6 +15,8 @@ interface DebateLine {
   text: string;
   completed?: boolean;
   visible?: boolean;
+  isInterruption?: boolean;
+  interrupted?: string;
 }
 
 // Get persona IDs from metadata
@@ -48,6 +51,7 @@ const Boardroom = () => {
   const [showResults, setShowResults] = useState(false);
   const [flashAll, setFlashAll] = useState(false);
   const [currentTypingIndex, setCurrentTypingIndex] = useState(0);
+  const [debateMode, setDebateMode] = useState<'answer' | 'debate'>('answer');
   // const [freeQuestionsRemaining, setFreeQuestionsRemaining] = useState<number>(() => {
   //   const stored = localStorage.getItem('free_questions_remaining');
   //   return stored ? parseInt(stored, 10) : 20;
@@ -205,6 +209,7 @@ const Boardroom = () => {
     setDebateResults(null);
     setDebateLines([]); // Clear previous lines for new answer
     setCurrentTypingIndex(0); // Reset typing index
+    setDebateMode('answer'); // Set to answer mode
     
     // Track usage (don't block on this)
     track('question_submitted', { personas: selectedPhDs.size, mode: 'answer' });
@@ -327,6 +332,7 @@ const Boardroom = () => {
       // Clear previous debate lines
       setDebateLines([]);
       setCurrentTypingIndex(0); // Reset typing index
+      setDebateMode('debate'); // Set to debate mode
         setShowResults(true); // Show results immediately to see streaming
       
       await ssePost(`/api/v1/debate`, {
@@ -563,19 +569,27 @@ const Boardroom = () => {
                               <span className={`font-semibold ${PERSONA_COLORS[line.speaker] || 'text-purple-400'}`}>
                                 {line.speaker}:
                               </span>
+                              {line.isInterruption && (
+                                <span className="ml-2 text-xs text-red-400 italic">
+                                  (interrupting {line.interrupted})
+                                </span>
+                              )}
                             </div>
-                            <div className="pl-4">
+                            <div className={`${line.isInterruption ? 'pl-6 border-l-2 border-red-400/40' : 'pl-4'}`}>
                               {index === currentTypingIndex ? (
                                 <StreamingText 
                                   text={line.text}
-                                  speed={15}
-                                  className="leading-relaxed text-white/80 block"
+                                  speed={line.isInterruption ? 12 : 15} // Faster for interruptions
+                                  className={`leading-relaxed block ${line.isInterruption ? 'text-white/90 font-medium' : 'text-white/80'}`}
                                   onComplete={() => {
                                     // Move to next speaker after current completes
                                     if (index < debateLines.length - 1) {
+                                      const delay = debateMode === 'debate' 
+                                        ? Math.random() * 600 + 200  // 200-800ms for debates
+                                        : 400; // Consistent 400ms for answers
                                       setTimeout(() => {
                                         setCurrentTypingIndex(prev => prev + 1);
-                                      }, 400); // 400ms pause between speakers
+                                      }, delay);
                                     }
                                   }}
                                 />
