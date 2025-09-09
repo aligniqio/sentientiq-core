@@ -227,13 +227,25 @@ const Boardroom = () => {
           const text = data.text || '';
           if (text.trim()) {
             setDebateLines(prev => {
-              const newLine = {
-                id: `${Date.now()}-${Math.random()}`,
-                speaker: speaker,
-                text: text,
-                completed: false
-              };
-              return [...prev, newLine];
+              // Check if last line is from same speaker
+              const lastLine = prev[prev.length - 1];
+              if (lastLine && lastLine.speaker === speaker) {
+                // Append to existing speaker's text
+                return prev.map((line, i) => 
+                  i === prev.length - 1 
+                    ? { ...line, text: line.text + ' ' + text }
+                    : line
+                );
+              } else {
+                // New speaker, create new line
+                const newLine = {
+                  id: `${Date.now()}-${Math.random()}`,
+                  speaker: speaker,
+                  text: text,
+                  completed: false
+                };
+                return [...prev, newLine];
+              }
             });
           }
         }
@@ -320,13 +332,25 @@ const Boardroom = () => {
           const text = data.text || '';
           if (text.trim()) {
             setDebateLines(prev => {
-              const newLine = {
-                id: `${Date.now()}-${Math.random()}`,
-                speaker: speaker,
-                text: text,
-                completed: false
-              };
-              return [...prev, newLine];
+              // Check if last line is from same speaker
+              const lastLine = prev[prev.length - 1];
+              if (lastLine && lastLine.speaker === speaker) {
+                // Append to existing speaker's text
+                return prev.map((line, i) => 
+                  i === prev.length - 1 
+                    ? { ...line, text: line.text + ' ' + text }
+                    : line
+                );
+              } else {
+                // New speaker, create new line
+                const newLine = {
+                  id: `${Date.now()}-${Math.random()}`,
+                  speaker: speaker,
+                  text: text,
+                  completed: false
+                };
+                return [...prev, newLine];
+              }
             });
           }
         }
@@ -512,20 +536,24 @@ const Boardroom = () => {
                   )}
                   
                   {/* Stream debate lines as they arrive */}
-                  <div className="space-y-3">
+                  <div className="space-y-4">
                     {debateLines.map((line) => (
                       <div
                         key={line.id}
-                        className="text-white/90 text-xs mb-3"
+                        className="text-white/90 text-xs"
                       >
-                        <span className={`font-semibold ${PERSONA_COLORS[line.speaker] || 'text-purple-400'}`}>
-                          {line.speaker}:
-                        </span>{' '}
-                        <StreamingText 
-                          text={line.text}
-                          speed={15}
-                          className="leading-relaxed text-white/80"
-                        />
+                        <div className="mb-1">
+                          <span className={`font-semibold ${PERSONA_COLORS[line.speaker] || 'text-purple-400'}`}>
+                            {line.speaker}:
+                          </span>
+                        </div>
+                        <div className="pl-4">
+                          <StreamingText 
+                            text={line.text}
+                            speed={15}
+                            className="leading-relaxed text-white/80 block"
+                          />
+                        </div>
                       </div>
                     ))}
                   </div>
