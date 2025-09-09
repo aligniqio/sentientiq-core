@@ -8,6 +8,14 @@ import { AgentCard } from '../components/AgentCard';
 import { PERSONA_META } from '../personas/meta';
 import { StreamingText } from '../components/StreamingText';
 
+interface DebateLine {
+  id: string;
+  speaker: string;
+  text: string;
+  completed?: boolean;
+  visible?: boolean;
+}
+
 // Get persona IDs from metadata
 const PERSONA_IDS = Object.keys(PERSONA_META);
 
@@ -36,9 +44,10 @@ const Boardroom = () => {
   const [question, setQuestion] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [debateResults, setDebateResults] = useState<any>(null);
-  const [debateLines, setDebateLines] = useState<Array<{id: string, speaker: string, text: string, completed?: boolean}>>([]);
+  const [debateLines, setDebateLines] = useState<DebateLine[]>([]);
   const [showResults, setShowResults] = useState(false);
   const [flashAll, setFlashAll] = useState(false);
+  const [currentTypingIndex, setCurrentTypingIndex] = useState(0);
   // const [freeQuestionsRemaining, setFreeQuestionsRemaining] = useState<number>(() => {
   //   const stored = localStorage.getItem('free_questions_remaining');
   //   return stored ? parseInt(stored, 10) : 20;
@@ -195,6 +204,7 @@ const Boardroom = () => {
     setShowResults(true); // Show results immediately to see streaming
     setDebateResults(null);
     setDebateLines([]); // Clear previous lines for new answer
+    setCurrentTypingIndex(0); // Reset typing index
     
     // Track usage (don't block on this)
     track('question_submitted', { personas: selectedPhDs.size, mode: 'answer' });
@@ -316,6 +326,7 @@ const Boardroom = () => {
       
       // Clear previous debate lines
       setDebateLines([]);
+      setCurrentTypingIndex(0); // Reset typing index
         setShowResults(true); // Show results immediately to see streaming
       
       await ssePost(`/api/v1/debate`, {
@@ -537,23 +548,45 @@ const Boardroom = () => {
                   
                   {/* Stream debate lines as they arrive */}
                   <div className="space-y-4">
-                    {debateLines.map((line) => (
+                    {debateLines.map((line, index) => (
                       <div
                         key={line.id}
                         className="text-white/90 text-xs"
+                        style={{ 
+                          opacity: index <= currentTypingIndex ? 1 : 0,
+                          transition: 'opacity 0.3s ease-in'
+                        }}
                       >
-                        <div className="mb-1">
-                          <span className={`font-semibold ${PERSONA_COLORS[line.speaker] || 'text-purple-400'}`}>
-                            {line.speaker}:
-                          </span>
-                        </div>
-                        <div className="pl-4">
-                          <StreamingText 
-                            text={line.text}
-                            speed={15}
-                            className="leading-relaxed text-white/80 block"
-                          />
-                        </div>
+                        {index <= currentTypingIndex && (
+                          <>
+                            <div className="mb-1">
+                              <span className={`font-semibold ${PERSONA_COLORS[line.speaker] || 'text-purple-400'}`}>
+                                {line.speaker}:
+                              </span>
+                            </div>
+                            <div className="pl-4">
+                              {index === currentTypingIndex ? (
+                                <StreamingText 
+                                  text={line.text}
+                                  speed={15}
+                                  className="leading-relaxed text-white/80 block"
+                                  onComplete={() => {
+                                    // Move to next speaker after current completes
+                                    if (index < debateLines.length - 1) {
+                                      setTimeout(() => {
+                                        setCurrentTypingIndex(prev => prev + 1);
+                                      }, 400); // 400ms pause between speakers
+                                    }
+                                  }}
+                                />
+                              ) : (
+                                <span className="leading-relaxed text-white/80 block">
+                                  {line.text}
+                                </span>
+                              )}
+                            </div>
+                          </>
+                        )}
                       </div>
                     ))}
                   </div>

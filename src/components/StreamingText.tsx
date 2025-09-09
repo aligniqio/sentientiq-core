@@ -4,9 +4,10 @@ interface StreamingTextProps {
   text: string;
   speed?: number;
   className?: string;
+  onComplete?: () => void;
 }
 
-export const StreamingText = ({ text, speed = 15, className = '' }: StreamingTextProps) => {
+export const StreamingText = ({ text, speed = 15, className = '', onComplete }: StreamingTextProps) => {
   const [displayedText, setDisplayedText] = useState('');
   const indexRef = useRef(0);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -31,6 +32,10 @@ export const StreamingText = ({ text, speed = 15, className = '' }: StreamingTex
         if (intervalRef.current) {
           clearInterval(intervalRef.current);
           intervalRef.current = null;
+        }
+        // Call onComplete callback
+        if (onComplete) {
+          onComplete();
         }
       }
     }, speed);
