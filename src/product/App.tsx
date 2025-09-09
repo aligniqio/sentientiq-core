@@ -12,7 +12,7 @@ import Settings from '../pages/settings'
 import Pricing from '../pages/pricing'
 import Billing from '../pages/billing'
 import SageInbox from '../pages/sage-inbox'
-import PhDCollective from '../pages/phd-collective'
+import Boardroom from '../pages/boardroom'
 import Onboarding from '../pages/onboarding'
 import DynamicRecommendations from '../pages/dynamic-recommendations'
 
@@ -39,7 +39,7 @@ function App() {
           <Route path="/" element={
             <>
               <SignedIn>
-                <PhDCollective /> {/* Changed from dead IntelligenceMonitor */}
+                <Boardroom /> {/* Changed from dead IntelligenceMonitor */}
               </SignedIn>
               <SignedOut>
                 <Navigate to="/auth" replace />
@@ -107,7 +107,7 @@ function App() {
             element={
               <>
                 <SignedIn>
-                  <PhDCollective />
+                  <Boardroom />
                 </SignedIn>
                 <SignedOut>
                   <Navigate to="/auth" replace />
@@ -153,11 +153,11 @@ function App() {
           {/* Instant value onboarding - NO AUTH REQUIRED */}
           <Route path="/start" element={<Onboarding />} />
           
-          {/* PhD Collective - The Crystal Palace */}
-          <Route path="/phd-collective" element={
+          {/* Boardroom - The Crystal Palace */}
+          <Route path="/boardroom" element={
             <>
               <SignedIn>
-                <PhDCollective />
+                <Boardroom />
               </SignedIn>
               <SignedOut>
                 <Navigate to="/auth" replace />

@@ -10,7 +10,25 @@ import { PERSONA_META } from '../personas/meta';
 // Get persona IDs from metadata
 const PERSONA_IDS = Object.keys(PERSONA_META);
 
-const PhDCollective = () => {
+// Unique colors for each persona
+const PERSONA_COLORS: Record<string, string> = {
+  'ROI Analyst': 'text-green-400',
+  'Emotion Scientist': 'text-blue-400', 
+  'CRO Specialist': 'text-orange-400',
+  'Copy Chief': 'text-pink-400',
+  'Dr. Strategic': 'text-purple-400',
+  'Dr. Emotion': 'text-indigo-400',
+  'Dr. Pattern': 'text-cyan-400',
+  'Dr. Identity': 'text-yellow-400',
+  'Dr. Chaos': 'text-red-400',
+  'Dr. ROI': 'text-emerald-400',
+  'Dr. Sage': 'text-amber-400',
+  'Dr. Tactic': 'text-teal-400',
+  'Moderator': 'text-gray-300',
+  'Answer': 'text-white'
+};
+
+const Boardroom = () => {
   // const { user } = useUser(); // Not needed with hardcoded tenant ID
   // const subscription = useSubscription();
   const [selectedPhDs, setSelectedPhDs] = useState<Set<string>>(new Set()); // Start with none selected
@@ -466,25 +484,27 @@ const PhDCollective = () => {
             >
               {showResults ? (
                 <>
-                  <motion.div
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="text-white/60 text-xs mb-3"
-                  >
-                    COLLECTIVE SYNTHESIS
-                  </motion.div>
+                  {selectedPhDs.size === 12 && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="text-white/60 text-xs mb-3"
+                    >
+                      COLLECTIVE SYNTHESIS
+                    </motion.div>
+                  )}
                   
                   {/* Stream debate lines as they arrive */}
                   <div className="space-y-3">
                     {debateLines.map((line) => (
                       <div
                         key={line.id}
-                        className="text-white/90 text-sm animate-fadeIn"
+                        className="text-white/90 text-xs animate-fadeIn mb-2"
                       >
-                        <span className="font-semibold text-purple-400">
+                        <span className={`font-semibold ${PERSONA_COLORS[line.speaker] || 'text-purple-400'}`}>
                           {line.speaker}:
                         </span>{' '}
-                        <span className="leading-relaxed">
+                        <span className="leading-relaxed text-white/80">
                           {line.text}
                         </span>
                       </div>
@@ -563,4 +583,4 @@ const PhDCollective = () => {
   );
 };
 
-export default PhDCollective;
+export default Boardroom;
