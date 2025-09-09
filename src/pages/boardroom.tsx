@@ -395,7 +395,7 @@ const Boardroom = () => {
         <div className="absolute top-[60%] left-[25%] w-[180px] h-[180px] bg-gradient-radial from-emerald-300/10 to-transparent rounded-full blur-[35px]" />
       </div>
       
-      <div className="max-w-[1600px] mx-auto w-full px-4 md:px-6 lg:px-8">
+      <div className="max-w-[1500px] mx-auto w-full px-4 md:px-6 lg:px-8">
         <div className="pt-8">
           <PageHeader 
             title="The Collective" 
@@ -407,7 +407,7 @@ const Boardroom = () => {
         <div className="flex pb-8 flex-col lg:flex-row gap-6" style={{ height: 'calc(100vh - 10rem)' }}>
         
         {/* LEFT SIDE - PhD Cards Grid + Input */}
-        <div className="lg:w-[720px] flex flex-col gap-4">
+        <div className="lg:w-[800px] flex flex-col gap-4">
           {/* Selection Buttons */}
           <div className="flex gap-3 relative z-50">
             <button
@@ -485,14 +485,14 @@ const Boardroom = () => {
         </div>
 
         {/* RIGHT SIDE - Full Height Output Area */}
-        <div className="flex-1 relative z-20">
+        <div className="lg:w-[600px] relative z-20">
           <div className="h-full">
             
             {/* Full Height Output Area */}
             <motion.div
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
-              className="h-full bg-white/5 backdrop-blur-xl rounded-xl p-6 overflow-y-auto"
+              className="h-full bg-white/5 backdrop-blur-xl rounded-xl p-4 overflow-y-auto"
             >
               {isAnalyzing && debateLines.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full">
