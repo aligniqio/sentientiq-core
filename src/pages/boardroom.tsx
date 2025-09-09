@@ -23,19 +23,27 @@ const PERSONA_IDS = Object.keys(PERSONA_META);
 
 // Unique colors for each persona
 const PERSONA_COLORS: Record<string, string> = {
+  // Old persona names (for compatibility)
   'ROI Analyst': 'text-green-400',
   'Emotion Scientist': 'text-blue-400', 
   'CRO Specialist': 'text-orange-400',
   'Copy Chief': 'text-pink-400',
-  'Dr. Strategic': 'text-purple-400',
-  'Dr. Emotion': 'text-indigo-400',
-  'Dr. Pattern': 'text-cyan-400',
-  'Dr. Identity': 'text-yellow-400',
-  'Dr. Chaos': 'text-red-400',
-  'Dr. ROI': 'text-emerald-400',
-  'Dr. Sage': 'text-amber-400',
-  'Dr. Tactic': 'text-teal-400',
+  // Dr. personas with colors
+  'Strategic': 'text-purple-400',
+  'Emotion': 'text-pink-400',
+  'Pattern': 'text-blue-400',
+  'Identity': 'text-emerald-400',
+  'Chaos': 'text-orange-400',
+  'ROI': 'text-amber-400',
+  'Warfare': 'text-red-400',
+  'Omni': 'text-teal-400',
+  'First': 'text-indigo-400',
+  'Truth': 'text-gray-400',
+  'Brutal': 'text-violet-400',
+  'Context': 'text-green-400',
+  // System personas
   'Moderator': 'text-gray-300',
+  'Synthesis': 'text-white',
   'Answer': 'text-white'
 };
 
@@ -563,18 +571,16 @@ const Boardroom = () => {
                         }}
                       >
                         {index <= currentTypingIndex && (
-                          <>
-                            <div className="mb-1">
-                              <span className={`font-semibold ${PERSONA_COLORS[line.speaker] || 'text-purple-400'}`}>
-                                {line.speaker}:
+                          <div className="flex">
+                            <span className={`font-semibold mr-2 ${PERSONA_COLORS[line.speaker] || 'text-purple-400'}`}>
+                              {line.speaker.charAt(0).toUpperCase() + line.speaker.slice(1)}:
+                            </span>
+                            {line.isInterruption && (
+                              <span className="mr-2 text-xs text-red-400 italic">
+                                (interrupting {line.interrupted})
                               </span>
-                              {line.isInterruption && (
-                                <span className="ml-2 text-xs text-red-400 italic">
-                                  (interrupting {line.interrupted})
-                                </span>
-                              )}
-                            </div>
-                            <div className={`${line.isInterruption ? 'pl-6 border-l-2 border-red-400/40' : 'pl-4'}`}>
+                            )}
+                            <div className={`flex-1 ${line.isInterruption ? 'pl-2 border-l-2 border-red-400/40' : ''}`}>
                               {index === currentTypingIndex ? (
                                 <StreamingText 
                                   text={line.text}
@@ -598,7 +604,7 @@ const Boardroom = () => {
                                 </span>
                               )}
                             </div>
-                          </>
+                          </div>
                         )}
                       </div>
                     ))}
