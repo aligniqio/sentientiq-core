@@ -1,5 +1,5 @@
 // Natural tensions and rivalries between personas
-export const PERSONA_RIVALRIES = {
+export const PERSONA_RIVALRIES: Record<string, string[]> = {
   // Classic oppositions
   'Dr. Emotion': ['Dr. ROI', 'Dr. Truth', 'Dr. Pattern'],  // Feelings vs Facts
   'Dr. ROI': ['Dr. Emotion', 'Dr. Chaos'],                  // Efficiency vs Experimentation
@@ -92,8 +92,8 @@ export function checkInterruptionTrigger(text: string, currentSpeaker: string, a
 }
 
 // Generate interruption text based on rivalry
-export function generateInterruption(interrupter: string, interrupted: string, topic: string): string {
-  const interruptions = {
+export function generateInterruption(interrupter: string, interrupted: string): string {
+  const interruptions: Record<string, Record<string, string>> = {
     'Dr. ROI': {
       'Dr. Emotion': "NO THEY DON'T. It's about the money. Always the money.",
       'Dr. Chaos': "Stop burning cash on random experiments!",

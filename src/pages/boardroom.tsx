@@ -7,7 +7,6 @@ import { ssePost } from '../utils/ssePost';
 import { AgentCard } from '../components/AgentCard';
 import { PERSONA_META } from '../personas/meta';
 import { StreamingText } from '../components/StreamingText';
-import { checkInterruptionTrigger, generateInterruption } from '../personas/rivalries';
 
 interface DebateLine {
   id: string;
