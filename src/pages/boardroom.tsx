@@ -193,9 +193,10 @@ const Boardroom = () => {
     if (!question.trim()) return;
     
     setIsAnalyzing(true);
-    setShowResults(false);
+    setShowResults(true); // Show results immediately to see streaming
     setDebateResults(null);
     setDebateLines([]); // Clear previous lines for new answer
+    setCurrentTypingIndex(0); // Start typing from first line
     
     // Track usage (don't block on this)
     track('question_submitted', { personas: selectedPhDs.size, mode: 'answer' });
@@ -227,14 +228,18 @@ const Boardroom = () => {
           const speaker = data.speaker || data.label || 'Answer';
           const text = data.text || '';
           if (text.trim()) {
-            const newLineIndex = debateLines.length;
-            setDebateLines(prev => [...prev, {
-              id: `${Date.now()}-${Math.random()}`,
-              speaker: speaker,
-              text: text,
-              completed: false
-            }]);
-            setCurrentTypingIndex(newLineIndex);
+            setDebateLines(prev => {
+              const newLine = {
+                id: `${Date.now()}-${Math.random()}`,
+                speaker: speaker,
+                text: text,
+                completed: false
+              };
+              const newLineIndex = prev.length;
+              // Set typing index to the new line
+              setTimeout(() => setCurrentTypingIndex(newLineIndex), 0);
+              return [...prev, newLine];
+            });
           }
         }
         if (event === 'synth') {
@@ -304,6 +309,7 @@ const Boardroom = () => {
       
       // Clear previous debate lines
       setDebateLines([]);
+      setCurrentTypingIndex(0); // Start typing from first line
       setShowResults(true); // Show results immediately to see streaming
       
       await ssePost(`/api/v1/debate`, {
@@ -319,14 +325,18 @@ const Boardroom = () => {
           const speaker = data.speaker || data.label || 'System';
           const text = data.text || '';
           if (text.trim()) {
-            const newLineIndex = debateLines.length;
-            setDebateLines(prev => [...prev, {
-              id: `${Date.now()}-${Math.random()}`,
-              speaker: speaker,
-              text: text,
-              completed: false
-            }]);
-            setCurrentTypingIndex(newLineIndex);
+            setDebateLines(prev => {
+              const newLine = {
+                id: `${Date.now()}-${Math.random()}`,
+                speaker: speaker,
+                text: text,
+                completed: false
+              };
+              const newLineIndex = prev.length;
+              // Set typing index to the new line
+              setTimeout(() => setCurrentTypingIndex(newLineIndex), 0);
+              return [...prev, newLine];
+            });
           }
         }
         if (event === 'synth') {
