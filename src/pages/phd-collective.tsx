@@ -2,7 +2,6 @@ import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { Brain } from 'lucide-react';
 import PageHeader from '../components/PageHeader';
-import { useUser } from '@clerk/clerk-react';
 import { track } from '../lib/track';
 import { ssePost } from '../utils/ssePost';
 import { AgentCard } from '../components/AgentCard';
