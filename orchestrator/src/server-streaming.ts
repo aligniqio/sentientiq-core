@@ -48,7 +48,7 @@ export async function* openaiStream(messages: any[], max_tokens = 220, temperatu
 }
 
 // ---------- Env ----------
-const PORT = Number(process.env.PORT || 8787);
+const PORT = Number(process.env.STREAMING_PORT || 8788);
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY || '';
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY || '';
@@ -282,11 +282,17 @@ app.post('/v1/boardroom', async (req: Request, res: Response) => {
   
   // Get tenant plan and enforce caps
   const plan = await getTenantPlan(tenantId);
-  const personaCap = capForPlan(plan);
+  // Override for Matt's tenant during development
+  const effectivePlan = tenantId === '7a6c61c4-95e4-4b15-94b8-02995f81c291' ? 'enterprise' : plan;
+  const personaCap = capForPlan(effectivePlan);
   
-  // Pick personas
+  // Pick personas - personaCap is a MAXIMUM, not a default
   const requested = Array.from(new Set(personas ?? []));
-  const roster = (requested.length ? requested : DEFAULT_PERSONAS).slice(0, personaCap);
+  const roster = requested.length > 0 
+    ? requested.slice(0, personaCap)  // Use what they selected, up to the cap
+    : DEFAULT_PERSONAS.slice(0, 4);   // Default to 4 if nothing selected
+  console.log(`[PERSONAS] Requested: ${requested.length} personas:`, requested);
+  console.log(`[PERSONAS] Roster (cap=${personaCap}, actual=${roster.length}):`, roster);
   
   // Detect provider
   const provider = process.env.PREFER_ANTHROPIC === 'false' ? 'openai' : 'anthropic';
@@ -492,23 +498,29 @@ Principles:
       // Answer mode: Selected agents provide perspectives, then moderator synthesizes
       sseWrite(res, 'phase', { label: 'answer', status: 'begin' });
       
-      // Get agent-specific system prompts with bias
+      // Get agent-specific system prompts based on their professional DNA
       function getAgentBias(name: string) {
+        // Each persona's worldview shaped by their career experiences
         const biases: Record<string, string> = {
-          Emotion:  "Champion human impact and trust. Tease ROI as 'cold' when relevant.",
-          ROI:      "Unit economics (CAC/LTV/payback). Call out hand-wavy claims.",
-          Strategic:"Moat, positioning, 6–24mo horizon. Challenge blitz tactics.",
-          Identity: "Aspirational self; brand truth; long-term equity.",
-          Context:  "Market forces; second-order effects; constraints.",
-          Pattern:  "Cohorts, correlations, retention curves; be evidence-led.",
-          Omni:     "Experiments, funnels, instrumentation; propose AB tests.",
-          First:    "Frame problem and propose a first-draft plan (3 bullets)."
+          'ROI Analyst': "Ex-McKinsey. Emotion Scientist's touchy-feely BS bankrupts companies. Money talks, feelings walk.",
+          'Emotion Scientist': "Stanford PhD. ROI Analyst's spreadsheet addiction misses why humans actually buy. Feelings drive wallets.",
+          'CRO Specialist': "Built Booking.com's test framework. Brand Strategist's 'authenticity' doesn't convert. Test or guess.",
+          'Copy Chief': "Mad Men era survivor. UX Researcher's interviews miss the point. Great copy creates need, not just meets it.",
+          'Performance Engineer': "Ex-Google. CEO's 'move fast' breaks everything. Milliseconds matter more than moonshots.",
+          'Brand Strategist': "Helped Nike through sweatshop crisis. CRO's A/B obsession commoditizes soul. Brand equity compounds.",
+          'UX Researcher': "Ethnographer turned tech. Copy Chief writes fiction. I watch reality. Users don't read your clever words.",
+          'Data Skeptic': "Former Theranos whistleblower. CEO Provocateur's 'vision' is usually fraud. Show me the real data.",
+          'Social Strategist': "Managed United's Twitter during THAT incident. Internet never forgets. Perception IS reality.",
+          'Customer Success': "20 years in SaaS. Confusion kills retention. Happy customers don't read fine print.",
+          'CEO Provocateur': "Three unicorns, two failures. Convention is competition. Break rules intelligently.",
+          'Compliance Counsel': "Ex-FTC prosecutor. Seen companies destroyed by one disclosure miss. Document everything."
         };
-        return biases[name] || "Provide balanced perspective.";
+        return biases[name] || "Bring your unique professional lens. Your experience shapes your answer.";
       }
       
-      // Use selected agents or default to top 3
-      const activeAgents = roster.length > 0 ? roster : DEFAULT_PERSONAS.slice(0, 3);
+      // Use exactly what was selected (roster already has the selected personas)
+      // Only default if absolutely nothing was provided
+      const activeAgents = roster;
       
       // Send meta with actual agents being used
       sseWrite(res, 'meta', { requestId, subject: prompt.slice(0, 120), personas: activeAgents });
@@ -520,12 +532,12 @@ Principles:
         sseWrite(res, 'turn', { speaker: agent, start: true });
         
         const agentBias = getAgentBias(agent);
-        const agentPrompt = `Question: ${prompt}\n${contextBlock}\n\nGive your perspective in 1-2 sentences.`;
+        const agentPrompt = `Question: ${prompt}\n${contextBlock}\n\nGive your unique professional perspective in 1-2 sentences. Be decisive but professional.`;
         
         async function* agentStream() {
-          const sys = `You are ${agent}. ${agentBias} Be decisive and show your bias. 1-2 sentences only.`;
+          const sys = `You are ${agent}. ${agentBias} Be direct and contrarian. Challenge conventional wisdom. Your rivals are watching. 1-2 sharp sentences.`;
           const msgs = [{ role: "system", content: sys }, { role: "user", content: agentPrompt }];
-          for await (const c of openaiStream(msgs, 80, 0.5)) {
+          for await (const c of openaiStream(msgs, 80, 0.8)) {
             if (c?.text) yield { text: c.text };
           }
         }
@@ -535,55 +547,39 @@ Principles:
         await pause(180); // Brief pause between agents
       }
       
-      // Now moderator synthesizes with the structured format
-      const moderatorContract = `Write in this exact structure—no headings beyond those shown:
+      // Now synthesis finds insight in the conflict
+      const synthesisContract = `Synthesize the DISAGREEMENT into actionable insight (2-3 sentences max):
 
-Short answer:
-<one decisive sentence that answers the user's question directly. If it depends, state the decision rule.>
+1. What's the core tension between perspectives?
+2. What's the non-obvious insight from this conflict?
+3. What bold action emerges from the debate?
 
-Why:
-• <bullet 1 — concrete, business-relevant>
-• <bullet 2>
-• <bullet 3>
-
-When this would be wrong:
-• <edge case 1>
-• <edge case 2>
-
-What to test next (7–21 days):
-• <test 1 — metric + success threshold>
-• <test 2 — metric + threshold>
-• <test 3 — metric + threshold>
-
-CTAs:
-1) <Action> — Owner: <Role> — When: <Timebox>
-2) <Action> — Owner: <Role> — When: <Timebox>
-3) <Action> — Owner: <Role> — When: <Timebox>`;
+Don't just summarize - find the breakthrough in the disagreement.`;
       
-      const moderatorPrompt = `Question: ${prompt}
+      const synthesisPrompt = `Question: ${prompt}
 
 Agent Perspectives:
 ${Object.entries(perspectives).map(([agent, view]) => `${agent}: ${view}`).join('\n')}
 
-${moderatorContract}`;
+${synthesisContract}`;
       
-      sseWrite(res, 'turn', { speaker: 'Moderator', start: true });
+      sseWrite(res, 'turn', { speaker: 'Synthesis', start: true });
       
-      async function* moderatorStream() {
-        const sys = "You are the Moderator. Synthesize agent perspectives using the EXACT structure provided. Answer the question directly.";
-        const msgs = [{ role: "system", content: sys }, { role: "user", content: moderatorPrompt }];
-        for await (const c of openaiStream(msgs, 500, 0.3)) {
+      async function* synthesisStream() {
+        const sys = "You are creating a synthesis. Find the INSIGHT in the disagreement. Don't repeat what was said - extract what matters from the conflict. Be bold and decisive.";
+        const msgs = [{ role: "system", content: sys }, { role: "user", content: synthesisPrompt }];
+        for await (const c of openaiStream(msgs, 120, 0.7)) {
           if (c?.text) yield { text: c.text };
         }
       }
       
-      await speakBuffered(res, 'Moderator', 'answer', moderatorStream);
+      await speakBuffered(res, 'Synthesis', 'answer', synthesisStream);
       
       // Extract and save synthesis
-      const synthesisText = (speakerBuf.get('Moderator') || '').trim();
-      const ctas = normalizeCTAs(synthesisText);
-      debateSetSynthesis(requestId, { summary: synthesisText, ctas });
-      sseWrite(res, 'synth', { synthesis: synthesisText, ctas, personas: activeAgents, perspectives });
+      const synthesisText = (speakerBuf.get('Synthesis') || '').trim();
+      // For answer mode, no CTAs needed - just the synthesis
+      debateSetSynthesis(requestId, { summary: synthesisText, ctas: [] });
+      sseWrite(res, 'synth', { synthesis: synthesisText, personas: activeAgents });
       
       sseWrite(res, 'phase', { label: 'answer', status: 'end' });
       

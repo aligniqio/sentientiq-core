@@ -45,8 +45,8 @@ export async function* hybridLLMStream(
   );
 
   // Override system prompt for controversial personas
-  const finalSystem = CONTROVERSIAL_SYSTEMS[persona] || 
-                     CONTROVERSIAL_SYSTEMS[persona.replace('Dr. ', '').toLowerCase()] ||
+  const finalSystem = CONTROVERSIAL_SYSTEMS[persona as keyof typeof CONTROVERSIAL_SYSTEMS] || 
+                     CONTROVERSIAL_SYSTEMS[persona.replace('Dr. ', '').toLowerCase() as keyof typeof CONTROVERSIAL_SYSTEMS] ||
                      systemPrompt;
 
   if (useSonnet && process.env.ANTHROPIC_API_KEY) {

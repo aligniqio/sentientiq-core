@@ -227,7 +227,7 @@ const Boardroom = () => {
         prompt: question,
         mode: 'answer',
         topK: 3,
-        personas: [], // Empty array for answer mode to let backend choose
+        personas: Array.from(selectedPhDs), // Send selected personas for answer mode too
         tenantId: '7a6c61c4-95e4-4b15-94b8-02995f81c291' // Your enterprise tenant ID
       }, ({ event, data }) => {
         console.log('SSE Event:', event, data); // Debug all events

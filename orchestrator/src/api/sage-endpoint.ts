@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { sageWatcher } from '../services/sage-stream';
+import { sageWatcher } from '../services/sage-stream.js';
 // import { SageService } from '../../src/services/sage';
 
 // API endpoints for Sage
