@@ -23,12 +23,17 @@ import InvitesPage from './admin/InvitesPage'
 // Candy Kit UI enhancements
 import { SenseiCandyProvider } from '../components/ui/SenseiCandy'
 
+// Sage - The Crystal Palace of Marketing Truth
+import SageCrystalBall from '../components/SageCrystalBall'
+
 function App() {
   return (
     <HelmetProvider>
       <SenseiCandyProvider confetti cursor toasts>
         <Router>
           <Layout>
+          {/* Sage watches from the corner, always */}
+          <SageCrystalBall />
         <Routes>
           {/* Root - App only (domain routing handles marketing site) */}
           <Route path="/" element={

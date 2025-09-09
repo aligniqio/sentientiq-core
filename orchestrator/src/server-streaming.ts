@@ -19,6 +19,19 @@ import OpenAI from "openai";
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 const OPENAI_MODEL = process.env.OPENAI_MODEL || "gpt-4o-mini";
 
+// Sage Integration - The Crystal Palace of Marketing Truth
+import { sageWatcher } from './services/sage-stream.js';
+import { setupSageRoutes } from './api/sage-endpoint.js';
+import { createClient } from 'redis';
+
+// Redis client for Sage communication
+const redisClient = createClient({
+  url: process.env.REDIS_URL || 'redis://localhost:6379'
+});
+redisClient.connect()
+  .then(() => console.log('📡 Redis connected for Sage'))
+  .catch(err => console.error('📡 Redis connection failed:', err));
+
 export async function* openaiStream(messages: any[], max_tokens = 220, temperature = 0.4) {
   const resp = await openai.chat.completions.create({
     model: OPENAI_MODEL,
@@ -49,10 +62,19 @@ const groqPool = pLimit(Number(process.env.GROQ_CONCURRENCY || 50));
 
 // ---------- Helpers ----------
 const sleep = (ms: number) => new Promise(res => setTimeout(res, ms));
-function sseWrite(res: Response, event: string, data: any) {
+function sseWrite(res: Response, event: string, data: any, debateId?: string) {
   res.write(`event: ${event}\n`);
   res.write(`data: ${JSON.stringify(data)}\n\n`);
   (res as any).flush?.(); // Force flush after EVERY write
+  
+  // Publish debate messages to Redis for Sage
+  if (debateId && (event === 'message' || event === 'synthesis' || event === 'conclusion')) {
+    redisClient.publish(`debate:${debateId}`, JSON.stringify({
+      event,
+      ...data,
+      timestamp: new Date().toISOString()
+    })).catch(err => console.error('Redis publish failed:', err));
+  }
 }
 function attachKeepAlive(res: Response) {
   const int = setInterval(() => res.write(': keep-alive\n\n'), 15000);
@@ -424,7 +446,7 @@ Principles:
     for (const s of sents) {
       const line = s.trim();
       if (!line) continue;
-      sseWrite(res, "delta", { speaker, text: line + " " });
+      sseWrite(res, "delta", { speaker, text: line + " " }, requestId);
       debateMaybeQuote?.(requestId, speaker, line);
     }
   }
@@ -432,11 +454,11 @@ Principles:
   async function onTurnEnd(speaker: string) {
     const rem = (speakerBuf.get(speaker) || '').trim();
     if (rem) {
-      sseWrite(res, 'delta', { speaker, text: rem + ' ' });
+      sseWrite(res, 'delta', { speaker, text: rem + ' ' }, requestId);
       debateMaybeQuote(requestId, speaker, rem);
       speakerBuf.set(speaker, '');
     }
-    sseWrite(res, 'turn', { speaker, end: true, mode: currentMode });
+    sseWrite(res, 'turn', { speaker, end: true, mode: currentMode }, requestId);
   }
 
   // Slow typing for demo/placeholder text to feel live
@@ -695,6 +717,12 @@ app.get('/health', (_req, res) => {
     provider: process.env.PREFER_ANTHROPIC === 'false' ? 'openai' : 'anthropic'
   });
 });
+
+// Initialize Sage
+setupSageRoutes(app);
+sageWatcher.connect()
+  .then(() => console.log('🔮 Sage connected to debate streams'))
+  .catch(err => console.error('🔮 Sage connection failed:', err));
 
 app.listen(PORT, () => {
   console.log(`orchestrator-streaming listening on :${PORT}`);
