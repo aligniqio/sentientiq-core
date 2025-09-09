@@ -8,6 +8,7 @@ import { DEFAULT_PERSONAS, personaSystem as personaSystemOld } from './personas.
 import { retrieveContext, supabase } from './retrieveContext.js';
 import { RIVALS } from './theater/rivals.js';
 import { callWithFallback } from './safe-llm.js';
+import { hybridLLMStream, getModelDistribution } from './services/hybrid-llm.js';
 // ESM import (your repo is `"type":"module"`)
 import {
   debateInit,
@@ -337,15 +338,23 @@ Principles:
 
   async function* personaOpeningStream(name: string, prompt: string, maxTok=120) {
     const sys = personaSystem(name, RIVALS?.[name]);
-    const msgs = [{ role:"system", content: sys }, { role:"user", content: prompt }];
-    for await (const c of openaiStream(msgs, maxTok, 0.4)) yield c;
+    
+    // Use hybrid LLM system for diverse responses
+    const stream = hybridLLMStream(name, sys, prompt, 0.4);
+    for await (const chunk of stream) {
+      yield { text: chunk.text };
+    }
   }
 
   async function* personaRebuttalStream(name: string, rival: string, prompt: string, maxTok=60) {
     const sys = personaSystem(name, rival);
     const user = `Rebut ${rival} briefly, then add one crisp point on: ${prompt}`;
-    const msgs = [{ role:"system", content: sys }, { role:"user", content: user }];
-    for await (const c of openaiStream(msgs, maxTok, 0.5)) yield c;
+    
+    // Use hybrid LLM - rebuttals should be spicier
+    const stream = hybridLLMStream(name, sys, user, 0.6);
+    for await (const chunk of stream) {
+      yield { text: chunk.text };
+    }
   }
 
   // Helper to collect full response then stream with pacing
