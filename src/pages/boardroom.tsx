@@ -6,6 +6,7 @@ import { track } from '../lib/track';
 import { ssePost } from '../utils/ssePost';
 import { AgentCard } from '../components/AgentCard';
 import { PERSONA_META } from '../personas/meta';
+import { TypewriterText } from '../components/TypewriterText';
 
 // Get persona IDs from metadata
 const PERSONA_IDS = Object.keys(PERSONA_META);
@@ -35,9 +36,10 @@ const Boardroom = () => {
   const [question, setQuestion] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [debateResults, setDebateResults] = useState<any>(null);
-  const [debateLines, setDebateLines] = useState<Array<{id: string, speaker: string, text: string}>>([]);
+  const [debateLines, setDebateLines] = useState<Array<{id: string, speaker: string, text: string, completed?: boolean}>>([]);
   const [showResults, setShowResults] = useState(false);
   const [flashAll, setFlashAll] = useState(false);
+  const [currentTypingIndex, setCurrentTypingIndex] = useState<number | null>(null);
   // const [freeQuestionsRemaining, setFreeQuestionsRemaining] = useState<number>(() => {
   //   const stored = localStorage.getItem('free_questions_remaining');
   //   return stored ? parseInt(stored, 10) : 20;
@@ -222,11 +224,14 @@ const Boardroom = () => {
           const speaker = data.speaker || data.label || 'Answer';
           const text = data.text || '';
           if (text.trim()) {
+            const newLineIndex = debateLines.length;
             setDebateLines(prev => [...prev, {
               id: `${Date.now()}-${Math.random()}`,
               speaker: speaker,
-              text: text
+              text: text,
+              completed: false
             }]);
+            setCurrentTypingIndex(newLineIndex);
           }
         }
         if (event === 'synth') {
@@ -311,11 +316,14 @@ const Boardroom = () => {
           const speaker = data.speaker || data.label || 'System';
           const text = data.text || '';
           if (text.trim()) {
+            const newLineIndex = debateLines.length;
             setDebateLines(prev => [...prev, {
               id: `${Date.now()}-${Math.random()}`,
               speaker: speaker,
-              text: text
+              text: text,
+              completed: false
             }]);
+            setCurrentTypingIndex(newLineIndex);
           }
         }
         if (event === 'synth') {
@@ -496,17 +504,36 @@ const Boardroom = () => {
                   
                   {/* Stream debate lines as they arrive */}
                   <div className="space-y-3">
-                    {debateLines.map((line) => (
+                    {debateLines.map((line, index) => (
                       <div
                         key={line.id}
-                        className="text-white/90 text-xs animate-fadeIn mb-2"
+                        className="text-white/90 text-xs mb-3"
                       >
                         <span className={`font-semibold ${PERSONA_COLORS[line.speaker] || 'text-purple-400'}`}>
                           {line.speaker}:
                         </span>{' '}
-                        <span className="leading-relaxed text-white/80">
-                          {line.text}
-                        </span>
+                        {currentTypingIndex === index || currentTypingIndex === null || index < (currentTypingIndex || 0) ? (
+                          <TypewriterText 
+                            text={line.text}
+                            speed={25}
+                            className="leading-relaxed text-white/80"
+                            onComplete={() => {
+                              setDebateLines(prev => prev.map((l, i) => 
+                                i === index ? { ...l, completed: true } : l
+                              ));
+                              // Move to next line if there is one
+                              if (index < debateLines.length - 1) {
+                                setCurrentTypingIndex(index + 1);
+                              } else {
+                                setCurrentTypingIndex(null);
+                              }
+                            }}
+                          />
+                        ) : (
+                          <span className="leading-relaxed text-white/80 opacity-0">
+                            {line.text}
+                          </span>
+                        )}
                       </div>
                     ))}
                   </div>
