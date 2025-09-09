@@ -1,6 +1,6 @@
-# For sentientiq.ai - build marketing site
+# For sentientiq.app - build app
 [build]
-  base = "marketing-website"
+  base = "sentientiq-core"
   command = "npm run build"
   publish = "dist"
   # (omit functions here unless this app actually uses Netlify Functions)
