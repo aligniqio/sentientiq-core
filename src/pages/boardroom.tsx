@@ -356,7 +356,7 @@ const Boardroom = () => {
     setDebateResults(null);
     
     // Track usage (don't block on this)
-    track('question_submitted', { personas: selectedPhDs.size, mode: 'answer' });
+    track('question_submitted', { personas: selectedPhDs.size, mode: 'debate' });
     
     const newQuestion = {
       type: 'question',
