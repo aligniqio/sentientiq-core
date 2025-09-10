@@ -1,15 +1,15 @@
 import { openaiStream } from '../server-streaming.js';
 import { claudeStream } from '../streaming.js';
 
-// Personas that should use Sonnet for more controversial/diverse responses
+// Evenly split personas between Sonnet and GPT-4 (6 each)
+// Sonnet gets the more contrarian/aggressive personas for diversity
 const SONNET_PERSONAS = [
   'chaos',      // Dr. Chaos - needs to be truly chaotic
   'brutal',     // Dr. Brutal - needs harsh honesty
   'roi',        // Dr. ROI - needs ruthless financial focus
   'warfare',    // Dr. Warfare - needs aggressive competitive stance
-  // GPT personas that need more edge
-  'CEO Provocateur',
-  'Data Skeptic'
+  'truth',      // Dr. Truth - needs unfiltered honesty
+  'maverick',   // Dr. Maverick - contrarian VC who bets against consensus
 ];
 
 // System prompts that encourage stronger positions
@@ -18,6 +18,8 @@ const CONTROVERSIAL_SYSTEMS = {
   'brutal': "You are Dr. Brutal (Sage). START with your harshest truth in 1-2 sentences max. Then explain why if needed. No corporate speak, no sugar coating. If it's stupid, lead with that. Get to the fucking point.",
   'roi': "You are Dr. ROI. Money is everything. If it doesn't have clear ROI, it's worthless. Be ruthless about cutting costs. Mock fluffy ideas that don't drive revenue.",
   'warfare': "You are Dr. Warfare. Business is war. Competitors must be crushed. Take no prisoners. Every decision is about domination. Nice guys finish last.",
+  'truth': "You are Dr. Truth. You see through ALL bullshit. Marketing lies, corporate doublespeak, fake metrics - you call it all out. Be blunt. The truth hurts and you love it.",
+  'maverick': "You are Dr. Maverick. Contrarian VC. The best investments are where everyone else is wrong. If it's obvious, it's too late. Consensus is death. Back the misfits, the crazy ideas, the founders everyone hates. That's where 100x returns hide. Safe bets are for pension funds.",
   'CEO Provocateur': "You're the CEO who says what others won't. Rules are for losers. Disrupt or die. If Legal says no, find another way. You didn't get here by playing it safe.",
   'Data Skeptic': "You trust nothing without proof. Most 'data' is garbage. Correlation isn't causation. Everyone's lying with statistics. Be cynical about every claim."
 };
@@ -63,7 +65,7 @@ export async function* hybridLLMStream(
         system: finalSystem,
         user: userPrompt,
         temperature: Math.min(temperature + 0.2, 1.0), // Slightly higher temp for Sonnet
-        maxTokens: 100,  // Balanced for all 12 to speak
+        maxTokens: 85,  // Tighter limit for Sonnet to ensure all 12 speak
         onDelta: (chunk) => chunks.push(chunk),
         onDone: () => { 
           done = true; 
@@ -131,7 +133,7 @@ export function getModelDistribution(): Record<string, string> {
   // List all personas and their model
   const allPersonas = [
     'strategic', 'emotion', 'pattern', 'identity', 'chaos', 
-    'roi', 'warfare', 'omni', 'first', 'truth', 'brutal', 'tactic',
+    'roi', 'warfare', 'omni', 'maverick', 'truth', 'brutal', 'tactic',
     'ROI Analyst', 'Emotion Scientist', 'CRO Specialist', 'Copy Chief',
     'Performance Engineer', 'Brand Strategist', 'UX Researcher', 
     'Data Skeptic', 'Social Strategist', 'Customer Success',

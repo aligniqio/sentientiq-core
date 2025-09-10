@@ -9,6 +9,7 @@ import { retrieveContext, supabase } from './retrieveContext.js';
 import { RIVALS } from './theater/rivals.js';
 import { callWithFallback } from './safe-llm.js';
 import { hybridLLMStream, getModelDistribution } from './services/hybrid-llm.js';
+import { DebateStateMachine, getOrCreateDebateState, clearDebateState } from './debate-state.js';
 // ESM import (your repo is `"type":"module"`)
 import {
   debateInit,
@@ -276,15 +277,22 @@ app.post('/v1/boardroom', async (req: Request, res: Response) => {
 
   const { prompt, topK, tenantId, personas, mode } = parsed.data;
   
+  console.log(`[TENANT] Received tenantId: ${tenantId}`);
+  
   // Send meta information to client
   sseWrite(res, 'meta', { requestId, subject: prompt.slice(0, 120) });
   const debateId = `debate-${Date.now()}`;
   
   // Get tenant plan and enforce caps
   const plan = await getTenantPlan(tenantId);
+  console.log(`[TENANT] Plan from DB: ${plan}`);
+  
   // Override for Matt's tenant during development
   const effectivePlan = tenantId === '7a6c61c4-95e4-4b15-94b8-02995f81c291' ? 'enterprise' : plan;
+  console.log(`[TENANT] Effective plan: ${effectivePlan} (override: ${tenantId === '7a6c61c4-95e4-4b15-94b8-02995f81c291'})`);
+  
   const personaCap = capForPlan(effectivePlan);
+  console.log(`[TENANT] Persona cap: ${personaCap}`);
   
   // Pick personas - personaCap is a MAXIMUM, not a default
   const requested = Array.from(new Set(personas ?? []));
@@ -292,7 +300,7 @@ app.post('/v1/boardroom', async (req: Request, res: Response) => {
   // In debate mode, don't default to any personas if none selected
   const roster = requested.length > 0 
     ? requested.slice(0, personaCap)  // Use what they selected, up to the cap
-    : (mode === 'debate' ? [] : DEFAULT_PERSONAS.slice(0, 4));   // Only default in answer mode
+    : (mode === 'debate' ? [] : DEFAULT_PERSONAS.slice(0, personaCap));   // Default to cap in answer mode
     
   console.log(`[PERSONAS] Requested: ${requested.length} personas:`, requested);
   console.log(`[PERSONAS] Roster (cap=${personaCap}, actual=${roster.length}):`, roster);
@@ -369,8 +377,8 @@ Principles:
 
   async function* personaRebuttalStream(name: string, rival: string, prompt: string, maxTok=60) {
     const agentBias = getAgentBias(name);
-    const sys = `${EI_PREAMBLE} You are ${name}. ${agentBias} You're directly rebutting ${rival}. Be sharp, dismissive of their point. No hedging, no "I feel". Attack their position, then make your point. NEVER use em-dashes (—).`;
-    const user = `${rival} is wrong. Say why in one sentence, then make your point about: ${prompt}`;
+    const sys = `${EI_PREAMBLE} You are ${name}. ${agentBias} In ONE sentence, rebut ${rival} (witty, respectful), then add ONE new point tied to: "${prompt}". Be sharp but professional. NEVER use em-dashes (—).`;
+    const user = `Rebut ${rival} and make your point about: ${prompt}`;
     
     // Use hybrid LLM - rebuttals should be spicier
     const stream = hybridLLMStream(name, sys, user, 0.8); // Even higher temp for conflict
@@ -473,7 +481,7 @@ Principles:
       'ROI': "Private equity. If it doesn't 3x, it's a waste. Everything else is noise.",
       'Warfare': "Special ops commander. Business is combat. Enemies everywhere. Victory or death.",
       'Omni': "Systems theorist. Everything connects. Miss one thread, lose the whole picture.",
-      'First': "First principles only. If you can't explain it simply, it's probably BS.",
+      'Maverick': "VC contrarian. Best returns come from betting against everyone. Consensus kills alpha.",
       'Truth': "Investigative journalist. Everyone's lying about something. Find what they're hiding.",
       'Brutal': "Turnaround specialist. Nice killed more companies than competition. Truth hurts, bankruptcy hurts more.",
       'Context': "Anthropologist. Nothing exists in isolation. Context determines meaning."
@@ -626,7 +634,19 @@ ${synthesisContract}`;
       sseWrite(res, 'phase', { label: 'answer', status: 'end' });
       
     } else {
-      // Debate mode: Full theatrical experience
+      // Debate mode: Full theatrical experience with elimination rounds
+      
+      // Initialize debate state machine with roster
+      const debateStateMachine = getOrCreateDebateState(debateId, roster);
+      let currentState = debateStateMachine.getState();
+      
+      // Send initial state to client
+      sseWrite(res, 'state', {
+        phase: currentState.phase,
+        active: currentState.active,
+        eliminated: currentState.eliminated,
+        description: debateStateMachine.getPhaseDescription()
+      });
       
       // Opening - Skip roll call, go straight to welcome
       sseWrite(res, 'scene', { step: 'openings' });
@@ -677,8 +697,123 @@ ${synthesisContract}`;
         await pause(250); // Natural pause between different speakers
       }
       
-      // 3) Crossfire - dynamically create pairs from available personas
-      const shuffledForPairs = shuffleArray(roster);
+      // ELIMINATION PHASE - After opening statements
+      if (ACTIVE.length > 6) {
+        // Advance to elimination poll
+        currentState = debateStateMachine.advance();
+        sseWrite(res, 'state', {
+          phase: currentState.phase,
+          active: currentState.active,
+          eliminated: currentState.eliminated,
+          description: debateStateMachine.getPhaseDescription()
+        });
+        
+        // Moderator announces elimination
+        sseWrite(res, 'scene', { step: 'elimination' });
+        sseWrite(res, 'turn', { speaker: 'Moderator', start: true, mode: 'elimination' });
+        
+        // Calculate how many to eliminate
+        const toEliminate = Math.floor(ACTIVE.length / 3);
+        const toAdvance = ACTIVE.length - toEliminate;
+        
+        // Have Moderator evaluate and rank the performances
+        const eliminationPrompt = `Question discussed: "${prompt}"
+Current roster: ${ACTIVE.join(', ')}
+
+Evaluate their opening statements and rank them.`;
+
+        const eliminationSystem = `You are the Moderator. After openings, produce:
+1) A one-line request to the user to pick exactly ${toEliminate} personas by name to ELIMINATE.
+2) A JSON object on its own line with this shape:
+{"ranked":[{"name":"persona1","score":0.82,"rationale":"..."}, ...]}
+
+Rules:
+• "name" must be one of the current roster names: ${ACTIVE.join(', ')}
+• "score" in [0,1] where higher is better performance
+• Provide exactly ${ACTIVE.length} ranked entries
+• Order from best to worst performer
+Do not add extra keys. Do not wrap JSON in markdown.`;
+        
+        // Get Moderator's ranking
+        let ranking = [...ACTIVE]; // Default fallback
+        try {
+          const evalMessages = [
+            { role: 'system', content: eliminationSystem },
+            { role: 'user', content: eliminationPrompt }
+          ];
+          
+          let moderatorEval = '';
+          for await (const chunk of openaiStream(evalMessages, 200, 0.3)) {
+            if (chunk?.text) {
+              moderatorEval += chunk.text;
+              sseWrite(res, 'delta', { speaker: 'Moderator', text: chunk.text });
+            }
+          }
+          
+          // Try to extract JSON ranking
+          const jsonMatch = moderatorEval.match(/\{"ranked":\s*\[.*?\]\}/s);
+          if (jsonMatch) {
+            try {
+              const parsed = JSON.parse(jsonMatch[0]);
+              if (parsed.ranked && Array.isArray(parsed.ranked)) {
+                // Extract names from the ranked objects, ordered best to worst
+                ranking = parsed.ranked
+                  .filter((p: any) => p.name && ACTIVE.includes(p.name))
+                  .map((p: any) => p.name);
+              }
+            } catch (e) {
+              console.log('Failed to parse ranking JSON, using fallback');
+            }
+          }
+        } catch (e) {
+          console.error('Moderator ranking failed:', e);
+        }
+        
+        await onTurnEnd('Moderator');
+        await pause(500);
+        
+        // Select weakest for elimination
+        const weakest = ranking.slice(-toEliminate);
+        const advancing = ranking.slice(0, toAdvance);
+        
+        // Send poll event for user to override
+        sseWrite(res, 'poll', {
+          prompt: `Select ${toAdvance} to advance (Moderator suggests eliminating: ${weakest.join(', ')})`,
+          options: ACTIVE,
+          recommended: weakest,  // Show who Moderator wants to eliminate
+          timeoutMs: 15000
+        });
+        
+        // Wait for user selection or timeout
+        await pause(15000);  // For now, auto-select after timeout
+        
+        // Use Moderator's recommendation as default
+        const eliminated = weakest;
+        
+        // Send advance event
+        sseWrite(res, 'advance', { selected: advancing });
+        
+        const eliminationText = `The weakest links have been identified. ${eliminated.map(e => `Dr. ${e}`).join(', ')} - your services are no longer required. ${advancing.length} remain.`;
+        sseWrite(res, 'delta', { speaker: 'Moderator', text: eliminationText });
+        await onTurnEnd('Moderator');
+        await pause(500);
+        
+        // Auto-advance with eliminations
+        currentState = debateStateMachine.advance(eliminated);
+        
+        // Update ACTIVE list
+        ACTIVE.splice(0, ACTIVE.length, ...currentState.active);
+        
+        sseWrite(res, 'state', {
+          phase: currentState.phase,
+          active: currentState.active,
+          eliminated: currentState.eliminated,
+          description: `${currentState.active.length} remain in contention`
+        });
+      }
+      
+      // 3) Crossfire - dynamically create pairs from remaining active personas
+      const shuffledForPairs = shuffleArray(ACTIVE);  // Use ACTIVE not roster
       const activePairs: string[][] = [];
       
       // Create random pairs from available personas
@@ -751,6 +886,11 @@ You are the Moderator. Write a 4–6 sentence exec synthesis (plain prose). Then
     }
     
     sseWrite(res, 'done', { ok: true });
+    
+    // Clean up debate state if in debate mode
+    if (mode === 'debate' && debateId) {
+      clearDebateState(debateId);
+    }
     
   } catch (e: any) {
     sseWrite(res, 'error', { message: String(e?.message || e) });

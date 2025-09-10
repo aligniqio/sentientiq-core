@@ -54,31 +54,6 @@
   status = 200
   force = true
 
-# Legacy/internal services (keep until you migrate them behind api.sentientiq.app)
-[[redirects]]
-  from = "/api/posts/*"
-  to   = "http://3.15.29.138:8002/api/posts/:splat"
-  status = 200
-  force = true
-
-[[redirects]]
-  from = "/api/swarm/*"
-  to   = "http://3.15.29.138:8003/api/swarm/:splat"
-  status = 200
-  force = true
-
-[[redirects]]
-  from = "/api/stripe/webhook"
-  to   = "http://3.15.29.138:8005/webhook"
-  status = 200
-  force = true
-
-[[redirects]]
-  from = "/api/evi/*"
-  to   = "http://3.15.29.138:8001/api/evi/:splat"
-  status = 200
-  force = true
-
 # ---------- SPA fallback (must be last) ----------
 [[redirects]]
   from = "/*"

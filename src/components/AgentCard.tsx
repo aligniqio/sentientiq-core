@@ -3,14 +3,13 @@ import { PERSONA_COLOR } from '../personas/colors';
 import { rgba } from '../ui/color';
 
 export function AgentCard({
-  id, selected, disabled, onToggle, flashAll, isSpeaking
+  id, selected, disabled, onToggle, flashAll
 }: {
   id: string;
   selected?: boolean;
   disabled?: boolean;
   onToggle?: (id: string) => void;
   flashAll?: boolean;  // pass true for ~1s after "Summon Entire Collective"
-  isSpeaking?: boolean;  // true when this persona is actively speaking
 }) {
   const p = PERSONA_META[id];
   if (!p) return null;
@@ -27,12 +26,10 @@ export function AgentCard({
         'agent-card agent-tint group w-full text-left min-h-[160px]',
         selected ? 'ring-1 ring-green-400/35 selected-tint' : '',
         disabled ? 'opacity-50 cursor-not-allowed' : 'hover:translate-y-[-1px]',
-        flashAll && selected ? 'flash-green' : '',
-        isSpeaking ? 'speaking-glow' : ''
+        flashAll && selected ? 'flash-green' : ''
       ].join(' ')}
       style={{ 
-        ['--tint' as any]: tint,
-        ['--glow-color' as any]: isSpeaking ? color : 'transparent'
+        ['--tint' as any]: tint
       }}
       aria-pressed={!!selected}
     >

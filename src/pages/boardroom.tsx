@@ -1,6 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { Brain, Mic } from 'lucide-react';
+import { useChime } from '../components/ui/useChime';
+import NeuronCursor from '../components/ui/NeuronCursor';
+import PulseDot from '../components/ui/PulseDot';
 import PageHeader from '../components/PageHeader';
 import { track } from '../lib/track';
 import { ssePost } from '../utils/ssePost';
@@ -28,19 +31,31 @@ const PERSONA_COLORS: Record<string, string> = {
   'Emotion Scientist': 'text-blue-400', 
   'CRO Specialist': 'text-orange-400',
   'Copy Chief': 'text-pink-400',
-  // Dr. personas with colors
+  // Dr. personas with colors (with and without Dr. prefix)
   'Strategic': 'text-purple-400',
+  'Dr. Strategic': 'text-purple-400',
   'Emotion': 'text-pink-400',
+  'Dr. Emotion': 'text-pink-400',
   'Pattern': 'text-blue-400',
+  'Dr. Pattern': 'text-blue-400',
   'Identity': 'text-emerald-400',
+  'Dr. Identity': 'text-emerald-400',
   'Chaos': 'text-orange-400',
+  'Dr. Chaos': 'text-orange-400',
   'ROI': 'text-amber-400',
+  'Dr. ROI': 'text-amber-400',
   'Warfare': 'text-red-400',
+  'Dr. Warfare': 'text-red-400',
   'Omni': 'text-teal-400',
+  'Dr. Omni': 'text-teal-400',
   'First': 'text-indigo-400',
+  'Dr. First': 'text-indigo-400',
   'Truth': 'text-gray-400',
+  'Dr. Truth': 'text-gray-400',
   'Brutal': 'text-violet-400',
+  'Dr. Brutal': 'text-violet-400',
   'Context': 'text-green-400',
+  'Dr. Context': 'text-green-400',
   // System personas
   'Moderator': 'text-gray-300',
   'Synthesis': 'text-white',
@@ -59,7 +74,8 @@ const Boardroom = () => {
   const [flashAll, setFlashAll] = useState(false);
   const [currentTypingIndex, setCurrentTypingIndex] = useState(0);
   const [debateMode, setDebateMode] = useState<'answer' | 'debate'>('answer');
-  const [activeSpeaker, setActiveSpeaker] = useState<string | null>(null);
+  // Moderator stays visible to maintain order!
+  const { go, nope } = useChime();
   // const [freeQuestionsRemaining, setFreeQuestionsRemaining] = useState<number>(() => {
   //   const stored = localStorage.getItem('free_questions_remaining');
   //   return stored ? parseInt(stored, 10) : 20;
@@ -198,6 +214,10 @@ const Boardroom = () => {
     // Trigger flash animation
     setFlashAll(true);
     setTimeout(() => setFlashAll(false), 900);
+    // Just a subtle sound when all 12 are selected
+    if (newSet.size === 12) {
+      go(); // Success sound
+    }
     // Force a check after state update
     setTimeout(() => {
       console.log('Selected PhDs after update:', selectedPhDs.size);
@@ -255,7 +275,7 @@ const Boardroom = () => {
                    PERSONA_META[id].name.toLowerCase().includes(speaker.toLowerCase())
           );
           if (personaId) {
-            setActiveSpeaker(personaId);
+            // Speaker tracking removed - card glow was buggy
           }
           
           if (text.trim()) {
@@ -288,7 +308,8 @@ const Boardroom = () => {
         }
         if (event === 'done') {
           setShowResults(true);
-          setActiveSpeaker(null); // Clear active speaker when done
+          // Clear selections after answer ends - no more green borders
+          setSelectedPhDs(new Set());
         }
       });
       
@@ -308,6 +329,7 @@ const Boardroom = () => {
       
       // Easter eggs for insufficient debaters
       if (selectedPhDs.size === 0 && question.trim()) {
+        nope(); // Error sound
         setDebateResults({ 
           collective_synthesis: `You came to the fight with no fighters? \n\nSeriously? You gotta choose at least 2 personas to have a debate. Otherwise it's just... silence. \n\nSummon some experts and let them tear each other apart.` 
         });
@@ -316,6 +338,7 @@ const Boardroom = () => {
       }
       
       if (selectedPhDs.size === 1 && question.trim()) {
+        nope(); // Error sound
         setDebateResults({ 
           collective_synthesis: `That's not really a debate, is it? More of a monologue. \n\nTry selecting at least 2 agents so they can actually disagree about something. The whole point is watching them argue - one PhD just agrees with themselves.` 
         });
@@ -361,7 +384,7 @@ const Boardroom = () => {
       setDebateLines([]);
       setCurrentTypingIndex(0); // Reset typing index
       setDebateMode('debate'); // Set to debate mode
-        setShowResults(true); // Show results immediately to see streaming
+      setShowResults(true); // Show results immediately to see streaming
       
       await ssePost(`/api/v1/debate`, {
         prompt: questionToSend,
@@ -382,7 +405,7 @@ const Boardroom = () => {
                    PERSONA_META[id].name.toLowerCase().includes(speaker.toLowerCase())
           );
           if (personaId) {
-            setActiveSpeaker(personaId);
+            // Speaker tracking removed - card glow was buggy
           }
           
           if (text.trim()) {
@@ -416,7 +439,8 @@ const Boardroom = () => {
         if (event === 'done') {
           // Debate complete
           console.log('Debate complete');
-          setActiveSpeaker(null); // Clear active speaker when done
+          // Clear selections after debate ends - no more green borders
+          setSelectedPhDs(new Set());
         }
       });
       
@@ -442,6 +466,8 @@ const Boardroom = () => {
 
   return (
     <div className="min-h-screen bg-black relative overflow-hidden">
+      {/* UI Candy Components */}
+      <NeuronCursor />
       {/* Neural Network Canvas */}
       <canvas 
         ref={canvasRef}
@@ -481,7 +507,10 @@ const Boardroom = () => {
             title="Boardroom" 
             subtitle="12 expert personas. One decisive answer."
           />
-          
+          {/* Live status indicator */}
+          <div className="absolute top-8 right-8">
+            <PulseDot live={!isAnalyzing} />
+          </div>
         </div>
 
         <div className="flex pb-8 flex-col lg:flex-row gap-6" style={{ height: 'calc(100vh - 10rem)' }}>
@@ -520,7 +549,6 @@ const Boardroom = () => {
                 disabled={false}
                 onToggle={(personaId) => togglePhD(personaId)}
                 flashAll={flashAll}
-                isSpeaking={activeSpeaker === id}
               />
             ))}
           </div>
@@ -573,22 +601,70 @@ const Boardroom = () => {
             <motion.div
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
-              className="h-full bg-white/5 backdrop-blur-xl rounded-xl p-4 overflow-y-auto relative"
+              className="h-full bg-white/5 backdrop-blur-xl rounded-xl overflow-hidden relative flex flex-col"
             >
-              {/* Moderator Indicator - Glassmorphic Overlay */}
+              {/* Fixed Moderator Section - Only in debate mode */}
               {debateMode === 'debate' && showResults && (
-                <div className={`absolute top-3 right-3 z-10 bg-white/5 backdrop-blur-xl rounded-lg px-3 py-2 border border-white/10 transition-all ${
-                  activeSpeaker === 'moderator' ? 'ring-1 ring-gray-400/50 bg-white/10' : ''
-                }`}>
-                  <div className="flex items-center gap-2">
-                    <Mic className={`w-4 h-4 text-gray-400 ${activeSpeaker === 'moderator' ? 'animate-pulse' : ''}`} />
+                <motion.div 
+                  initial={{ opacity: 0, y: -20 }}
+                  animate={{ 
+                    opacity: 1,  // Always stay at full opacity
+                    y: 0 
+                  }}
+                  transition={{ 
+                    opacity: { duration: 0.5 },
+                    y: { type: "spring", stiffness: 200, damping: 20 }
+                  }}
+                  className="bg-white/8 backdrop-blur-xl border-b border-white/10 p-3 flex gap-3 items-start"
+                >
+                  {/* Moderator Badge */}
+                  <div className="bg-white/5 backdrop-blur-xl rounded-lg px-3 py-2 border border-white/10 flex items-center gap-2 min-w-fit">
+                    <Mic className="w-4 h-4 text-gray-400" />
                     <div>
                       <div className="text-xs font-medium text-white/90">Moderator</div>
-                      <div className="text-[10px] text-white/60">Debate Orchestrator</div>
+                      <div className="text-[10px] text-white/60">Orchestrator</div>
                     </div>
                   </div>
-                </div>
+                  {/* Moderator Dialogue - Enters, speaks, then exits stage right */}
+                  <div className="flex-1 pt-0.5 overflow-hidden">
+                    <motion.div 
+                      initial={{ opacity: 0, x: -50 }}
+                      animate={{ 
+                        opacity: [0, 1, 1, 1, 1, 0],
+                        x: [-50, 0, 0, 0, 0, window.innerWidth],
+                      }}
+                      transition={{ 
+                        times: [0, 0.1, 0.3, 0.7, 0.9, 1],
+                        duration: 4,
+                        delay: 0.5,
+                        ease: "easeInOut"
+                      }}
+                      className="inline-block"
+                    >
+                      <motion.span 
+                        className="text-sm font-medium text-white leading-relaxed inline-block whitespace-nowrap"
+                        animate={{
+                          textShadow: [
+                            "0 0 4px rgba(255,255,255,0.5)",
+                            "0 0 8px rgba(255,255,255,0.8)",
+                            "0 0 4px rgba(255,255,255,0.5)"
+                          ]
+                        }}
+                        transition={{ 
+                          duration: 1.5,
+                          repeat: 2,
+                          repeatType: "reverse"
+                        }}
+                      >
+                        Your opening statements, please.
+                      </motion.span>
+                    </motion.div>
+                  </div>
+                </motion.div>
               )}
+              
+              {/* Scrollable Debate Content */}
+              <div className="flex-1 overflow-y-auto p-4">
               {isAnalyzing && debateLines.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full">
                   <Brain className="w-12 h-12 text-purple-400/30 mb-4 animate-pulse" />
@@ -608,9 +684,11 @@ const Boardroom = () => {
                     </motion.div>
                   )}
                   
-                  {/* Stream debate lines as they arrive */}
+                  {/* Stream debate lines as they arrive - filter out moderator */}
                   <div className="space-y-4">
-                    {debateLines.map((line, index) => (
+                    {debateLines
+                      .filter(line => line.speaker.toLowerCase() !== 'moderator')
+                      .map((line, index) => (
                       <div
                         key={line.id}
                         className="text-white/90 text-xs"
@@ -637,7 +715,8 @@ const Boardroom = () => {
                                   className={`leading-relaxed block ${line.isInterruption ? 'text-white/90 font-medium' : 'text-white/80'}`}
                                   onComplete={() => {
                                     // Move to next speaker after current completes
-                                    if (index < debateLines.length - 1) {
+                                    const filteredLines = debateLines.filter(l => l.speaker.toLowerCase() !== 'moderator');
+                                    if (index < filteredLines.length - 1) {
                                       const delay = debateMode === 'debate' 
                                         ? Math.random() * 600 + 200  // 200-800ms for debates
                                         : 400; // Consistent 400ms for answers
@@ -722,6 +801,7 @@ const Boardroom = () => {
                   )}
                 </div>
               )}
+              </div>
             </motion.div>
           </div>
         </div>

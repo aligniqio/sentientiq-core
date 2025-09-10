@@ -1,5 +1,5 @@
 import { Response } from 'express';
-import { THEATRICAL_PERSONAS, CROSSFIRE_PAIRS, ROLL_CALL } from './theatrical-personas';
+import { THEATRICAL_PERSONAS, CROSSFIRE_PAIRS, ROLL_CALL } from './theatrical-personas.js';
 import { callGroq, callOpenAI, callAnthropic } from './chain';
 import pLimit from 'p-limit';
 

@@ -7,7 +7,7 @@ import Layout from '../components/Layout'
 import Auth from '../pages/auth'
 import HowItWorks from '../pages/how-it-works'
 import AlwaysOnFaculty from '../pages/always-on-faculty'
-import Ask from '../pages/ask'
+// import Ask from '../pages/ask' // REMOVED - replaced by Boardroom
 import Settings from '../pages/settings'
 import Pricing from '../pages/pricing'
 import Billing from '../pages/billing'
@@ -72,19 +72,7 @@ function App() {
               </>
             }
           />
-          <Route
-            path="/ask"
-            element={
-              <>
-                <SignedIn>
-                  <Ask />
-                </SignedIn>
-                <SignedOut>
-                  <Navigate to="/auth" replace />
-                </SignedOut>
-              </>
-            }
-          />
+          {/* /ask route removed - replaced by /boardroom */}
           
           {/* Sage - The Inbox Protector */}
           <Route

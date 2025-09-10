@@ -136,54 +136,6 @@ force = true
 [redirects.headers]
 
 [[redirects]]
-from = "/api/posts/*"
-to = "http://3.15.29.138:8002/api/posts/:splat"
-status = 200.0
-force = true
-
-[redirects.query]
-
-[redirects.conditions]
-
-[redirects.headers]
-
-[[redirects]]
-from = "/api/swarm/*"
-to = "http://3.15.29.138:8003/api/swarm/:splat"
-status = 200.0
-force = true
-
-[redirects.query]
-
-[redirects.conditions]
-
-[redirects.headers]
-
-[[redirects]]
-from = "/api/stripe/webhook"
-to = "http://3.15.29.138:8005/webhook"
-status = 200.0
-force = true
-
-[redirects.query]
-
-[redirects.conditions]
-
-[redirects.headers]
-
-[[redirects]]
-from = "/api/evi/*"
-to = "http://3.15.29.138:8001/api/evi/:splat"
-status = 200.0
-force = true
-
-[redirects.query]
-
-[redirects.conditions]
-
-[redirects.headers]
-
-[[redirects]]
 from = "/*"
 to = "/index.html"
 status = 200.0
