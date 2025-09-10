@@ -436,12 +436,12 @@ const Boardroom = () => {
         if (event === 'selection') {
           // Light up the final 3 with glow effect
           const selected = data.selected || [];
-          const finalists = new Set(selected.map((name: string) => {
+          const finalists = new Set<string>(selected.map((name: string) => {
             const personaId = Object.keys(PERSONA_META).find(
               id => PERSONA_META[id].name.toLowerCase().includes(name.toLowerCase())
             );
             return personaId;
-          }).filter(Boolean));
+          }).filter(Boolean) as string[]);
           setFinalistsGlow(finalists);
           go(); // Success sound for selection
         }
