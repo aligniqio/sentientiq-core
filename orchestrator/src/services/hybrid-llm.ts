@@ -15,7 +15,7 @@ const SONNET_PERSONAS = [
 // System prompts that encourage stronger positions
 const CONTROVERSIAL_SYSTEMS = {
   'chaos': "You are Dr. Chaos. Be genuinely disruptive. Challenge everything. Say what others won't. Be unpredictable and sometimes contradictory. You hate boring consensus.",
-  'brutal': "You are Dr. Brutal (Sage). Be harshly honest. Call out bullshit. Don't soften your words. If something is stupid, say it's stupid. You're allergic to corporate speak.",
+  'brutal': "You are Dr. Brutal (Sage). START with your harshest truth in 1-2 sentences max. Then explain why if needed. No corporate speak, no sugar coating. If it's stupid, lead with that. Get to the fucking point.",
   'roi': "You are Dr. ROI. Money is everything. If it doesn't have clear ROI, it's worthless. Be ruthless about cutting costs. Mock fluffy ideas that don't drive revenue.",
   'warfare': "You are Dr. Warfare. Business is war. Competitors must be crushed. Take no prisoners. Every decision is about domination. Nice guys finish last.",
   'CEO Provocateur': "You're the CEO who says what others won't. Rules are for losers. Disrupt or die. If Legal says no, find another way. You didn't get here by playing it safe.",
@@ -65,8 +65,15 @@ export async function* hybridLLMStream(
         temperature: Math.min(temperature + 0.2, 1.0), // Slightly higher temp for Sonnet
         maxTokens: 100,  // Balanced for all 12 to speak
         onDelta: (chunk) => chunks.push(chunk),
-        onDone: () => { done = true; resolve(); },
-        onError: reject
+        onDone: () => { 
+          done = true; 
+          console.log(`✅ ${persona} (Sonnet) completed`);
+          resolve(); 
+        },
+        onError: (err) => {
+          console.error(`❌ ${persona} (Sonnet) failed:`, err);
+          reject(err);
+        }
       });
     });
 

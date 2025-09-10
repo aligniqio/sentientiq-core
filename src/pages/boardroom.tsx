@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { Brain } from 'lucide-react';
+import { Brain, Mic } from 'lucide-react';
 import PageHeader from '../components/PageHeader';
 import { track } from '../lib/track';
 import { ssePost } from '../utils/ssePost';
@@ -605,7 +605,10 @@ const Boardroom = () => {
                       >
                         {index <= currentTypingIndex && (
                           <div>
-                            <div className={`font-semibold mb-1 ${PERSONA_COLORS[line.speaker] || 'text-purple-400'}`}>
+                            <div className={`font-semibold mb-1 flex items-center gap-2 ${PERSONA_COLORS[line.speaker] || 'text-purple-400'}`}>
+                              {line.speaker === 'Moderator' && (
+                                <Mic className={`w-4 h-4 ${activeSpeaker === 'moderator' ? 'animate-pulse' : ''}`} />
+                              )}
                               {line.speaker.charAt(0).toUpperCase() + line.speaker.slice(1)}
                               {line.isInterruption && (
                                 <span className="ml-2 text-xs text-red-400 italic font-normal">

@@ -628,32 +628,65 @@ ${synthesisContract}`;
     } else {
       // Debate mode: Full theatrical experience
       
-      // 1) Roll call
-      sseWrite(res, "scene", { step: "rollcall" });
-      sseWrite(res, "delta", { speaker: "Moderator", text: `Roll call: ${roster.map(r => `Dr. ${r}`).join(", ")}.` });
-      await onTurnEnd('Moderator');
-      
-      // 2) Opening statements
+      // Opening - Skip roll call, go straight to welcome
       sseWrite(res, 'scene', { step: 'openings' });
       currentMode = 'opening';
       
-      // Moderator introduces opening statements
+      // Simple moderator opening
       sseWrite(res, 'delta', { speaker: 'Moderator', text: 'Drs, distinguished members of the board, welcome. Your opening statements please.' });
       await onTurnEnd('Moderator');
       
       const TOK = { persona: 220, reply: 160, moderator: 350 }; // Higher limits for theatrical debate
-      const ACTIVE = roster; // Active personas
+      
+      // Shuffle personas for random speaking order (but keep roll call in original order)
+      const shuffleArray = <T>(arr: T[]): T[] => {
+        const shuffled = [...arr];
+        for (let i = shuffled.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+        }
+        return shuffled;
+      };
+      
+      // Separate Sonnet personas to avoid bunching
+      const SONNET_PERSONAS = ['chaos', 'roi', 'brutal', 'warfare'];
+      const sonnetInDebate = roster.filter(p => SONNET_PERSONAS.includes(p.toLowerCase()));
+      const gptInDebate = roster.filter(p => !SONNET_PERSONAS.includes(p.toLowerCase()));
+      
+      // Shuffle each group separately
+      const shuffledSonnet = shuffleArray(sonnetInDebate);
+      const shuffledGPT = shuffleArray(gptInDebate);
+      
+      // Interleave them for better distribution
+      const ACTIVE: string[] = [];
+      const maxLen = Math.max(shuffledSonnet.length, shuffledGPT.length);
+      for (let i = 0; i < maxLen; i++) {
+        if (i < shuffledGPT.length) ACTIVE.push(shuffledGPT[i]);
+        if (i < shuffledSonnet.length) ACTIVE.push(shuffledSonnet[i]);
+      }
+      
+      console.log(`🎲 Randomized speaking order: ${ACTIVE.join(', ')}`);
+      console.log(`   (Sonnet: ${sonnetInDebate.join(', ')}, GPT: ${gptInDebate.join(', ')})`)
       
       for (const p of ACTIVE) {
+        console.log(`🎭 Starting opening statement for: ${p}`);
         sseWrite(res, 'turn', { speaker: `Dr. ${p}`, start: true, mode: 'opening' });
         const openingPrompt = `Challenge: ${prompt}\n\n${contextBlock}`;
         await speakBuffered(res, p, 'opening', () => personaOpeningStream(p, openingPrompt, TOK?.persona || 120));
+        console.log(`✓ Completed opening statement for: ${p}`);
         await pause(250); // Natural pause between different speakers
       }
       
-      // 3) Crossfire (if we have rival pairs)
-      const rivals = [['Emotion', 'ROI'], ['Strategic', 'Warfare'], ['Pattern', 'Chaos']];
-      const activePairs = rivals.filter(([a, b]) => roster.includes(a) && roster.includes(b));
+      // 3) Crossfire - dynamically create pairs from available personas
+      const shuffledForPairs = shuffleArray(roster);
+      const activePairs: string[][] = [];
+      
+      // Create random pairs from available personas
+      for (let i = 0; i < shuffledForPairs.length - 1; i += 2) {
+        activePairs.push([shuffledForPairs[i], shuffledForPairs[i + 1]]);
+      }
+      
+      console.log(`⚔️ Crossfire pairs: ${activePairs.map(p => p.join(' vs ')).join(', ')}`);
       
       if (activePairs.length > 0) {
         sseWrite(res, 'scene', { step: 'crossfire' });
