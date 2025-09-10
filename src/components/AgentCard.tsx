@@ -3,13 +3,14 @@ import { PERSONA_COLOR } from '../personas/colors';
 import { rgba } from '../ui/color';
 
 export function AgentCard({
-  id, selected, disabled, onToggle, flashAll
+  id, selected, disabled, onToggle, flashAll, glowing
 }: {
   id: string;
   selected?: boolean;
   disabled?: boolean;
   onToggle?: (id: string) => void;
   flashAll?: boolean;  // pass true for ~1s after "Summon Entire Collective"
+  glowing?: boolean;   // true when this persona is in the finals
 }) {
   const p = PERSONA_META[id];
   if (!p) return null;
@@ -25,6 +26,7 @@ export function AgentCard({
       className={[
         'agent-card agent-tint group w-full text-left min-h-[160px]',
         selected ? 'ring-1 ring-green-400/35 selected-tint' : '',
+        glowing ? 'ring-2 ring-yellow-400/50 animate-pulse shadow-lg shadow-yellow-400/20' : '',
         disabled ? 'opacity-50 cursor-not-allowed' : 'hover:translate-y-[-1px]',
         flashAll && selected ? 'flash-green' : ''
       ].join(' ')}

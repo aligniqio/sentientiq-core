@@ -72,6 +72,7 @@ const Boardroom = () => {
   const [debateLines, setDebateLines] = useState<DebateLine[]>([]);
   const [showResults, setShowResults] = useState(false);
   const [flashAll, setFlashAll] = useState(false);
+  const [finalistsGlow, setFinalistsGlow] = useState<Set<string>>(new Set());
   const [currentTypingIndex, setCurrentTypingIndex] = useState(0);
   const [debateMode, setDebateMode] = useState<'answer' | 'debate'>('answer');
   // Moderator stays visible to maintain order!
@@ -432,6 +433,55 @@ const Boardroom = () => {
             });
           }
         }
+        if (event === 'selection') {
+          // Light up the final 3 with glow effect
+          const selected = data.selected || [];
+          const finalists = new Set(selected.map((name: string) => {
+            const personaId = Object.keys(PERSONA_META).find(
+              id => PERSONA_META[id].name.toLowerCase().includes(name.toLowerCase())
+            );
+            return personaId;
+          }).filter(Boolean));
+          setFinalistsGlow(finalists);
+          go(); // Success sound for selection
+        }
+        if (event === 'semifinal_result') {
+          // Turn off light for semifinal loser
+          const loser = data.loser;
+          if (loser) {
+            setFinalistsGlow(prev => {
+              const updated = new Set(prev);
+              const loserId = Object.keys(PERSONA_META).find(
+                id => PERSONA_META[id].name.toLowerCase().includes(loser.toLowerCase())
+              );
+              if (loserId) updated.delete(loserId);
+              return updated;
+            });
+          }
+        }
+        if (event === 'champion') {
+          // Only champion card stays lit with victory flash
+          const champion = data.champion;
+          if (champion) {
+            const championId = Object.keys(PERSONA_META).find(
+              id => PERSONA_META[id].name.toLowerCase().includes(champion.toLowerCase())
+            );
+            if (championId) {
+              // Flash effect: turn off briefly then back on
+              setFinalistsGlow(new Set());
+              setTimeout(() => {
+                setFinalistsGlow(new Set([championId]));
+                go(); // Victory sound
+              }, 200);
+              setTimeout(() => {
+                setFinalistsGlow(new Set());
+              }, 400);
+              setTimeout(() => {
+                setFinalistsGlow(new Set([championId]));
+              }, 600);
+            }
+          }
+        }
         if (event === 'synth') {
           // Handle synthesis separately if needed
           setDebateResults(data);
@@ -439,8 +489,11 @@ const Boardroom = () => {
         if (event === 'done') {
           // Debate complete
           console.log('Debate complete');
-          // Clear selections after debate ends - no more green borders
+          // Clear selections and finalist glow after debate ends
           setSelectedPhDs(new Set());
+          setTimeout(() => {
+            setFinalistsGlow(new Set()); // Clear glow after a delay
+          }, 5000);
         }
       });
       
@@ -549,6 +602,7 @@ const Boardroom = () => {
                 disabled={false}
                 onToggle={(personaId) => togglePhD(personaId)}
                 flashAll={flashAll}
+                glowing={finalistsGlow.has(id)}
               />
             ))}
           </div>

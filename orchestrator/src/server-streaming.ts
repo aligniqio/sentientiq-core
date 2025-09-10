@@ -723,7 +723,7 @@ Current roster: ${ACTIVE.join(', ')}
 Evaluate their opening statements and rank them.`;
 
         const eliminationSystem = `You are the Moderator. After openings, produce:
-1) Simply say: "Choose your final three by typing their tags. No choice? I'll advance the top three."
+1) Simply say: "Based on their opening statements, I'm advancing the top three performers."
 2) A JSON object on its own line with this shape:
 {"ranked":[{"name":"persona1","score":0.82,"rationale":"..."}, ...]}
 
@@ -776,19 +776,21 @@ Do not add extra keys. Do not wrap JSON in markdown.`;
         const weakest = ranking.slice(-toEliminate);
         const advancing = ranking.slice(0, toAdvance);
         
-        // Poll already announced by moderator above, skip duplicate
-        await pause(500);
+        // Announce the selected final 3 with dramatic flair
+        const finalThreeText = `The final three advancing to championship rounds: ${advancing.map(a => `Dr. ${a}`).join(', ')}. The rest of you, thank you for your insights.`;
+        sseWrite(res, 'delta', { speaker: 'Moderator', text: finalThreeText });
+        await onTurnEnd('Moderator');
+        await pause(1000);
         
-        // Send poll event for user to override
-        sseWrite(res, 'poll', {
-          prompt: `Select 3 to advance to finals`,
-          options: ACTIVE,
-          recommended: advancing,  // Show Moderator's top 3
-          timeoutMs: 15000
+        // Send selection event to highlight the final 3
+        sseWrite(res, 'selection', {
+          selected: advancing,
+          eliminated: weakest,
+          phase: 'finals'
         });
         
-        // Wait for user selection or timeout
-        await pause(15000);  // For now, auto-select after timeout
+        // Dramatic pause for the selection to sink in
+        await pause(3000);
         
         // Use Moderator's recommendation as default
         const eliminated = weakest;
@@ -796,7 +798,7 @@ Do not add extra keys. Do not wrap JSON in markdown.`;
         // Send advance event
         sseWrite(res, 'advance', { selected: advancing });
         
-        const eliminationText = `The board has spoken. We advance with our final three: ${advancing.map(a => `Dr. ${a}`).join(', ')}.`;
+        const eliminationText = `${eliminated.map(e => `Dr. ${e}`).join(', ')}, please leave the boardroom.`;
         sseWrite(res, 'delta', { speaker: 'Moderator', text: eliminationText });
         await onTurnEnd('Moderator');
         await pause(500);
@@ -840,6 +842,9 @@ Do not add extra keys. Do not wrap JSON in markdown.`;
         const semifinalWinner = Math.random() > 0.5 ? A : B;
         const semifinalLoser = semifinalWinner === A ? B : A;
         
+        // Send semifinal result event to dim the loser's card
+        sseWrite(res, 'semifinal_result', { winner: semifinalWinner, loser: semifinalLoser });
+        
         sseWrite(res, 'turn', { speaker: 'Moderator', start: true, mode: 'verdict' });
         const semifinalVerdict = `Dr. ${semifinalWinner} advances. Dr. ${semifinalLoser}, thank you.`;
         sseWrite(res, 'delta', { speaker: 'Moderator', text: semifinalVerdict });
@@ -868,6 +873,9 @@ Do not add extra keys. Do not wrap JSON in markdown.`;
         const reason = champion === semifinalWinner ? 
           'dominated both rounds with precision' : 
           'fresh perspective cuts through groupthink';
+        
+        // Send champion event for victory flash
+        sseWrite(res, 'champion', { champion: champion, reason: reason });
         
         sseWrite(res, 'turn', { speaker: 'Moderator', start: true, mode: 'champion' });
         const championText = `Champion: ${champion}. Reason: ${reason}. Now the plan.`;
