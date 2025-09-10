@@ -592,7 +592,9 @@ const Boardroom = () => {
               {isAnalyzing && debateLines.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full">
                   <Brain className="w-12 h-12 text-purple-400/30 mb-4 animate-pulse" />
-                  <div className="text-white/60 text-sm">The experts are thinking...</div>
+                  <div className="text-white/60 text-sm">
+                    {debateMode === 'debate' ? 'Debate preparation has begun...' : 'The boardroom is deliberating...'}
+                  </div>
                 </div>
               ) : showResults ? (
                 <>
