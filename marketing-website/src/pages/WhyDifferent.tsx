@@ -5,6 +5,7 @@ import NeuralBackground from '@/components/NeuralBackground';
 import NavBar from '@/components/NavBar';
 import Footer from '@/components/Footer';
 import EmotionalTracker from '@/components/EmotionalTracker';
+import EmotionalTrails from '@/components/EmotionalTrails';
 
 export default function WhyDifferent() {
   const [activePhase, setActivePhase] = useState(0);
@@ -69,6 +70,7 @@ export default function WhyDifferent() {
       
       <div className="relative min-h-screen bg-black">
         <EmotionalTracker />
+        <EmotionalTrails />
         <NeuralBackground />
         
         <main className="relative z-10 text-white">
