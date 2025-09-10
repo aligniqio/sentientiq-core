@@ -254,7 +254,7 @@ export class EmotionalIntelligence extends EventEmitter {
 
   private recordBehavior(behavior: MicroBehavior) {
     this.behaviorBuffer.push(behavior);
-    this.lastInteraction = Date.now();
+    this.lastInteraction = Date.now(); // Track for idle detection
     
     // Keep only last 100 behaviors in buffer
     if (this.behaviorBuffer.length > 100) {
@@ -438,6 +438,11 @@ export class EmotionalIntelligence extends EventEmitter {
   // Public API
   public getCurrentEmotionalState(): EmotionalSignature | null {
     return this.currentState;
+  }
+
+  public getIdleTime(): number {
+    // Returns milliseconds since last interaction
+    return Date.now() - this.lastInteraction;
   }
 
   public getEmotionalJourney(): EmotionalSignature[] {
