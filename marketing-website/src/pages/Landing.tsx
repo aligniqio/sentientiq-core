@@ -5,6 +5,7 @@ import NavBar from '@/components/NavBar';
 import Hero from '@/components/Hero';
 import TrustBar from '@/components/TrustBar';
 import WhyVsIntent from '@/components/WhyVsIntent';
+import EmotionalEngine from '@/components/EmotionalEngine';
 import HowItWorks from '@/components/HowItWorks';
 import LiveDemo from '@/components/LiveDemo';
 import ThirtyDayPath from '@/components/ThirtyDayPath';
@@ -25,8 +26,8 @@ export default function Landing() {
       <SEO 
         siteUrl={siteUrl}
         path="/"
-        title="SentientIQ — 3x Your Conversion in 30 Days"
-        description="AI-powered debates that find hidden conversion blockers and prescribe exact fixes. Used by Stripe, Notion, Linear."
+        title="SentientIQ — Marketing at the Speed of Emotion™"
+        description="We detect rage in 300ms. You prevent abandonment in 3 seconds. Real emotions, real predictions, real accountability. Zero mock data. The antithesis to generateBullshitInsights()."
       />
       <div className="relative min-h-screen bg-black">
         <NeuralBackground />
@@ -34,6 +35,9 @@ export default function Landing() {
           <NavBar />
           <Hero />
           <TrustBar />
+          <div id="emotional-engine">
+            <EmotionalEngine />
+          </div>
           <WhyVsIntent />
           <HowItWorks />
           <LiveDemo />
