@@ -15,6 +15,7 @@ import SageInbox from '../pages/sage-inbox'
 import Boardroom from '../pages/boardroom'
 import Onboarding from '../pages/onboarding'
 import DynamicRecommendations from '../pages/dynamic-recommendations'
+import SentientIQScorecard from '../components/SentientIQScorecard'
 
 // Admin pages
 import TenantsPage from './admin/TenantsPage'
@@ -158,6 +159,18 @@ function App() {
             <>
               <SignedIn>
                 <DynamicRecommendations />
+              </SignedIn>
+              <SignedOut>
+                <Navigate to="/auth" replace />
+              </SignedOut>
+            </>
+          } />
+
+          {/* SentientIQ Scorecard - The Crystal Palace of Marketing Truth */}
+          <Route path="/scorecard" element={
+            <>
+              <SignedIn>
+                <SentientIQScorecard />
               </SignedIn>
               <SignedOut>
                 <Navigate to="/auth" replace />

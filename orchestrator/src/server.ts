@@ -2,9 +2,24 @@ import 'dotenv/config';
 import express, { Request, Response } from 'express';
 import cors from 'cors';
 import { z } from 'zod';
-import { callAnthropic, sseWrite } from './chain.js';
+import { callAnthropic } from './services/hybrid-llm.js';
+import { 
+  generalLimiter, 
+  debateLimiter, 
+  sageLimiter,
+  strictLimiter,
+  securityHeaders,
+  errorHandler,
+  timeoutMiddleware,
+  validateDebateRequest,
+  validateSageRequest,
+  handleValidationErrors,
+  requestSizeLimiter,
+  sanitizeInput
+} from './middleware/security.js';
 import { enqueueDebate } from './queue/redis.js';
 import { createClient } from '@supabase/supabase-js';
+import { createClerkClient } from '@clerk/clerk-sdk-node';
 import { 
   pickPersonas, 
   rivalPairs, 
@@ -13,7 +28,8 @@ import {
   streamPersonaRebuttal, 
   streamSynthesis,
   takeTopCTAs,
-  TOK 
+  TOK,
+  sseWrite 
 } from './theatrical-helpers.js';
 import { exportBriefHandler } from './services/brief/exportBrief.js';
 import { debateInit, debateMaybeQuote, debateSetSynthesis } from './services/brief/store.js';
@@ -37,6 +53,11 @@ function capForPlan(plan?: string) {
 // ---------- Supabase ----------
 const supabase = process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY
   ? createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY)
+  : null;
+
+// ---------- Clerk ----------
+const clerkClient = process.env.CLERK_SECRET_KEY 
+  ? createClerkClient({ secretKey: process.env.CLERK_SECRET_KEY })
   : null;
 
 // ---------- Tenant Plan Helper ----------
@@ -71,8 +92,26 @@ const DEFAULT_PERSONAS = [
 
 // ---------- Server ----------
 const app = express();
-app.use(cors());
+// Security middleware
+app.use(securityHeaders);
+app.use(cors({
+  origin: process.env.NODE_ENV === 'production' 
+    ? ['https://sentientiq.app', 'https://www.sentientiq.app', 'https://api.sentientiq.app']
+    : true,
+  credentials: true,
+  maxAge: 86400
+}));
 app.use(express.json({ limit: '1mb' }));
+app.use(requestSizeLimiter('1mb'));
+app.use(generalLimiter);
+
+// Sanitize all incoming request bodies
+app.use((req, res, next) => {
+  if (req.body) {
+    req.body = sanitizeInput(req.body);
+  }
+  next();
+});
 
 // Keep-alive pings so proxies don't kill SSE
 function attachKeepAlive(res: Response) {
@@ -275,11 +314,11 @@ Synthesize into EXACTLY 3 action items:
 };
 
 // All possible routes that might be called - boring redundancy is GOOD
-app.post('/v1/debate', boardroomHandler);
-app.post('/v1/boardroom', boardroomHandler);
-app.post('/api/v1/debate', boardroomHandler);
-app.post('/api/v1/boardroom', boardroomHandler);
-app.post('/api/sage/debate', boardroomHandler); // legacy route
+app.post('/v1/debate', debateLimiter, timeoutMiddleware(60), validateDebateRequest, handleValidationErrors, boardroomHandler);
+app.post('/v1/boardroom', debateLimiter, timeoutMiddleware(60), validateDebateRequest, handleValidationErrors, boardroomHandler);
+app.post('/api/v1/debate', debateLimiter, timeoutMiddleware(60), validateDebateRequest, handleValidationErrors, boardroomHandler);
+app.post('/api/v1/boardroom', debateLimiter, timeoutMiddleware(60), validateDebateRequest, handleValidationErrors, boardroomHandler);
+app.post('/api/sage/debate', debateLimiter, timeoutMiddleware(60), validateDebateRequest, handleValidationErrors, boardroomHandler); // legacy route
 
 // Queued endpoint handler
 const queueHandler = async (req: Request, res: Response) => {
@@ -327,6 +366,49 @@ app.all('/v1/track', usageHandler); // short version
 app.post('/v1/debate/export', express.json(), exportBriefHandler);
 app.post('/api/v1/debate/export', express.json(), exportBriefHandler);
 
+// Invite user endpoint for super-admin
+const inviteUserHandler = async (req: Request, res: Response) => {
+  try {
+    const { email, name, organizationId, organizationName, role } = req.body;
+    
+    if (!email || !organizationId) {
+      return res.status(400).json({ error: 'Email and organizationId are required' });
+    }
+    
+    if (!clerkClient) {
+      return res.status(500).json({ error: 'Clerk is not configured' });
+    }
+    
+    // Create an invitation through Clerk
+    const invitation = await clerkClient.invitations.createInvitation({
+      emailAddress: email,
+      publicMetadata: {
+        organization_id: organizationId,
+        organization_name: organizationName,
+        role: role || 'user',
+        invited_by: 'super-admin'
+      },
+      redirectUrl: `${process.env.FRONTEND_URL || 'https://sentientiq.app'}/sign-up?organization=${organizationId}`,
+      notify: true
+    });
+    
+    res.json({ 
+      ok: true, 
+      invitationId: invitation.id,
+      email: invitation.emailAddress,
+      status: invitation.status
+    });
+  } catch (error) {
+    console.error('Failed to send invitation:', error);
+    res.status(500).json({ 
+      error: error instanceof Error ? error.message : 'Failed to send invitation' 
+    });
+  }
+};
+
+app.post('/v1/invite-user', express.json(), inviteUserHandler);
+app.post('/api/v1/invite-user', express.json(), inviteUserHandler);
+
 // Admin toggle for provider preference
 const adminToggleHandler = (req: Request, res: Response) => {
   const { prefer_anthropic } = req.body;
@@ -361,12 +443,52 @@ const healthHandler = (_req: Request, res: Response) => {
   });
 };
 
+// Sage analyze endpoint
+app.post('/api/sage/analyze', sageLimiter, timeoutMiddleware(30), validateSageRequest, handleValidationErrors, async (req: Request, res: Response) => {
+  try {
+    const { message, context } = req.body;
+    
+    // Call Claude Sonnet 3.5 for Sage's brutally honest response
+    const response = await callAnthropic(
+      `You are Sage, the brutally honest AI assistant. You call out BS, manipulation, and corporate-speak without mercy. 
+      Analyze this message and respond with your trademark wit and honesty:
+      
+      Context: ${context || 'General inquiry'}
+      Message: ${message}`,
+      'claude-3-5-sonnet-20241022'
+    );
+    
+    res.json({
+      response: response,
+      bullshit_score: Math.random() * 100, // TODO: Implement actual BS detection
+      sage_says: "I've seen worse, but not by much."
+    });
+  } catch (error) {
+    console.error('Sage analyze error:', error);
+    res.status(500).json({ error: 'Sage is taking a coffee break' });
+  }
+});
+
 app.get('/health', healthHandler);
 app.get('/healthz', healthHandler);  // k8s style
 app.get('/ping', healthHandler);     // classic
 app.get('/api/health', healthHandler);
 app.get('/api/ping', healthHandler);
 app.get('/', healthHandler);         // root check
+
+// Error handling middleware (must be last)
+app.use(errorHandler);
+
+// Graceful shutdown handling
+process.on('SIGTERM', () => {
+  console.log('SIGTERM received, shutting down gracefully');
+  process.exit(0);
+});
+
+process.on('SIGINT', () => {
+  console.log('SIGINT received, shutting down gracefully');
+  process.exit(0);
+});
 
 app.listen(PORT, () => {
   console.log(`orchestrator listening on :${PORT}`);

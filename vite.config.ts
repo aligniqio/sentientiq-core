@@ -13,6 +13,10 @@ export default defineConfig({
     port: 3000,
     open: true,
     proxy: {
+      '/api/sage': {
+        target: 'http://localhost:8004',
+        changeOrigin: true,
+      },
       '/api': {
         target: 'http://localhost:8787',
         changeOrigin: true,

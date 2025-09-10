@@ -122,44 +122,61 @@ export class SageService {
   // Generate Sage's response
   async generateResponse(
     input: string,
-    _context?: string,
-    _memories?: SageMemory[]
+    context?: string,
+    memories?: SageMemory[]
   ): Promise<string> {
-    const analysis = this.analyzeAuthenticity(input);
-    
-    // const memoryContext = memories?.length 
-    //   ? `\nRelevant memories:\n${memories.map(m => `- ${m.content} (${m.memory_type})`).join('\n')}`
-    //   : '';
+    try {
+      // Call the backend Sage API
+      const apiUrl = import.meta.env.DEV 
+        ? '/api/sage/analyze'  // Use Vite proxy in dev
+        : 'https://api.sentientiq.app/api/sage/analyze'; // Production API
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          message: input,
+          sender: 'user@sentientiq.ai',
+          context: context || 'crystal_ball_consultation',
+          memories: memories?.map(m => ({
+            content: m.content,
+            type: m.memory_type,
+            authenticity: m.authenticity_score
+          }))
+        }),
+      });
 
-    // const prompt = `You are Sage, a brutally honest AI gatekeeper with a dry sense of humor and zero tolerance for BS.
-    // [Rest of prompt commented out for backend implementation]`;
+      if (!response.ok) {
+        throw new Error('Sage API error');
+      }
 
-    // TODO: Call through backend API
-    // const response = await openai.chat.completions.create({
-    //   model: 'gpt-4-turbo-preview',
-    //   messages: [{ role: 'system', content: prompt }],
-    //   temperature: 0.8,
-    //   max_tokens: 200,
-    // });
-    
-    // Placeholder response for now
-    const sageResponse = analysis.verdict;
+      const data = await response.json();
+      
+      // Store this interaction as a memory
+      if (data.analysis) {
+        const responseText = data.sage_says || data.response || data.verdict || '';
+        await this.storeMemory({
+          content: `Responded to: "${input.slice(0, 100)}..."`,
+          context: { 
+            authenticity_score: data.analysis.bullshit_score || data.analysis.authenticityScore || 0,
+            flags: data.analysis.manipulation_tactics || data.analysis.manipulationFlags || [],
+            response_preview: responseText.slice(0, 100)
+          },
+          memory_type: (data.analysis.bullshit_score || data.analysis.authenticityScore || 0) > 0.6 ? 'roast' : 'observation',
+          authenticity_score: data.analysis.bullshit_score || data.analysis.authenticityScore || 0,
+          manipulation_flags: data.analysis.manipulation_tactics || data.analysis.manipulationFlags || [],
+          sage_commentary: responseText,
+        });
+      }
 
-    // Store this interaction as a memory
-    await this.storeMemory({
-      content: `Responded to: "${input.slice(0, 100)}..."`,
-      context: { 
-        authenticity_score: analysis.score,
-        flags: analysis.flags,
-        response_preview: sageResponse.slice(0, 100)
-      },
-      memory_type: analysis.score < 0.4 ? 'roast' : 'observation',
-      authenticity_score: analysis.score,
-      manipulation_flags: analysis.flags,
-      sage_commentary: sageResponse,
-    });
-
-    return sageResponse;
+      return data.sage_says || data.response || data.verdict || "Even Sage is processing this one...";
+    } catch (error) {
+      console.error('Sage API error:', error);
+      // Fallback to local analysis
+      const analysis = this.analyzeAuthenticity(input);
+      return analysis.verdict;
+    }
   }
 
   // Get Sage's mood based on recent interactions

@@ -65,7 +65,7 @@ Cache-Control = "no-store"
 
 [[redirects]]
 from = "/api/boardroom/save-brief"
-to = "https://api.sentientiq.app/v1/debate/save-brief"
+to = "https://api.sentientiq.app/api/boardroom/save-brief"
 status = 200.0
 force = true
 
@@ -77,7 +77,19 @@ force = true
 
 [[redirects]]
 from = "/api/sage/analyze"
-to = "https://api.sentientiq.app/v1/analyze"
+to = "https://api.sentientiq.app/api/sage/analyze"
+status = 200.0
+force = true
+
+[redirects.query]
+
+[redirects.conditions]
+
+[redirects.headers]
+
+[[redirects]]
+from = "/api/health"
+to = "https://api.sentientiq.app/api/health"
 status = 200.0
 force = true
 
@@ -89,7 +101,7 @@ force = true
 
 [[redirects]]
 from = "/api/v1/debate"
-to = "https://api.sentientiq.app/v1/boardroom"
+to = "https://api.sentientiq.app/api/v1/debate"
 status = 200.0
 force = true
 
@@ -101,7 +113,7 @@ force = true
 
 [[redirects]]
 from = "/api/sage/debate"
-to = "https://api.sentientiq.app/v1/boardroom"
+to = "https://api.sentientiq.app/api/sage/debate"
 status = 200.0
 force = true
 
@@ -113,7 +125,7 @@ force = true
 
 [[redirects]]
 from = "/api/usage/track"
-to = "https://api.sentientiq.app/v1/usage/track"
+to = "https://api.sentientiq.app/api/usage/track"
 status = 200.0
 force = true
 
@@ -125,7 +137,19 @@ force = true
 
 [[redirects]]
 from = "/api/debate/export"
-to = "https://api.sentientiq.app/v1/debate/export"
+to = "https://api.sentientiq.app/api/debate/export"
+status = 200.0
+force = true
+
+[redirects.query]
+
+[redirects.conditions]
+
+[redirects.headers]
+
+[[redirects]]
+from = "/api/*"
+to = "https://api.sentientiq.app/api/:splat"
 status = 200.0
 force = true
 

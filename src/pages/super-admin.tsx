@@ -8,17 +8,15 @@ import {
   TrendingUp,
   Network,
   Zap,
-  AlertTriangle,
   Plus,
   X,
   Eye,
-  UserCheck,
-  Activity,
-  Award,
-  Target,
-  Crown
+  Crown,
+  Trash2,
+  UserPlus
 } from 'lucide-react';
 import { useUser } from '@clerk/clerk-react';
+import PageHeader from '../components/PageHeader';
 
 interface Tenant {
   id: string;
@@ -30,12 +28,22 @@ interface Tenant {
   mrr: number;
   active_users: number;
   questions_this_month: number;
+  revenue_share_percent: number;
+  referral_code?: string;
+  stripe_customer_id?: string;
 }
 
 export default function SuperAdmin() {
   const { user } = useUser();
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [showAddTenant, setShowAddTenant] = useState(false);
+  const [showAddUser, setShowAddUser] = useState(false);
+  const [selectedOrgForUser, setSelectedOrgForUser] = useState<Tenant | null>(null);
+  const [newUser, setNewUser] = useState({
+    name: '',
+    email: '',
+    role: 'user'
+  });
   const [stats, setStats] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [supabase, setSupabase] = useState<any>(null);
@@ -43,7 +51,7 @@ export default function SuperAdmin() {
     company_name: '',
     email: '',
     tenant_type: 'standard',
-    commission_rate: 20 // Default 20% for MLM
+    revenue_share: 0.30 // Default 30% revenue share
   });
 
   // Initialize Supabase client lazily
@@ -66,47 +74,49 @@ export default function SuperAdmin() {
     initSupabase();
   }, []);
 
-  // Zeus-level stats for the empire
+  // Real stats from actual data
   const fetchStats = async () => {
-    if (!supabase) return; // Skip if no Supabase client
+    if (!supabase) return;
     try {
-      // Fetch all the metrics
-      const [tenantsData, usersData, usageData] = await Promise.all([
-        supabase.from('tenants').select('*'),
-        supabase.from('users').select('*'),
-        supabase.from('usage_logs').select('*')
+      // Fetch real metrics
+      const [orgsData, membershipsData] = await Promise.all([
+        supabase.from('organizations').select('*'),
+        supabase.from('memberships').select('*')
       ]);
 
-      const totalTenants = tenantsData.data?.length || 0;
-      const agencyTenants = tenantsData.data?.filter((t: any) => t.is_white_label).length || 0;
-      const totalUsers = usersData.data?.length || 0;
-      const totalQuestions = usageData.data?.filter((u: any) => u.action === 'phd_question').length || 0;
+      const totalOrgs = orgsData.data?.length || 0;
+      const whiteLabel = orgsData.data?.filter((t: any) => t.is_white_label).length || 0;
+      const totalMembers = membershipsData.data?.length || 0;
       
-      // Calculate MRR
-      const mrr = tenantsData.data?.reduce((sum: number, t: any) => {
-        const tierPrices: Record<string, number> = { free: 0, starter: 99, professional: 499, enterprise: 2000, agency: 999 };
-        return sum + (tierPrices[t.subscription_tier] || 0);
+      // Calculate real MRR based on subscription tiers
+      const tierPrices: Record<string, number> = { 
+        free: 0, 
+        starter: 99, 
+        professional: 499, 
+        enterprise: 2000, 
+        agency: 999 
+      };
+      
+      const mrr = orgsData.data?.reduce((sum: number, org: any) => {
+        return sum + (tierPrices[org.subscription_tier] || 0);
       }, 0) || 0;
 
-      // Calculate growth rate (mock for now)
-      const growthRate = 147; // You'd calculate this from historical data
-      
-      // MLM Network value (agencies * their average customers * commission)
-      const networkValue = agencyTenants * 5 * 99 * 0.2; // Assuming 5 customers per agency, $99 avg, 20% commission
+      // Calculate average revenue share
+      const avgRevShare = orgsData.data?.reduce((sum: number, org: any) => {
+        return sum + (org.revenue_share_percent || 0);
+      }, 0) / Math.max(totalOrgs, 1);
 
+      // Set only the stats we have real data for
       setStats([
-        { icon: Building2, label: 'Total Tenants', value: totalTenants.toString(), color: 'from-blue-500 to-blue-600', trend: '+12%' },
-        { icon: Crown, label: 'Agency Partners', value: agencyTenants.toString(), color: 'from-purple-500 to-pink-500', trend: '+47%' },
-        { icon: DollarSign, label: 'MRR', value: `$${mrr.toLocaleString()}`, color: 'from-green-500 to-green-600', trend: '+23%' },
-        { icon: Network, label: 'Network Value', value: `$${Math.round(networkValue).toLocaleString()}`, color: 'from-yellow-500 to-orange-500', trend: '+89%' },
-        { icon: Users, label: 'Active Users', value: totalUsers.toString(), color: 'from-indigo-500 to-purple-600', trend: '+34%' },
-        { icon: Brain, label: 'PhD Questions', value: totalQuestions.toLocaleString(), color: 'from-pink-500 to-rose-600', trend: '+156%' },
-        { icon: TrendingUp, label: 'Growth Rate', value: `${growthRate}%`, color: 'from-emerald-500 to-teal-600', trend: 'Monthly' },
-        { icon: Zap, label: 'API Calls Today', value: '47.2K', color: 'from-orange-500 to-red-500', trend: 'Live' },
-        { icon: AlertTriangle, label: 'Truth Detection', value: '99.7%', color: 'from-red-600 to-red-700', trend: 'Accuracy' },
-        { icon: Award, label: 'Top Performer', value: 'TechCorp', color: 'from-purple-600 to-indigo-600', trend: '$47K MRR' },
-        { icon: Target, label: 'Conversion', value: '31%', color: 'from-cyan-500 to-blue-500', trend: '+5%' },
-        { icon: Activity, label: 'Server Health', value: '100%', color: 'from-green-600 to-emerald-600', trend: 'Optimal' },
+        { icon: Building2, label: 'Organizations', value: totalOrgs.toString(), color: 'from-blue-500 to-blue-600' },
+        { icon: Crown, label: 'White Label', value: whiteLabel.toString(), color: 'from-purple-500 to-pink-500' },
+        { icon: DollarSign, label: 'MRR', value: `$${mrr.toLocaleString()}`, color: 'from-green-500 to-green-600' },
+        { icon: Users, label: 'Total Members', value: totalMembers.toString(), color: 'from-indigo-500 to-purple-600' },
+        // Additional metrics
+        { icon: Network, label: 'Avg Rev Share', value: `${(avgRevShare * 100).toFixed(1)}%`, color: 'from-yellow-500 to-orange-500' },
+        { icon: Brain, label: 'Questions', value: '-', color: 'from-pink-500 to-rose-600' },
+        { icon: TrendingUp, label: 'Growth', value: '-', color: 'from-emerald-500 to-teal-600' },
+        { icon: Zap, label: 'Active Today', value: '-', color: 'from-orange-500 to-red-500' },
       ]);
     } catch (error) {
       console.error('Failed to fetch stats:', error);
@@ -121,14 +131,14 @@ export default function SuperAdmin() {
     try {
       // Create tenant in Supabase
       const { error } = await supabase
-        .from('tenants')
+        .from('organizations')
         .insert({
           company_name: newTenant.company_name,
           domain,
           admin_email: newTenant.email,
           is_white_label: newTenant.tenant_type === 'agency',
           subscription_tier: newTenant.tenant_type === 'agency' ? 'agency' : 'professional',
-          commission_rate: newTenant.tenant_type === 'agency' ? newTenant.commission_rate : 0,
+          revenue_share_percent: newTenant.tenant_type === 'agency' ? newTenant.revenue_share : 0.30,
           created_at: new Date().toISOString(),
           settings: {
             branding: {
@@ -147,16 +157,15 @@ export default function SuperAdmin() {
       
       if (error) throw error;
       
-      // Send welcome email (you'd implement this)
-      console.log(`🚀 New ${newTenant.tenant_type} tenant created: ${newTenant.company_name}`);
+      console.log(`New ${newTenant.tenant_type} organization created: ${newTenant.company_name}`);
       
       // Refresh tenants list
       fetchTenants();
       setShowAddTenant(false);
-      setNewTenant({ company_name: '', email: '', tenant_type: 'standard', commission_rate: 20 });
+      setNewTenant({ company_name: '', email: '', tenant_type: 'standard', revenue_share: 0.30 });
       
-      // Show success animation
-      alert(`✅ Tenant ${newTenant.company_name} created! Welcome to the truth empire.`);
+      // Show success message
+      alert(`✅ Organization ${newTenant.company_name} created successfully.`);
     } catch (error) {
       console.error('Failed to add tenant:', error);
       alert('Failed to create tenant. Check console for details.');
@@ -167,7 +176,7 @@ export default function SuperAdmin() {
     if (!supabase) return; // Skip if no Supabase client
     try {
       const { data, error } = await supabase
-        .from('tenants')
+        .from('organizations')
         .select('*')
         .order('created_at', { ascending: false });
       
@@ -180,10 +189,100 @@ export default function SuperAdmin() {
     }
   };
 
-  const impersonateTenant = async (tenantId: string) => {
-    // This would set a special admin session to view the app as this tenant
-    console.log(`👁️ Impersonating tenant ${tenantId}`);
-    alert('Impersonation feature coming soon! This will let you see their exact experience.');
+  const switchContext = (tenant: Tenant) => {
+    // Store the organization context
+    localStorage.setItem('admin_context_org', JSON.stringify(tenant));
+    console.log(`Switching context to: ${tenant.company_name}`);
+    // You could navigate to a tenant-specific view or update the UI
+    alert(`Context switched to ${tenant.company_name}. You're now viewing as this organization.`);
+  };
+
+  const openAddUserModal = (tenant: Tenant) => {
+    setSelectedOrgForUser(tenant);
+    setShowAddUser(true);
+    setNewUser({ name: '', email: '', role: 'user' });
+  };
+
+  const addUserToOrg = async () => {
+    if (!supabase || !selectedOrgForUser) return;
+    
+    try {
+      // Call the backend API to send Clerk invitation
+      const inviteResponse = await fetch('/api/v1/invite-user', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          email: newUser.email,
+          name: newUser.name,
+          organizationId: selectedOrgForUser.id,
+          organizationName: selectedOrgForUser.company_name,
+          role: newUser.role
+        })
+      });
+
+      if (!inviteResponse.ok) {
+        const errorData = await inviteResponse.json();
+        throw new Error(errorData.error || 'Failed to send invitation');
+      }
+
+      const { invitationId } = await inviteResponse.json();
+      
+      // Then add user to memberships table with Clerk invitation ID
+      const { error } = await supabase
+        .from('memberships')
+        .insert({
+          organization_id: selectedOrgForUser.id,
+          user_email: newUser.email,
+          user_name: newUser.name,
+          role: newUser.role,
+          clerk_invitation_id: invitationId,
+          invitation_status: 'pending',
+          created_at: new Date().toISOString()
+        });
+      
+      if (error) throw error;
+      
+      alert(`✅ Invitation sent to ${newUser.name} (${newUser.email}) for ${selectedOrgForUser.company_name}`);
+      setShowAddUser(false);
+      setSelectedOrgForUser(null);
+      setNewUser({ name: '', email: '', role: 'user' }); // Reset form
+      // Optionally refresh stats
+      fetchStats();
+    } catch (error) {
+      console.error('Failed to add user:', error);
+      alert(`Failed to send invitation: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  };
+
+  const deleteTenant = async (tenant: Tenant) => {
+    const confirmDelete = window.confirm(
+      `Are you sure you want to delete ${tenant.company_name}?\n\nThis action cannot be undone.`
+    );
+    
+    if (!confirmDelete) return;
+    
+    if (!supabase) {
+      alert('Database connection not available');
+      return;
+    }
+    
+    try {
+      const { error } = await supabase
+        .from('organizations')
+        .delete()
+        .eq('id', tenant.id);
+      
+      if (error) throw error;
+      
+      // Refresh the list
+      fetchTenants();
+      alert(`✅ ${tenant.company_name} has been deleted.`);
+    } catch (error) {
+      console.error('Failed to delete tenant:', error);
+      alert('Failed to delete organization. Check console for details.');
+    }
   };
 
   useEffect(() => {
@@ -216,40 +315,31 @@ export default function SuperAdmin() {
   }, [user, supabase]);
 
   return (
-    <div className="min-h-screen bg-black relative overflow-hidden">
-      {/* Epic Zeus Background */}
-      <div className="absolute inset-0">
-        <div className="absolute inset-0 bg-gradient-to-br from-purple-950/20 via-black to-blue-950/20" />
-        <div className="absolute top-0 left-1/4 w-[600px] h-[600px] bg-purple-600/10 rounded-full blur-3xl animate-pulse" />
-        <div className="absolute bottom-0 right-1/4 w-[600px] h-[600px] bg-blue-600/10 rounded-full blur-3xl animate-pulse delay-1000" />
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-gradient-radial from-indigo-600/5 via-transparent to-transparent rounded-full blur-3xl" />
-      </div>
+    <div className="min-h-screen bg-black text-white">
+      {/* Neural Cathedral Background - matching billing page */}
+      <div className="neural-bg" />
       
-      <div className="relative z-10 max-w-[1600px] mx-auto p-6">
-        
-        {/* Zeus Header */}
-        <div className="flex justify-between items-center mb-8">
-          <div>
-            <h1 className="text-5xl font-bold text-white mb-2 flex items-center gap-3">
-              <Zap className="w-12 h-12 text-yellow-400" />
-              SuperAdmin Control Center
-            </h1>
-            <p className="text-white/60 text-lg">
-              Zeus mode activated. Command the emotional intelligence empire.
-            </p>
-          </div>
+      <div className="relative z-10">
+        <div className="mx-auto max-w-6xl px-6 pt-12">
+          {/* Header */}
+          <PageHeader 
+            title="Super Admin"
+            subtitle="Organization & membership management dashboard"
+          />
           
-          <button
-            onClick={() => setShowAddTenant(true)}
-            className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl hover:from-purple-700 hover:to-pink-700 transition-all shadow-lg shadow-purple-500/20"
-          >
-            <Plus className="w-5 h-5" />
-            Add Tenant
-          </button>
-        </div>
+          {/* Add Organization Button */}
+          <div className="flex justify-end mb-6">
+            <button
+              onClick={() => setShowAddTenant(true)}
+              className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl hover:from-purple-700 hover:to-pink-700 transition-all shadow-lg shadow-purple-500/20"
+            >
+              <Plus className="w-5 h-5" />
+              Add Organization
+            </button>
+          </div>
 
-        {/* 12-Box Power Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-8">
+          {/* Stats Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-8">
           {stats.map((stat, idx) => (
             <motion.div
               key={idx}
@@ -281,19 +371,19 @@ export default function SuperAdmin() {
                 )}
               </div>
             </motion.div>
-          ))}
-        </div>
+            ))}
+          </div>
 
-        {/* Tenants Empire Table */}
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-white/5 backdrop-blur-xl rounded-2xl border border-white/10 p-6"
-        >
+          {/* Organizations Table */}
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="glass-card p-6"
+          >
           <div className="flex justify-between items-center mb-6">
-            <h2 className="text-2xl font-bold text-white">The Truth Network</h2>
+            <h2 className="text-2xl font-bold text-white">Organizations</h2>
             <div className="text-sm text-white/60">
-              {tenants.filter(t => t.is_white_label).length} Agency Partners • {tenants.length} Total Tenants
+              {tenants.filter(t => t.is_white_label).length} White Label • {tenants.length} Total
             </div>
           </div>
           
@@ -305,9 +395,9 @@ export default function SuperAdmin() {
                   <th className="text-left text-white/60 font-medium pb-4">Domain</th>
                   <th className="text-left text-white/60 font-medium pb-4">Type</th>
                   <th className="text-left text-white/60 font-medium pb-4">Tier</th>
-                  <th className="text-left text-white/60 font-medium pb-4">MRR</th>
-                  <th className="text-left text-white/60 font-medium pb-4">Users</th>
-                  <th className="text-left text-white/60 font-medium pb-4">Questions</th>
+                  <th className="text-left text-white/60 font-medium pb-4">Rev Share</th>
+                  <th className="text-left text-white/60 font-medium pb-4">Referral</th>
+                  <th className="text-left text-white/60 font-medium pb-4">Stripe</th>
                   <th className="text-left text-white/60 font-medium pb-4">Created</th>
                   <th className="text-left text-white/60 font-medium pb-4">Actions</th>
                 </tr>
@@ -316,13 +406,13 @@ export default function SuperAdmin() {
                 {loading ? (
                   <tr>
                     <td colSpan={9} className="text-center py-8 text-white/40">
-                      Loading tenants...
+                      Loading organizations...
                     </td>
                   </tr>
                 ) : tenants.length === 0 ? (
                   <tr>
                     <td colSpan={9} className="text-center py-8 text-white/40">
-                      No tenants yet. Click "Add Tenant" to start the empire!
+                      No organizations yet. Click "Add Tenant" to create one.
                     </td>
                   </tr>
                 ) : (
@@ -348,13 +438,13 @@ export default function SuperAdmin() {
                         <span className="text-white/80 capitalize">{tenant.subscription_tier}</span>
                       </td>
                       <td className="py-4 text-green-400 font-medium">
-                        ${tenant.mrr || 0}
+                        {(tenant.revenue_share_percent * 100).toFixed(0)}%
                       </td>
                       <td className="py-4 text-white/60">
-                        {tenant.active_users || 0}
+                        {tenant.referral_code || '-'}
                       </td>
                       <td className="py-4 text-white/60">
-                        {tenant.questions_this_month || 0}
+                        {tenant.stripe_customer_id ? '✓' : '-'}
                       </td>
                       <td className="py-4 text-white/60">
                         {new Date(tenant.created_at).toLocaleDateString()}
@@ -362,15 +452,24 @@ export default function SuperAdmin() {
                       <td className="py-4">
                         <button 
                           className="text-blue-400 hover:text-blue-300 mr-3 transition-colors"
-                          onClick={() => window.open(`/admin/tenant/${tenant.id}`, '_blank')}
+                          onClick={() => switchContext(tenant)}
+                          title="Switch Context"
                         >
                           <Eye className="w-4 h-4 inline" />
                         </button>
                         <button 
-                          className="text-yellow-400 hover:text-yellow-300 transition-colors"
-                          onClick={() => impersonateTenant(tenant.id)}
+                          className="text-green-400 hover:text-green-300 mr-3 transition-colors"
+                          onClick={() => openAddUserModal(tenant)}
+                          title="Add User"
                         >
-                          <UserCheck className="w-4 h-4 inline" />
+                          <UserPlus className="w-4 h-4 inline" />
+                        </button>
+                        <button 
+                          className="text-red-400 hover:text-red-300 transition-colors"
+                          onClick={() => deleteTenant(tenant)}
+                          title="Delete Organization"
+                        >
+                          <Trash2 className="w-4 h-4 inline" />
                         </button>
                       </td>
                     </motion.tr>
@@ -443,13 +542,13 @@ export default function SuperAdmin() {
                         type="number"
                         min="10"
                         max="50"
-                        value={newTenant.commission_rate}
-                        onChange={(e) => setNewTenant({...newTenant, commission_rate: parseInt(e.target.value)})}
+                        value={newTenant.revenue_share * 100}
+                        onChange={(e) => setNewTenant({...newTenant, revenue_share: parseInt(e.target.value) / 100})}
                         className="w-full px-4 py-3 bg-white/5 border border-white/20 rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-purple-400 transition-colors"
                         placeholder="20"
                       />
                       <p className="text-xs text-white/40 mt-1">
-                        Agency gets {newTenant.commission_rate}% of all revenue from their referred customers
+                        Agency gets {(newTenant.revenue_share * 100).toFixed(0)}% of all revenue from their referred customers
                       </p>
                     </div>
                   )}
@@ -460,7 +559,7 @@ export default function SuperAdmin() {
                         <>
                           <span className="font-bold text-purple-400">Agency Partner Benefits:</span>
                           <br />• White-label the entire platform
-                          <br />• {newTenant.commission_rate}% commission on all sales
+                          <br />• {(newTenant.revenue_share * 100).toFixed(0)}% revenue share on all sales
                           <br />• API access for custom integrations
                           <br />• Priority support & training
                         </>
@@ -496,6 +595,118 @@ export default function SuperAdmin() {
             </div>
           )}
         </AnimatePresence>
+
+        {/* Add User Modal */}
+        <AnimatePresence>
+          {showAddUser && (
+            <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-6">
+              <motion.div
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.9, opacity: 0 }}
+                className="bg-gradient-to-br from-gray-900 to-gray-950 rounded-2xl p-8 w-full max-w-md border border-green-500/20 shadow-2xl shadow-green-500/10"
+              >
+                <div className="flex justify-between items-center mb-6">
+                  <h3 className="text-2xl font-bold text-white">Add New User</h3>
+                  <button
+                    onClick={() => {
+                      setShowAddUser(false);
+                      setSelectedOrgForUser(null);
+                    }}
+                    className="text-white/60 hover:text-white transition-colors"
+                  >
+                    <X className="w-6 h-6" />
+                  </button>
+                </div>
+
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-white/60 mb-2 text-sm font-medium">Full Name</label>
+                    <input
+                      type="text"
+                      value={newUser.name}
+                      onChange={(e) => setNewUser({...newUser, name: e.target.value})}
+                      className="w-full px-4 py-3 bg-white/5 border border-white/20 rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-green-400 transition-colors"
+                      placeholder="John Doe"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-white/60 mb-2 text-sm font-medium">Email Address</label>
+                    <input
+                      type="email"
+                      value={newUser.email}
+                      onChange={(e) => setNewUser({...newUser, email: e.target.value})}
+                      className="w-full px-4 py-3 bg-white/5 border border-white/20 rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-green-400 transition-colors"
+                      placeholder="john@example.com"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-white/60 mb-2 text-sm font-medium">Associated Tenant</label>
+                    <select
+                      value={selectedOrgForUser?.id || ''}
+                      onChange={(e) => {
+                        const org = tenants.find(t => t.id === e.target.value);
+                        setSelectedOrgForUser(org || null);
+                      }}
+                      className="w-full px-4 py-3 bg-white/5 border border-white/20 rounded-xl text-white focus:outline-none focus:border-green-400 transition-colors"
+                    >
+                      <option value="">Select a tenant...</option>
+                      {tenants.map(tenant => (
+                        <option key={tenant.id} value={tenant.id}>
+                          {tenant.company_name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-white/60 mb-2 text-sm font-medium">Role</label>
+                    <select
+                      value={newUser.role}
+                      onChange={(e) => setNewUser({...newUser, role: e.target.value})}
+                      className="w-full px-4 py-3 bg-white/5 border border-white/20 rounded-xl text-white focus:outline-none focus:border-green-400 transition-colors"
+                    >
+                      <option value="user">User</option>
+                      <option value="admin">Admin</option>
+                      <option value="owner">Owner</option>
+                    </select>
+                  </div>
+
+                  <div className="bg-gradient-to-r from-green-500/10 to-blue-500/10 rounded-xl p-4 border border-green-500/20">
+                    <p className="text-sm text-white/80">
+                      <span className="font-bold text-green-400">User Access:</span>
+                      <br />• Will receive an invitation email
+                      <br />• Access to {selectedOrgForUser?.company_name || 'selected organization'}
+                      <br />• {newUser.role === 'admin' ? 'Can manage team settings' : newUser.role === 'owner' ? 'Full organization control' : 'Standard user access'}
+                    </p>
+                  </div>
+
+                  <div className="flex gap-3 mt-6">
+                    <button
+                      onClick={addUserToOrg}
+                      disabled={!newUser.name || !newUser.email || !selectedOrgForUser}
+                      className="flex-1 py-3 bg-gradient-to-r from-green-600 to-blue-600 text-white rounded-xl hover:from-green-700 hover:to-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all font-medium"
+                    >
+                      Add User
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowAddUser(false);
+                        setSelectedOrgForUser(null);
+                      }}
+                      className="flex-1 py-3 bg-white/10 text-white rounded-xl hover:bg-white/20 transition-colors font-medium"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
+        </div>
       </div>
     </div>
   );

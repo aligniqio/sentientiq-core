@@ -12,7 +12,6 @@ import crypto from 'crypto';
 import dotenv from 'dotenv';
 import onboardingRouter from './onboarding-api.js';
 import recommendationsRouter from './recommendations-api.js';
-import eviRouter from './evi-api.js';
 
 dotenv.config();
 
@@ -58,7 +57,6 @@ app.use(express.json({ limit: '10mb' }));
 // Mount onboarding routes
 app.use(onboardingRouter);
 app.use(recommendationsRouter);
-app.use(eviRouter);
 
 // Map PhDs to their optimal LLM based on personality
 const PHD_LLM_MAPPING = {
