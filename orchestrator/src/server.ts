@@ -485,13 +485,13 @@ app.get('/', healthHandler);         // root check
 // The crystal palace of marketing truth
 
 // Emotional Analytics
-app.post('/api/emotional/event', generalLimiter, express.json(), emotionalAnalyticsHandlers.recordEvent);
-app.get('/api/emotional/patterns', generalLimiter, emotionalAnalyticsHandlers.getPatterns);
-app.get('/api/emotional/heatmap', generalLimiter, emotionalAnalyticsHandlers.getHeatmap);
-app.post('/api/emotional/predict', generalLimiter, express.json(), emotionalAnalyticsHandlers.predictAction);
-app.get('/api/emotional/funnel', generalLimiter, emotionalAnalyticsHandlers.getFunnel);
-app.post('/api/emotional/outcome', generalLimiter, express.json(), emotionalAnalyticsHandlers.recordOutcome);
-app.get('/api/emotional/moat', generalLimiter, emotionalAnalyticsHandlers.getDataMoat);
+app.post('/api/emotional/event', express.json(), emotionalAnalyticsHandlers.recordEvent);
+app.get('/api/emotional/patterns', emotionalAnalyticsHandlers.getPatterns);
+app.get('/api/emotional/heatmap', emotionalAnalyticsHandlers.getHeatmap);
+app.post('/api/emotional/predict', express.json(), emotionalAnalyticsHandlers.predictAction);
+app.get('/api/emotional/funnel', emotionalAnalyticsHandlers.getFunnel);
+app.post('/api/emotional/outcome', express.json(), emotionalAnalyticsHandlers.recordOutcome);
+app.get('/api/emotional/moat', emotionalAnalyticsHandlers.getDataMoat);
 app.get('/api/emotional/blindspots', generalLimiter, emotionalAnalyticsHandlers.getBlindSpots);
 
 // Recommendations & Accountability

@@ -21,6 +21,7 @@ function getSupabaseClient(): SupabaseClient | null {
 }
 
 export interface EmotionalEvent {
+  tenant_id?: string; // Added for RLS
   session_id: string;
   user_id?: string;
   timestamp: Date;
@@ -56,6 +57,7 @@ export class EmotionalAnalytics {
     }
 
     try {
+      console.log('Attempting to insert emotional event:', event.emotion, 'for tenant:', event.tenant_id);
       const { error } = await supabase
         .from('emotional_events')
         .insert({
@@ -63,7 +65,11 @@ export class EmotionalAnalytics {
           created_at: new Date().toISOString()
         });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase insert error:', error);
+        throw error;
+      }
+      console.log('Successfully inserted emotional event:', event.emotion);
 
       // Trigger real-time analysis if high-value emotion detected
       if (event.confidence > 85) {
@@ -153,17 +159,18 @@ export class EmotionalAnalytics {
 
     // Analyze each emotion group
     for (const [emotion, group] of Object.entries(emotionGroups)) {
-      const avgConfidence = group.reduce((sum, e) => sum + e.confidence, 0) / group.length;
-      const avgIntensity = group.reduce((sum, e) => sum + e.intensity, 0) / group.length;
+      const typedGroup = group as any[];
+      const avgConfidence = typedGroup.reduce((sum: number, e: any) => sum + e.confidence, 0) / typedGroup.length;
+      const avgIntensity = typedGroup.reduce((sum: number, e: any) => sum + e.intensity, 0) / typedGroup.length;
       
       // Calculate conversion impact (simplified - would use actual conversion data)
       const conversionImpact = this.calculateConversionImpact(emotion, avgConfidence);
       
       insights.push({
         pattern: `${emotion}_pattern`,
-        frequency: group.length,
+        frequency: typedGroup.length,
         conversion_impact: conversionImpact,
-        revenue_impact: conversionImpact * group.length * 100, // Simplified revenue calc
+        revenue_impact: conversionImpact * typedGroup.length * 100, // Simplified revenue calc
         recommended_action: this.getRecommendedAction(emotion, avgIntensity),
         confidence: avgConfidence
       });
@@ -385,10 +392,17 @@ export class EmotionalAnalytics {
 export const emotionalAnalyticsHandlers = {
   // Record emotional event
   recordEvent: async (req: Request, res: Response) => {
+    console.log('📊 Emotional event received:', req.body.emotion, 'from session:', req.body.session_id);
     try {
-      await EmotionalAnalytics.recordEmotionalEvent(req.body);
+      // Use user_id as tenant_id (from the API key in the event)
+      const eventWithTenant = {
+        ...req.body,
+        tenant_id: req.body.user_id || 'DEMO_TENANT'
+      };
+      await EmotionalAnalytics.recordEmotionalEvent(eventWithTenant);
       res.json({ success: true });
     } catch (error) {
+      console.error('❌ Error in recordEvent handler:', error);
       res.status(500).json({ error: 'Failed to record emotional event' });
     }
   },

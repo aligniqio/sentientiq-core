@@ -53,15 +53,35 @@
     return 'sq_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
   }
   
+  // Predict likely action based on emotion
+  function getPredictedAction(emotion) {
+    const predictions = {
+      'rage': 'abandon',
+      'hesitation': 'needs_support',
+      'confusion': 'seek_clarity',
+      'sticker_shock': 'compare_prices',
+      'abandonment': 'exit',
+      'delight': 'convert',
+      'interest': 'explore',
+      'session_start': 'browse'
+    };
+    return predictions[emotion] || 'observe';
+  }
+  
   // Send event to backend
   async function sendEvent(emotion, confidence, metadata = {}) {
     const event = {
-      apiKey,
-      sessionId: config.sessionId,
-      timestamp: Date.now(),
-      emotion,
-      confidence,
-      url: window.location.href,
+      session_id: config.sessionId,
+      user_id: config.apiKey, // API key serves as user identifier
+      emotion: emotion,
+      confidence: confidence,
+      intensity: metadata.intensity || 80, // Default intensity
+      page_url: window.location.href,
+      element_target: metadata.target || metadata.element || '',
+      micro_behaviors: metadata.micro_behaviors || [emotion + '_detected'],
+      predicted_action: metadata.predicted_action || getPredictedAction(emotion),
+      intervention_window: metadata.intervention_window || 5,
+      timestamp: new Date().toISOString(),
       metadata: {
         ...metadata,
         timeOnPage: Date.now() - config.startTime,
@@ -69,7 +89,8 @@
         viewport: {
           width: window.innerWidth,
           height: window.innerHeight
-        }
+        },
+        referrer: document.referrer
       }
     };
     
@@ -124,9 +145,11 @@
       if (avgInterval < 300) {
         state.currentEmotion = 'rage';
         sendEvent('rage', 95, {
+          intensity: 90,
           clickCount: state.clickTimes.length,
           avgInterval: Math.round(avgInterval),
-          target: event.target?.tagName
+          target: event.target?.tagName,
+          micro_behaviors: ['rapid_clicking', 'frustration_pattern']
         });
       }
     }
@@ -142,9 +165,11 @@
       if (isActionable) {
         state.currentEmotion = 'hesitation';
         sendEvent('hesitation', 85, {
+          intensity: 75,
           duration: hoverDuration,
           element: state.hoverTarget.tagName,
-          text: state.hoverTarget.textContent?.slice(0, 50)
+          text: state.hoverTarget.textContent?.slice(0, 50),
+          micro_behaviors: ['prolonged_hover', 'decision_paralysis']
         });
       }
     }
@@ -181,8 +206,10 @@
       if (directionChanges >= 3) {
         state.currentEmotion = 'confusion';
         sendEvent('confusion', 78, {
+          intensity: 70,
           scrollPattern: 'erratic',
-          directionChanges
+          directionChanges,
+          micro_behaviors: ['erratic_scrolling', 'searching_behavior']
         });
         state.scrollPositions = []; // Reset after detection
       }
@@ -212,8 +239,11 @@
         if (nearPricing) {
           state.currentEmotion = 'sticker_shock';
           sendEvent('sticker_shock', 92, {
+            intensity: 85,
             velocity: { before: state.mouseVelocity, after: velocity },
-            priceElement: element?.textContent?.slice(0, 50)
+            priceElement: element?.textContent?.slice(0, 50),
+            micro_behaviors: ['sudden_stop', 'price_fixation'],
+            predicted_action: 'compare_prices'
           });
         }
       }
@@ -229,8 +259,11 @@
     if (idleTime > 60000 && state.currentEmotion !== 'abandonment') {
       state.currentEmotion = 'abandonment';
       sendEvent('abandonment', 88, {
+        intensity: 60,
         idleTime: Math.round(idleTime / 1000),
-        lastInteraction: state.lastInteraction
+        lastInteraction: state.lastInteraction,
+        micro_behaviors: ['idle_timeout', 'disengagement'],
+        predicted_action: 'exit'
       });
     }
   }
@@ -329,8 +362,12 @@
   
   // Send initialization event
   sendEvent('session_start', 100, {
+    intensity: 50,
     url: window.location.href,
-    referrer: document.referrer
+    referrer: document.referrer,
+    micro_behaviors: ['page_load', 'initial_impression'],
+    predicted_action: 'browse',
+    intervention_window: 30
   });
   
 })();
