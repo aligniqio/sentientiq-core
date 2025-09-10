@@ -2,8 +2,8 @@ import 'dotenv/config';
 import express, { Request, Response } from 'express';
 import cors from 'cors';
 import { z } from 'zod';
-import { runChain, sseWrite } from './chain';
-import { enqueueDebate } from './queue/redis';
+import { runChain, sseWrite } from './chain.js';
+import { enqueueDebate } from './queue/redis.js';
 import { createClient } from '@supabase/supabase-js';
 import { 
   pickPersonas, 
@@ -14,9 +14,9 @@ import {
   streamSynthesis,
   takeTopCTAs,
   TOK 
-} from './theatrical-helpers';
-import { exportBriefHandler } from './services/brief/exportBrief';
-import { debateInit, debateMaybeQuote, debateSetSynthesis } from './services/brief/store';
+} from './theatrical-helpers.js';
+import { exportBriefHandler } from './services/brief/exportBrief.js';
+import { debateInit, debateMaybeQuote, debateSetSynthesis } from './services/brief/store.js';
 
 // ---------- Env ----------
 const PORT = Number(process.env.PORT || 8787);

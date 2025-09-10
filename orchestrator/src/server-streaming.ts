@@ -420,7 +420,8 @@ Principles:
       
       // Send sentence
       console.log(`[STREAM] Sending sentence ${i+1}/${sentences.length} for ${speaker}: "${sentence.slice(0, 50)}..."`);
-      sseWrite(res, 'delta', { speaker, text: sentence + ' ' });
+      const displaySpeaker = (speaker === 'Moderator' || speaker === 'Synthesis') ? speaker : `Dr. ${speaker}`;
+      sseWrite(res, 'delta', { speaker: displaySpeaker, text: sentence + ' ' });
       debateMaybeQuote?.(requestId, speaker, sentence);
       
       // Natural pacing: vary based on sentence length and position
@@ -518,7 +519,8 @@ Principles:
     for (const s of sents) {
       const line = s.trim();
       if (!line) continue;
-      sseWrite(res, "delta", { speaker, text: line + " " }, requestId);
+      const displaySpeaker = (speaker === 'Moderator' || speaker === 'Synthesis') ? speaker : `Dr. ${speaker}`;
+      sseWrite(res, "delta", { speaker: displaySpeaker, text: line + " " }, requestId);
       debateMaybeQuote?.(requestId, speaker, line);
     }
   }
@@ -526,7 +528,8 @@ Principles:
   async function onTurnEnd(speaker: string) {
     const rem = (speakerBuf.get(speaker) || '').trim();
     if (rem) {
-      sseWrite(res, 'delta', { speaker, text: rem + ' ' }, requestId);
+      const displaySpeaker = (speaker === 'Moderator' || speaker === 'Synthesis') ? speaker : `Dr. ${speaker}`;
+      sseWrite(res, 'delta', { speaker: displaySpeaker, text: rem + ' ' }, requestId);
       debateMaybeQuote(requestId, speaker, rem);
       speakerBuf.set(speaker, '');
     }
@@ -627,18 +630,22 @@ ${synthesisContract}`;
       
       // 1) Roll call
       sseWrite(res, "scene", { step: "rollcall" });
-      sseWrite(res, "delta", { speaker: "Moderator", text: `Roll call: ${roster.join(", ")}.` });
+      sseWrite(res, "delta", { speaker: "Moderator", text: `Roll call: ${roster.map(r => `Dr. ${r}`).join(", ")}.` });
       await onTurnEnd('Moderator');
       
       // 2) Opening statements
       sseWrite(res, 'scene', { step: 'openings' });
       currentMode = 'opening';
       
+      // Moderator introduces opening statements
+      sseWrite(res, 'delta', { speaker: 'Moderator', text: 'Drs, distinguished members of the board, welcome. Your opening statements please.' });
+      await onTurnEnd('Moderator');
+      
       const TOK = { persona: 220, reply: 160, moderator: 350 }; // Higher limits for theatrical debate
       const ACTIVE = roster; // Active personas
       
       for (const p of ACTIVE) {
-        sseWrite(res, 'turn', { speaker: p, start: true, mode: 'opening' });
+        sseWrite(res, 'turn', { speaker: `Dr. ${p}`, start: true, mode: 'opening' });
         const openingPrompt = `Challenge: ${prompt}\n\n${contextBlock}`;
         await speakBuffered(res, p, 'opening', () => personaOpeningStream(p, openingPrompt, TOK?.persona || 120));
         await pause(250); // Natural pause between different speakers
@@ -653,11 +660,11 @@ ${synthesisContract}`;
         currentMode = 'rebuttal';
         
         for (const [a, b] of activePairs) {
-          sseWrite(res, 'turn', { speaker: a, start: true, mode: 'rebuttal' });
+          sseWrite(res, 'turn', { speaker: `Dr. ${a}`, start: true, mode: 'rebuttal' });
           await speakBuffered(res, a, 'rebuttal', () => personaRebuttalStream(a, b, prompt, TOK?.reply || 60));
           await pause(200); // Quick pause between rebuttals
 
-          sseWrite(res, 'turn', { speaker: b, start: true, mode: 'rebuttal' });
+          sseWrite(res, 'turn', { speaker: `Dr. ${b}`, start: true, mode: 'rebuttal' });
           await speakBuffered(res, b, 'rebuttal', () => personaRebuttalStream(b, a, prompt, TOK?.reply || 60));
           await pause(300); // Slightly longer pause between pairs
         }

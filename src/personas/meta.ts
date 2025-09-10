@@ -1,7 +1,7 @@
 import { LucideIcon } from 'lucide-react';
 import { 
   Map, Brain, TrendingUp, Fingerprint, Zap, DollarSign,
-  Crosshair, Globe, Compass, Search, Skull, Layers
+  Crosshair, Globe, Compass, Search, Skull, Layers, Mic
 } from 'lucide-react';
 
 export type PersonaMeta = {
@@ -123,5 +123,14 @@ export const PERSONA_META: Record<string, PersonaMeta> = {
     voice: 'Learns from every interaction; promotes proven moves to defaults.',
     icon: Layers,
     color: '#22c55e' // green
+  },
+  moderator: {
+    id: 'moderator',
+    name: 'Moderator',
+    role: 'Debate Orchestrator',
+    creds: ['Facilitator', 'Synthesis'],
+    voice: 'Orchestrates the intellectual combat; keeps order in the chaos.',
+    icon: Mic,
+    color: '#6b7280' // gray
   }
 };

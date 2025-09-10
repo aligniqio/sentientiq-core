@@ -251,8 +251,8 @@ const Boardroom = () => {
           
           // Track active speaker for glow effect
           const personaId = Object.keys(PERSONA_META).find(
-            id => PERSONA_META[id].name === `Dr. ${speaker}` || 
-                   PERSONA_META[id].name.includes(speaker)
+            id => id.toLowerCase() === speaker.toLowerCase() ||
+                   PERSONA_META[id].name.toLowerCase().includes(speaker.toLowerCase())
           );
           if (personaId) {
             setActiveSpeaker(personaId);
@@ -378,8 +378,8 @@ const Boardroom = () => {
           
           // Track active speaker for glow effect
           const personaId = Object.keys(PERSONA_META).find(
-            id => PERSONA_META[id].name === `Dr. ${speaker}` || 
-                   PERSONA_META[id].name.includes(speaker)
+            id => id.toLowerCase() === speaker.toLowerCase() ||
+                   PERSONA_META[id].name.toLowerCase().includes(speaker.toLowerCase())
           );
           if (personaId) {
             setActiveSpeaker(personaId);

@@ -63,7 +63,7 @@ export async function* hybridLLMStream(
         system: finalSystem,
         user: userPrompt,
         temperature: Math.min(temperature + 0.2, 1.0), // Slightly higher temp for Sonnet
-        maxTokens: 150,  // Sonnet gets more tokens but still reasonable
+        maxTokens: 100,  // Balanced for all 12 to speak
         onDelta: (chunk) => chunks.push(chunk),
         onDone: () => { done = true; resolve(); },
         onError: reject
