@@ -32,25 +32,32 @@
 # ---------- API proxies (to orchestrator & other services) ----------
 [[redirects]]
   from = "/api/v1/debate"
-  to   = "https://api.sentientiq.app/v1/boardroom"
+  to   = "https://api.sentientiq.app/api/v1/debate"
   status = 200
   force = true
 
 [[redirects]]
   from = "/api/sage/debate"
-  to   = "https://api.sentientiq.app/v1/boardroom"
+  to   = "https://api.sentientiq.app/api/sage/debate"
   status = 200
   force = true
 
 [[redirects]]
   from = "/api/usage/track"
-  to   = "https://api.sentientiq.app/v1/usage/track"
+  to   = "https://api.sentientiq.app/api/usage/track"
   status = 200
   force = true
 
 [[redirects]]
   from = "/api/debate/export"
-  to   = "https://api.sentientiq.app/v1/debate/export"
+  to   = "https://api.sentientiq.app/api/debate/export"
+  status = 200
+  force = true
+
+# Catch-all for any other API routes
+[[redirects]]
+  from = "/api/*"
+  to   = "https://api.sentientiq.app/api/:splat"
   status = 200
   force = true
 
