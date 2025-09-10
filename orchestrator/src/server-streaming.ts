@@ -9,7 +9,7 @@ import { retrieveContext, supabase } from './retrieveContext.js';
 import { RIVALS } from './theater/rivals.js';
 import { callWithFallback } from './safe-llm.js';
 import { hybridLLMStream, getModelDistribution } from './services/hybrid-llm.js';
-import { DebateStateMachine, getOrCreateDebateState, clearDebateState } from './debate-state.js';
+// import { DebateStateMachine, getOrCreateDebateState, clearDebateState } from './debate-state.js'; // REMOVED - no more elimination phases
 // ESM import (your repo is `"type":"module"`)
 import {
   debateInit,
@@ -637,16 +637,16 @@ ${synthesisContract}`;
       // Debate mode: Full theatrical experience with elimination rounds
       
       // Initialize debate state machine with roster
-      const debateStateMachine = getOrCreateDebateState(debateId, roster);
-      let currentState = debateStateMachine.getState();
+      // const debateStateMachine = getOrCreateDebateState(debateId, roster); // REMOVED
+      // let currentState = debateStateMachine.getState(); // REMOVED
       
-      // Send initial state to client
-      sseWrite(res, 'state', {
-        phase: currentState.phase,
-        active: currentState.active,
-        eliminated: currentState.eliminated,
-        description: debateStateMachine.getPhaseDescription()
-      });
+      // Send initial state to client - REMOVED
+      // sseWrite(res, 'state', {
+      //   phase: currentState.phase,
+      //   active: currentState.active,
+      //   eliminated: currentState.eliminated,
+      //   description: debateStateMachine.getPhaseDescription()
+      // });
       
       // Opening - Skip roll call, go straight to welcome
       sseWrite(res, 'scene', { step: 'openings' });
@@ -697,6 +697,7 @@ ${synthesisContract}`;
         await pause(250); // Natural pause between different speakers
       }
       
+      /* REMOVED: Elimination phase - letting rival pairs handle the drama instead
       // ELIMINATION PHASE - After opening statements (always do this for drama!)
       if (ACTIVE.length > 3) {
         // Advance to elimination poll
@@ -889,35 +890,14 @@ Do not add extra keys. Do not wrap JSON in markdown.`;
         sseWrite(res, 'delta', { speaker: 'Moderator', text: sendoffText });
         await onTurnEnd('Moderator');
         await pause(500);
-        
-      } else if (false) {
-        // DISABLED: Regular crossfire - we always do theatrical elimination now
-        const shuffledForPairs = shuffleArray(ACTIVE);
-        const activePairs: string[][] = [];
-        
-        for (let i = 0; i < shuffledForPairs.length - 1; i += 2) {
-          activePairs.push([shuffledForPairs[i], shuffledForPairs[i + 1]]);
-        }
-        
-        console.log(`⚔️ Crossfire pairs: ${activePairs.map(p => p.join(' vs ')).join(', ')}`);
-        
-        if (activePairs.length > 0) {
-          sseWrite(res, 'scene', { step: 'crossfire' });
-          currentMode = 'rebuttal';
-          
-          for (const [a, b] of activePairs) {
-            sseWrite(res, 'turn', { speaker: `Dr. ${a}`, start: true, mode: 'rebuttal' });
-            await speakBuffered(res, a, 'rebuttal', () => personaRebuttalStream(a, b, prompt, TOK?.reply || 60));
-            await pause(200);
-
-            sseWrite(res, 'turn', { speaker: `Dr. ${b}`, start: true, mode: 'rebuttal' });
-            await speakBuffered(res, b, 'rebuttal', () => personaRebuttalStream(b, a, prompt, TOK?.reply || 60));
-            await pause(300);
-          }
-        }
       }
+      */ // End of removed elimination phase
       
-      // 4) Synthesis
+      // Skip synthesis in debate mode - theatrical finale handles its own conclusion
+    } // End of debate mode
+    
+    // 4) Synthesis - Only for answer mode
+    if (mode === 'answer') {
       sseWrite(res, 'scene', { step: 'synthesis' });
       currentMode = 'synthesis';
       sseWrite(res, 'turn', { speaker: 'Moderator', start: true, mode: 'synthesis' });
@@ -934,14 +914,14 @@ Be decisive. No hedging.`;
       // Use buffered approach for synthesis too
       async function* synthesisStream() {
         if (provider === "anthropic" && ANTHROPIC_API_KEY) {
-          for await (const chunk of claudeStream(synthesisPrompt, TOK?.moderator || 250)) {
+          for await (const chunk of claudeStream(synthesisPrompt, 250)) {
             if (chunk?.text) yield { text: chunk.text };
           }
         } else {
           const sys = `${EI_PREAMBLE}
 You are the Moderator. Write a 4–6 sentence exec synthesis (plain prose). Then end with three actions (Action · Owner · When) on separate lines.`;
           const msgs = [{ role:"system", content: sys }, { role:"user", content: synthesisPrompt }];
-          for await (const c of openaiStream(msgs, TOK?.moderator || 250, 0.3)) {
+          for await (const c of openaiStream(msgs, 250, 0.3)) {
             if (c?.text) yield { text: c.text };
           }
         }
@@ -962,13 +942,13 @@ You are the Moderator. Write a 4–6 sentence exec synthesis (plain prose). Then
       if (!ctas?.length) {
         sseWrite(res, 'warn', { code: 'NO_CTAS', message: 'No actionable CTAs parsed' });
       }
-    }
+    } // End of answer mode synthesis
     
     sseWrite(res, 'done', { ok: true });
     
     // Clean up debate state if in debate mode
     if (mode === 'debate' && debateId) {
-      clearDebateState(debateId);
+      // clearDebateState(debateId); // REMOVED
     }
     
   } catch (e: any) {

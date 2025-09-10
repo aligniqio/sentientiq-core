@@ -747,11 +747,12 @@ const Boardroom = () => {
                         key={line.id}
                         className="text-white/90 text-xs"
                         style={{ 
-                          opacity: index <= currentTypingIndex ? 1 : 0,
+                          // Skip typing animation for debates with many personas
+                          opacity: (debateMode === 'debate' && selectedPhDs.size >= 10) ? 1 : (index <= currentTypingIndex ? 1 : 0),
                           transition: 'opacity 0.3s ease-in'
                         }}
                       >
-                        {index <= currentTypingIndex && (
+                        {((debateMode === 'debate' && selectedPhDs.size >= 10) || index <= currentTypingIndex) && (
                           <div>
                             <div className={`font-semibold mb-1 flex items-center gap-2 ${PERSONA_COLORS[line.speaker] || 'text-purple-400'}`}>
                               {line.speaker.charAt(0).toUpperCase() + line.speaker.slice(1)}
@@ -762,7 +763,7 @@ const Boardroom = () => {
                               )}
                             </div>
                             <div className={`${line.isInterruption ? 'pl-4 border-l-2 border-red-400/40' : ''}`}>
-                              {index === currentTypingIndex ? (
+                              {index === currentTypingIndex && !(debateMode === 'debate' && selectedPhDs.size >= 10) ? (
                                 <StreamingText 
                                   text={line.text}
                                   speed={line.isInterruption ? 12 : 15} // Faster for interruptions
