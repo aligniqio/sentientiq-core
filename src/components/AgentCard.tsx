@@ -14,8 +14,9 @@ export function AgentCard({
   const p = PERSONA_META[id];
   if (!p) return null;
   
-  const color = PERSONA_COLOR[p.name] || '#64748b';
+  const color = p.color || PERSONA_COLOR[p.name] || '#64748b';
   const tint = rgba(color, 0.14);
+  const Icon = p.icon;
 
   return (
     <button
@@ -31,9 +32,12 @@ export function AgentCard({
       aria-pressed={!!selected}
     >
       <div className="p-4 h-full flex flex-col">
-        {/* Title pinned top */}
+        {/* Title with icon pinned top */}
         <div className="agent-title">
-          <div className="text-[16px] font-semibold truncate">{p.name}</div>
+          <div className="flex items-center gap-2">
+            {Icon && <Icon className="w-4 h-4" style={{ color }} />}
+            <div className="text-[16px] font-semibold truncate" style={{ color }}>{p.name}</div>
+          </div>
           <div className="text-[12.5px] text-white/65 truncate">{p.role}</div>
         </div>
 

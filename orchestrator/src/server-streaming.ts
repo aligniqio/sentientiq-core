@@ -288,11 +288,24 @@ app.post('/v1/boardroom', async (req: Request, res: Response) => {
   
   // Pick personas - personaCap is a MAXIMUM, not a default
   const requested = Array.from(new Set(personas ?? []));
+  
+  // In debate mode, don't default to any personas if none selected
   const roster = requested.length > 0 
     ? requested.slice(0, personaCap)  // Use what they selected, up to the cap
-    : DEFAULT_PERSONAS.slice(0, 4);   // Default to 4 if nothing selected
+    : (mode === 'debate' ? [] : DEFAULT_PERSONAS.slice(0, 4));   // Only default in answer mode
+    
   console.log(`[PERSONAS] Requested: ${requested.length} personas:`, requested);
   console.log(`[PERSONAS] Roster (cap=${personaCap}, actual=${roster.length}):`, roster);
+  
+  // For debate mode with no personas, send an error
+  if (mode === 'debate' && roster.length === 0) {
+    sseWrite(res, 'error', { 
+      code: 'NO_FIGHTERS',
+      message: 'You came to the fight with no fighters? Choose at least 2 personas for a debate!'
+    });
+    sseWrite(res, 'done', { ok: false });
+    return res.end();
+  }
   
   // Detect provider
   const provider = process.env.PREFER_ANTHROPIC === 'false' ? 'openai' : 'anthropic';
@@ -343,21 +356,24 @@ Principles:
   }
 
   async function* personaOpeningStream(name: string, prompt: string, maxTok=120) {
-    const sys = personaSystem(name, RIVALS?.[name]);
+    // Use the same aggressive biases as answer mode
+    const agentBias = getAgentBias(name);
+    const sys = `${EI_PREAMBLE} You are ${name}. ${agentBias} Be direct and contrarian. Challenge conventional wisdom. ${RIVALS?.[name] ? `Your rival ${RIVALS[name]} is watching.` : ''} 1-2 sharp sentences. No "I feel" or hedging. Take a strong stance. NEVER use em-dashes (—). Use commas, periods, or simple hyphens instead.`;
     
     // Use hybrid LLM system for diverse responses
-    const stream = hybridLLMStream(name, sys, prompt, 0.4);
+    const stream = hybridLLMStream(name, sys, prompt, 0.6); // Higher temp for spicier takes
     for await (const chunk of stream) {
       yield { text: chunk.text };
     }
   }
 
   async function* personaRebuttalStream(name: string, rival: string, prompt: string, maxTok=60) {
-    const sys = personaSystem(name, rival);
-    const user = `Rebut ${rival} briefly, then add one crisp point on: ${prompt}`;
+    const agentBias = getAgentBias(name);
+    const sys = `${EI_PREAMBLE} You are ${name}. ${agentBias} You're directly rebutting ${rival}. Be sharp, dismissive of their point. No hedging, no "I feel". Attack their position, then make your point. NEVER use em-dashes (—).`;
+    const user = `${rival} is wrong. Say why in one sentence, then make your point about: ${prompt}`;
     
     // Use hybrid LLM - rebuttals should be spicier
-    const stream = hybridLLMStream(name, sys, user, 0.6);
+    const stream = hybridLLMStream(name, sys, user, 0.8); // Even higher temp for conflict
     for await (const chunk of stream) {
       yield { text: chunk.text };
     }
@@ -378,15 +394,15 @@ Principles:
     // Better sentence splitting for synthesis and lists
     let sentences: string[] = [];
     
-    if (speaker === 'Moderator' && fullText.includes('—')) {
+    if (speaker === 'Moderator' && fullText.includes(' - ')) {
       // Special handling for Moderator's action items
       // Split by newlines first, then by sentence endings
       sentences = fullText
         .split(/\n+/)
         .filter(s => s.trim())
         .flatMap(line => {
-          // If it's an action item (contains —), keep it whole
-          if (line.includes('—')) return [line];
+          // If it's an action item (contains dash), keep it whole
+          if (line.includes(' - ')) return [line];
           // Otherwise split normally
           return line.match(/[^.!?]+[.!?]+/g) || [line];
         })
@@ -431,6 +447,39 @@ Principles:
   // Natural pacing between turns
   const pause = (ms: number) => new Promise(r => setTimeout(r, ms));
 
+  // Get agent-specific system prompts based on their professional DNA
+  function getAgentBias(name: string) {
+    // Each persona's worldview shaped by their career experiences
+    const biases: Record<string, string> = {
+      'ROI Analyst': "Ex-McKinsey. Emotion Scientist's touchy-feely BS bankrupts companies. Money talks, feelings walk.",
+      'Emotion Scientist': "Stanford PhD. ROI Analyst's spreadsheet addiction misses why humans actually buy. Feelings drive wallets.",
+      'CRO Specialist': "Built Booking.com's test framework. Brand Strategist's 'authenticity' doesn't convert. Test or guess.",
+      'Copy Chief': "Mad Men era survivor. UX Researcher's interviews miss the point. Great copy creates need, not just meets it.",
+      'Performance Engineer': "Ex-Google. CEO's 'move fast' breaks everything. Milliseconds matter more than moonshots.",
+      'Brand Strategist': "Helped Nike through sweatshop crisis. CRO's A/B obsession commoditizes soul. Brand equity compounds.",
+      'UX Researcher': "Ethnographer turned tech. Copy Chief writes fiction. I watch reality. Users don't read your clever words.",
+      'Data Skeptic': "Former Theranos whistleblower. CEO Provocateur's 'vision' is usually fraud. Show me the real data.",
+      'Social Strategist': "Managed United's Twitter during THAT incident. Internet never forgets. Perception IS reality.",
+      'Customer Success': "20 years in SaaS. Confusion kills retention. Happy customers don't read fine print.",
+      'CEO Provocateur': "Three unicorns, two failures. Convention is competition. Break rules intelligently.",
+      'Compliance Counsel': "Ex-FTC prosecutor. Seen companies destroyed by one disclosure miss. Document everything.",
+      // Add the Dr. personas
+      'Strategic': "Ex-BCG. Military strategist. Chaos is the enemy of scale. Structure beats creativity.",
+      'Emotion': "Neuroscience PhD. Data can't measure what makes us human. Feelings aren't optional.",
+      'Pattern': "Quant from Renaissance Tech. Everything is predictable if you have enough data. Chaos is just misunderstood patterns.",
+      'Identity': "Built brands at Apple. Who you are matters more than what you sell. Identity is everything.",
+      'Chaos': "Serial disruptor. Order is death. Only chaos creates opportunity. Break things on purpose.",
+      'ROI': "Private equity. If it doesn't 3x, it's a waste. Everything else is noise.",
+      'Warfare': "Special ops commander. Business is combat. Enemies everywhere. Victory or death.",
+      'Omni': "Systems theorist. Everything connects. Miss one thread, lose the whole picture.",
+      'First': "First principles only. If you can't explain it simply, it's probably BS.",
+      'Truth': "Investigative journalist. Everyone's lying about something. Find what they're hiding.",
+      'Brutal': "Turnaround specialist. Nice killed more companies than competition. Truth hurts, bankruptcy hurts more.",
+      'Context': "Anthropologist. Nothing exists in isolation. Context determines meaning."
+    };
+    return biases[name] || "Bring your unique professional lens. Your experience shapes your answer.";
+  }
+
   // Sanitize persona text before splitting
   function sanitizePersonaText(speaker: string, raw: string) {
     if (!raw) return "";
@@ -446,6 +495,14 @@ Principles:
 
     // Collapse triple dots to a normal ellipsis vibe
     s = s.replace(/\.\.\.+/g, "… ");
+
+    // Replace ALL types of dashes with simple hyphens
+    // This catches em-dash (—), en-dash (–), and any other dash variants
+    s = s.replace(/[\u2013\u2014\u2015]/g, " - "); // Unicode dashes
+    s = s.replace(/—/g, " - "); // Em-dash specifically
+    s = s.replace(/–/g, " - "); // En-dash specifically  
+    // Also catch cases where dashes are directly attached to words
+    s = s.replace(/(\w)[-—–](\w)/g, "$1 - $2");
 
     return s;
   }
@@ -498,26 +555,6 @@ Principles:
       // Answer mode: Selected agents provide perspectives, then moderator synthesizes
       sseWrite(res, 'phase', { label: 'answer', status: 'begin' });
       
-      // Get agent-specific system prompts based on their professional DNA
-      function getAgentBias(name: string) {
-        // Each persona's worldview shaped by their career experiences
-        const biases: Record<string, string> = {
-          'ROI Analyst': "Ex-McKinsey. Emotion Scientist's touchy-feely BS bankrupts companies. Money talks, feelings walk.",
-          'Emotion Scientist': "Stanford PhD. ROI Analyst's spreadsheet addiction misses why humans actually buy. Feelings drive wallets.",
-          'CRO Specialist': "Built Booking.com's test framework. Brand Strategist's 'authenticity' doesn't convert. Test or guess.",
-          'Copy Chief': "Mad Men era survivor. UX Researcher's interviews miss the point. Great copy creates need, not just meets it.",
-          'Performance Engineer': "Ex-Google. CEO's 'move fast' breaks everything. Milliseconds matter more than moonshots.",
-          'Brand Strategist': "Helped Nike through sweatshop crisis. CRO's A/B obsession commoditizes soul. Brand equity compounds.",
-          'UX Researcher': "Ethnographer turned tech. Copy Chief writes fiction. I watch reality. Users don't read your clever words.",
-          'Data Skeptic': "Former Theranos whistleblower. CEO Provocateur's 'vision' is usually fraud. Show me the real data.",
-          'Social Strategist': "Managed United's Twitter during THAT incident. Internet never forgets. Perception IS reality.",
-          'Customer Success': "20 years in SaaS. Confusion kills retention. Happy customers don't read fine print.",
-          'CEO Provocateur': "Three unicorns, two failures. Convention is competition. Break rules intelligently.",
-          'Compliance Counsel': "Ex-FTC prosecutor. Seen companies destroyed by one disclosure miss. Document everything."
-        };
-        return biases[name] || "Bring your unique professional lens. Your experience shapes your answer.";
-      }
-      
       // Use exactly what was selected (roster already has the selected personas)
       // Only default if absolutely nothing was provided
       const activeAgents = roster;
@@ -529,21 +566,23 @@ Principles:
       const perspectives: Record<string, string> = {};
       
       for (const agent of activeAgents) {
-        sseWrite(res, 'turn', { speaker: agent, start: true });
+        // Capitalize agent name for display (ROI -> ROI, strategic -> Strategic)
+        const displayName = agent.charAt(0).toUpperCase() + agent.slice(1);
+        sseWrite(res, 'turn', { speaker: displayName, start: true });
         
         const agentBias = getAgentBias(agent);
         const agentPrompt = `Question: ${prompt}\n${contextBlock}\n\nGive your unique professional perspective in 1-2 sentences. Be decisive but professional.`;
         
         async function* agentStream() {
-          const sys = `You are ${agent}. ${agentBias} Be direct and contrarian. Challenge conventional wisdom. Your rivals are watching. 1-2 sharp sentences.`;
+          const sys = `You are ${agent}. ${agentBias} Be direct and contrarian. Challenge conventional wisdom. Your rivals are watching. 1-2 sharp sentences. NEVER use em-dashes (—) in your responses. Use commas, periods, or simple hyphens instead.`;
           const msgs = [{ role: "system", content: sys }, { role: "user", content: agentPrompt }];
           for await (const c of openaiStream(msgs, 80, 0.8)) {
             if (c?.text) yield { text: c.text };
           }
         }
         
-        await speakBuffered(res, agent, 'answer', agentStream);
-        perspectives[agent] = speakerBuf.get(agent) || '';
+        await speakBuffered(res, displayName, 'answer', agentStream);
+        perspectives[displayName] = speakerBuf.get(displayName) || '';
         await pause(180); // Brief pause between agents
       }
       
@@ -566,7 +605,7 @@ ${synthesisContract}`;
       sseWrite(res, 'turn', { speaker: 'Synthesis', start: true });
       
       async function* synthesisStream() {
-        const sys = "You are creating a synthesis. Find the INSIGHT in the disagreement. Don't repeat what was said - extract what matters from the conflict. Be bold and decisive.";
+        const sys = "You are creating a synthesis. Find the INSIGHT in the disagreement. Don't repeat what was said - extract what matters from the conflict. Be bold and decisive. NEVER use em-dashes (—). Use commas, periods, colons, or simple hyphens instead.";
         const msgs = [{ role: "system", content: sys }, { role: "user", content: synthesisPrompt }];
         for await (const c of openaiStream(msgs, 120, 0.7)) {
           if (c?.text) yield { text: c.text };
@@ -595,7 +634,7 @@ ${synthesisContract}`;
       sseWrite(res, 'scene', { step: 'openings' });
       currentMode = 'opening';
       
-      const TOK = { persona: 120, reply: 60, moderator: 250 }; // Token limits
+      const TOK = { persona: 220, reply: 160, moderator: 350 }; // Higher limits for theatrical debate
       const ACTIVE = roster; // Active personas
       
       for (const p of ACTIVE) {

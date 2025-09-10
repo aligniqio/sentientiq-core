@@ -294,12 +294,21 @@ const Boardroom = () => {
     if (!question.trim() || selectedPhDs.size < 2) {
       console.log('Debate validation failed:', { question: question.trim(), selectedCount: selectedPhDs.size });
       
-      // Easter egg for single agent "debates"
+      // Easter eggs for insufficient debaters
+      if (selectedPhDs.size === 0 && question.trim()) {
+        setDebateResults({ 
+          collective_synthesis: `You came to the fight with no fighters? \n\nSeriously? You gotta choose at least 2 personas to have a debate. Otherwise it's just... silence. \n\nSummon some experts and let them tear each other apart.` 
+        });
+        setShowResults(true);
+        return;
+      }
+      
       if (selectedPhDs.size === 1 && question.trim()) {
         setDebateResults({ 
           collective_synthesis: `That's not really a debate, is it? More of a monologue. \n\nTry selecting at least 2 agents so they can actually disagree about something. The whole point is watching them argue - one PhD just agrees with themselves.` 
         });
         setShowResults(true);
+        return;
       }
       return;
     }
@@ -549,7 +558,7 @@ const Boardroom = () => {
                 </div>
               ) : showResults ? (
                 <>
-                  {selectedPhDs.size === 12 && (
+                  {selectedPhDs.size === 12 && debateMode === 'answer' && (
                     <motion.div
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
@@ -571,16 +580,16 @@ const Boardroom = () => {
                         }}
                       >
                         {index <= currentTypingIndex && (
-                          <div className="flex">
-                            <span className={`font-semibold mr-2 ${PERSONA_COLORS[line.speaker] || 'text-purple-400'}`}>
-                              {line.speaker.charAt(0).toUpperCase() + line.speaker.slice(1)}:
-                            </span>
-                            {line.isInterruption && (
-                              <span className="mr-2 text-xs text-red-400 italic">
-                                (interrupting {line.interrupted})
-                              </span>
-                            )}
-                            <div className={`flex-1 ${line.isInterruption ? 'pl-2 border-l-2 border-red-400/40' : ''}`}>
+                          <div>
+                            <div className={`font-semibold mb-1 ${PERSONA_COLORS[line.speaker] || 'text-purple-400'}`}>
+                              {line.speaker.charAt(0).toUpperCase() + line.speaker.slice(1)}
+                              {line.isInterruption && (
+                                <span className="ml-2 text-xs text-red-400 italic font-normal">
+                                  (interrupting {line.interrupted})
+                                </span>
+                              )}
+                            </div>
+                            <div className={`${line.isInterruption ? 'pl-4 border-l-2 border-red-400/40' : ''}`}>
                               {index === currentTypingIndex ? (
                                 <StreamingText 
                                   text={line.text}

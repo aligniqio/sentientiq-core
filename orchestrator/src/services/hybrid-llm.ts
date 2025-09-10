@@ -59,11 +59,11 @@ export async function* hybridLLMStream(
     const promise = new Promise<void>((resolve, reject) => {
       claudeStream({
         apiKey: process.env.ANTHROPIC_API_KEY!,
-        model: 'claude-3-5-sonnet-20241022',
+        model: process.env.ANTHROPIC_MODEL || 'claude-3-5-sonnet-20240620',
         system: finalSystem,
         user: userPrompt,
         temperature: Math.min(temperature + 0.2, 1.0), // Slightly higher temp for Sonnet
-        maxTokens: 300,
+        maxTokens: 150,  // Sonnet gets more tokens but still reasonable
         onDelta: (chunk) => chunks.push(chunk),
         onDone: () => { done = true; resolve(); },
         onError: reject
@@ -94,7 +94,7 @@ export async function* hybridLLMStream(
     
     const stream = openaiStream(
       messages, 
-      250, 
+      120,  // GPT stays concise
       temperature
     );
     
