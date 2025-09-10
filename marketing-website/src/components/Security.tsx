@@ -10,9 +10,9 @@ export default function Security() {
           <div>
             <div className="flex items-center gap-2 mb-3">
               <span className="text-emerald-400">✓</span>
-              <h3 className="font-medium">SOC 2 Type II</h3>
+              <h3 className="font-medium">End-to-End Encryption</h3>
             </div>
-            <p className="text-sm text-white/60">Annual audits ensure continuous compliance</p>
+            <p className="text-sm text-white/60">All emotional data encrypted at rest and in transit</p>
           </div>
           
           <div>
