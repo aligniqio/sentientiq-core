@@ -52,7 +52,7 @@ export const EmotionalDashboard: React.FC = () => {
   const [pulses, setPulses] = useState<EmotionalPulse[]>([]);
   const [isRealTime, setIsRealTime] = useState(true);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const animationRef = useRef<number>();
+  // const animationRef = useRef<number>(); // Reserved for future animation loop
 
   // Emotional heatmap visualization
   useEffect(() => {
@@ -309,7 +309,7 @@ export const EmotionalDashboard: React.FC = () => {
                 {EMOTION_ICONS[emotion as EmotionalState]}
               </div>
               <div className="text-sm font-medium">{emotion.replace('_', ' ')}</div>
-              <div className="text-xs text-gray-400">{count} times</div>
+              <div className="text-xs text-gray-400">{String(count)} times</div>
             </div>
           ))}
         </div>

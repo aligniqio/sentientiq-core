@@ -50,7 +50,7 @@ export class EmotionalIntelligence extends EventEmitter {
   private behaviorBuffer: MicroBehavior[] = [];
   private emotionalHistory: EmotionalSignature[] = [];
   private currentState: EmotionalSignature | null = null;
-  private sessionStart: number = Date.now();
+  // private sessionStart: number = Date.now();
   private lastInteraction: number = Date.now();
   
   // Emotional pattern definitions - these are the tells
@@ -217,7 +217,7 @@ export class EmotionalIntelligence extends EventEmitter {
         this.recordBehavior({
           timestamp: Date.now(),
           type: 'focus',
-          target: (e.target as HTMLElement).name || (e.target as HTMLElement).id
+          target: (e.target as HTMLInputElement).name || (e.target as HTMLElement).id || ''
         });
       }
     }, true);
@@ -228,7 +228,7 @@ export class EmotionalIntelligence extends EventEmitter {
         this.recordBehavior({
           timestamp: Date.now(),
           type: 'blur',
-          target: (e.target as HTMLElement).name || (e.target as HTMLElement).id
+          target: (e.target as HTMLInputElement).name || (e.target as HTMLElement).id || ''
         });
       }
     }, true);
@@ -520,7 +520,7 @@ export function useEmotionalIntelligence() {
   useEffect(() => {
     const ei = getEmotionalIntelligence();
     
-    const handleStateChange = (change: any) => {
+    const handleStateChange = (_change: any) => {
       setEmotionalState(ei.getCurrentEmotionalState());
       setConversionProbability(ei.getPredictedConversionProbability());
     };
