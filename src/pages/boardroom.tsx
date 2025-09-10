@@ -573,8 +573,22 @@ const Boardroom = () => {
             <motion.div
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
-              className="h-full bg-white/5 backdrop-blur-xl rounded-xl p-4 overflow-y-auto"
+              className="h-full bg-white/5 backdrop-blur-xl rounded-xl p-4 overflow-y-auto relative"
             >
+              {/* Moderator Indicator - Glassmorphic Overlay */}
+              {debateMode === 'debate' && showResults && (
+                <div className={`absolute top-3 right-3 z-10 bg-white/5 backdrop-blur-xl rounded-lg px-3 py-2 border border-white/10 transition-all ${
+                  activeSpeaker === 'moderator' ? 'ring-1 ring-gray-400/50 bg-white/10' : ''
+                }`}>
+                  <div className="flex items-center gap-2">
+                    <Mic className={`w-4 h-4 text-gray-400 ${activeSpeaker === 'moderator' ? 'animate-pulse' : ''}`} />
+                    <div>
+                      <div className="text-xs font-medium text-white/90">Moderator</div>
+                      <div className="text-[10px] text-white/60">Debate Orchestrator</div>
+                    </div>
+                  </div>
+                </div>
+              )}
               {isAnalyzing && debateLines.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full">
                   <Brain className="w-12 h-12 text-purple-400/30 mb-4 animate-pulse" />
@@ -606,9 +620,6 @@ const Boardroom = () => {
                         {index <= currentTypingIndex && (
                           <div>
                             <div className={`font-semibold mb-1 flex items-center gap-2 ${PERSONA_COLORS[line.speaker] || 'text-purple-400'}`}>
-                              {line.speaker === 'Moderator' && (
-                                <Mic className={`w-4 h-4 ${activeSpeaker === 'moderator' ? 'animate-pulse' : ''}`} />
-                              )}
                               {line.speaker.charAt(0).toUpperCase() + line.speaker.slice(1)}
                               {line.isInterruption && (
                                 <span className="ml-2 text-xs text-red-400 italic font-normal">
