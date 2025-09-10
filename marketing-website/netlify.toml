@@ -12,6 +12,13 @@
     Strict-Transport-Security = "max-age=31536000; includeSubDomains; preload"
     Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com; img-src 'self' data: https:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; connect-src 'self' https://api.stripe.com; frame-src https://js.stripe.com https://hooks.stripe.com; base-uri 'self'; form-action 'self';"
 
+# Serve detect.js directly (not as SPA route)
+[[redirects]]
+  from = "/detect.js"
+  to = "/detect.js"
+  status = 200
+  force = true
+
 # SPA fallback
 [[redirects]]
   from = "/*"

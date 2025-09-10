@@ -10,7 +10,13 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     sourcemap: false,
+    rollupOptions: {
+      input: {
+        main: path.resolve(__dirname, 'index.html'),
+      }
+    }
   },
+  publicDir: 'public',
   server: {
     port: 3001, // Different port from main app
   }

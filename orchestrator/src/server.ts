@@ -97,10 +97,12 @@ const DEFAULT_PERSONAS = [
 const app = express();
 // Security middleware
 app.use(securityHeaders);
+// Allow ALL domains for emotional tracking (they need API keys anyway)
 app.use(cors({
-  origin: process.env.NODE_ENV === 'production' 
-    ? ['https://sentientiq.app', 'https://www.sentientiq.app', 'https://api.sentientiq.app']
-    : true,
+  origin: (origin, callback) => {
+    // Allow all origins for /api/emotional endpoints
+    callback(null, true);
+  },
   credentials: true,
   maxAge: 86400
 }));

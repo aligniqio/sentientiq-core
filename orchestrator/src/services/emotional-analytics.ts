@@ -9,11 +9,16 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { Request, Response } from 'express';
 import { EmotionalLearningEngine } from './emotional-learning.js';
 
-// Initialize Supabase for emotional data persistence
-const supabase: SupabaseClient | null = 
-  process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY
-    ? createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY)
-    : null;
+// Lazy-initialize Supabase client
+let supabase: SupabaseClient | null = null;
+
+function getSupabaseClient(): SupabaseClient | null {
+  if (!supabase && process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+    console.log('Supabase client initialized');
+  }
+  return supabase;
+}
 
 export interface EmotionalEvent {
   session_id: string;
@@ -44,6 +49,7 @@ export class EmotionalAnalytics {
    * Record an emotional event
    */
   static async recordEmotionalEvent(event: EmotionalEvent): Promise<void> {
+    const supabase = getSupabaseClient();
     if (!supabase) {
       console.warn('Supabase not configured - emotional event not persisted');
       return;

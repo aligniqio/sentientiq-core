@@ -1,2 +1,8 @@
-https://www.sentientiq.ai/*   https://sentientiq.ai/:splat    301!
-/*                            /index.html                     200
+# Serve static files directly
+/detect.js /detect.js 200!
+/favicon-32x32.png /favicon-32x32.png 200!
+/logo.png /logo.png 200!
+/red_pulse.png /red_pulse.png 200!
+
+# SPA fallback for everything else
+/* /index.html 200

@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Emotional Tracking - Random E-commerce Site</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .product {
+            border: 1px solid #ddd;
+            padding: 20px;
+            margin: 20px 0;
+            display: inline-block;
+            width: 300px;
+            margin-right: 20px;
+        }
+        .price {
+            font-size: 24px;
+            color: green;
+            font-weight: bold;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .expensive {
+            color: red !important;
+        }
+    </style>
+</head>
+<body>
+    <h1>Random E-commerce Site - Testing SentientIQ</h1>
+    <p>This is a completely different domain testing emotional tracking!</p>
+    
+    <div class="product">
+        <h2>Premium Widget</h2>
+        <p>The best widget money can buy!</p>
+        <div class="price">$99.99</div>
+        <button>Add to Cart</button>
+    </div>
+    
+    <div class="product">
+        <h2>Luxury Gadget</h2>
+        <p>You probably can't afford this...</p>
+        <div class="price expensive">$4,999.99</div>
+        <button>Add to Cart (if you dare)</button>
+    </div>
+    
+    <div class="product">
+        <h2>Budget Item</h2>
+        <p>For the price-conscious shopper</p>
+        <div class="price">$9.99</div>
+        <button>Add to Cart</button>
+    </div>
+    
+    <div style="margin-top: 50px; padding: 20px; background: #f0f0f0;">
+        <h3>Console Output:</h3>
+        <p>Open DevTools to see emotional detection in action!</p>
+        <p>Try:</p>
+        <ul>
+            <li>Hovering over high prices (sticker shock)</li>
+            <li>Clicking rapidly (rage clicks)</li>
+            <li>Scrolling randomly (confusion)</li>
+            <li>Hovering on buttons (hesitation)</li>
+        </ul>
+    </div>
+    
+    <!-- THE MAGIC LINE - This could be on ANY website! -->
+    <script src="public/detect.js" data-api-key="TEST_KEY" data-debug="true"></script>
+    
+    <script>
+        // Listen for emotional events
+        window.addEventListener('sentientiq:emotion', (e) => {
+            console.log('🎯 Emotion Detected on Random Site:', e.detail);
+        });
+        
+        // Show that we can interact with the SentientIQ API
+        setTimeout(() => {
+            if (window.SentientIQ) {
+                console.log('✅ SentientIQ is loaded!');
+                console.log('📊 Session ID:', window.SentientIQ.getSessionId());
+                console.log('💭 Current Emotion:', window.SentientIQ.getCurrentEmotion());
+            }
+        }, 1000);
+    </script>
+</body>
+</html>

@@ -16,7 +16,7 @@ import Boardroom from '../pages/boardroom'
 import Onboarding from '../pages/onboarding'
 import DynamicRecommendations from '../pages/dynamic-recommendations'
 import SentientIQScorecard from '../components/SentientIQScorecard'
-import EmotionalDashboard from '../components/EmotionalDashboard'
+import EmotionalLiveFeed from '../components/EmotionalLiveFeed'
 
 // Admin pages
 import TenantsPage from './admin/TenantsPage'
@@ -29,14 +29,12 @@ import { SenseiCandyProvider } from '../components/ui/SenseiCandy'
 // Sage - The Crystal Palace of Marketing Truth
 import SageCrystalBall from '../components/SageCrystalBall'
 
-// Emotional Intelligence - Marketing at the Speed of Emotion™
-import EmotionalIntelligenceProvider from '../providers/EmotionalIntelligenceProvider'
+// Emotional Intelligence - Now tracks OTHER sites, not this one!
 
 function App() {
   return (
     <HelmetProvider>
       <SenseiCandyProvider confetti cursor toasts>
-        <EmotionalIntelligenceProvider>
           <Router>
             <Layout>
             {/* Sage watches from the corner, always */}
@@ -183,11 +181,11 @@ function App() {
             </>
           } />
 
-          {/* Emotional Dashboard - Real-time Emotional Intelligence */}
+          {/* Emotional Live Feed - Real-time Emotional Intelligence from ANY website */}
           <Route path="/emotional-dashboard" element={
             <>
               <SignedIn>
-                <EmotionalDashboard />
+                <EmotionalLiveFeed />
               </SignedIn>
               <SignedOut>
                 <Navigate to="/auth" replace />
@@ -233,7 +231,6 @@ function App() {
         </Routes>
       </Layout>
     </Router>
-        </EmotionalIntelligenceProvider>
     </SenseiCandyProvider>
     </HelmetProvider>
   )
