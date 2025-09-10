@@ -374,6 +374,75 @@ export default function SuperAdmin() {
             ))}
           </div>
 
+          {/* Implementation Guide Section */}
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="glass-card p-6 mb-8"
+          >
+            <h2 className="text-2xl font-bold text-white mb-4">🚀 Implementation Guide</h2>
+            <p className="text-white/60 mb-6">One-line emotional intelligence for any website</p>
+            
+            <div className="grid md:grid-cols-2 gap-6">
+              <div>
+                <h3 className="text-lg font-semibold text-purple-400 mb-3">Quick Start</h3>
+                <div className="bg-black/30 rounded-lg p-4 font-mono text-sm">
+                  <code className="text-green-400">
+                    &lt;script src="https://cdn.sentientiq.ai/v1/detect.js"<br/>
+                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;data-api-key="YOUR_KEY"&gt;&lt;/script&gt;
+                  </code>
+                </div>
+                <p className="text-xs text-white/40 mt-2">Add before &lt;/body&gt; tag</p>
+              </div>
+              
+              <div>
+                <h3 className="text-lg font-semibold text-purple-400 mb-3">What Gets Detected</h3>
+                <ul className="space-y-1 text-sm text-white/80">
+                  <li>🤬 <strong>Rage:</strong> 3+ clicks in &lt;300ms</li>
+                  <li>🤔 <strong>Hesitation:</strong> 2+ second hovers</li>
+                  <li>😵 <strong>Confusion:</strong> Erratic scrolling</li>
+                  <li>💸 <strong>Sticker Shock:</strong> Mouse deceleration near prices</li>
+                  <li>🚪 <strong>Abandonment:</strong> 60+ seconds idle</li>
+                </ul>
+              </div>
+            </div>
+            
+            <div className="mt-6 p-4 bg-gradient-to-r from-purple-500/10 to-blue-500/10 rounded-lg border border-purple-500/20">
+              <h3 className="text-lg font-semibold text-white mb-2">Listen for Emotions</h3>
+              <div className="bg-black/30 rounded-lg p-3 font-mono text-sm">
+                <code className="text-blue-400">
+                  window.addEventListener('sentientiq:emotion', (e) =&gt; {'{'}<br/>
+                  &nbsp;&nbsp;console.log('Detected:', e.detail.emotion, e.detail.confidence + '%');<br/>
+                  &nbsp;&nbsp;// Deploy your intervention here<br/>
+                  {'}'});
+                </code>
+              </div>
+            </div>
+            
+            <div className="flex gap-4 mt-6">
+              <a 
+                href="/demo.html" 
+                target="_blank"
+                className="px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg hover:from-purple-700 hover:to-pink-700 transition-all"
+              >
+                View Live Demo
+              </a>
+              <a 
+                href="/detect.js" 
+                target="_blank"
+                className="px-4 py-2 bg-white/10 text-white rounded-lg hover:bg-white/20 transition-all"
+              >
+                Download Script
+              </a>
+              <button 
+                onClick={() => navigator.clipboard.writeText('<script src="https://cdn.sentientiq.ai/v1/detect.js" data-api-key="YOUR_KEY"></script>')}
+                className="px-4 py-2 bg-white/10 text-white rounded-lg hover:bg-white/20 transition-all"
+              >
+                Copy Script Tag
+              </button>
+            </div>
+          </motion.div>
+
           {/* Organizations Table */}
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
