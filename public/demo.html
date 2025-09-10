@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SentientIQ - One Line Implementation Demo</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      color: white;
+      padding: 40px 20px;
+    }
+    
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    
+    h1 {
+      font-size: 48px;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+    
+    .subtitle {
+      font-size: 24px;
+      text-align: center;
+      opacity: 0.9;
+      margin-bottom: 60px;
+    }
+    
+    .code-block {
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 8px;
+      padding: 20px;
+      margin: 30px 0;
+      font-family: 'Monaco', 'Courier New', monospace;
+      font-size: 14px;
+      overflow-x: auto;
+    }
+    
+    .emotion-display {
+      background: rgba(0, 0, 0, 0.2);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      border-radius: 12px;
+      padding: 30px;
+      margin: 40px 0;
+      text-align: center;
+    }
+    
+    .emotion-display h2 {
+      font-size: 24px;
+      margin-bottom: 20px;
+    }
+    
+    #current-emotion {
+      font-size: 36px;
+      font-weight: bold;
+      color: #ffd700;
+      margin: 20px 0;
+    }
+    
+    .emotion-log {
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: 8px;
+      padding: 20px;
+      margin-top: 20px;
+      max-height: 300px;
+      overflow-y: auto;
+      text-align: left;
+    }
+    
+    .emotion-entry {
+      padding: 10px;
+      margin: 5px 0;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 4px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .test-section {
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      padding: 30px;
+      margin: 40px 0;
+    }
+    
+    .test-section h3 {
+      margin-bottom: 20px;
+    }
+    
+    .test-item {
+      background: rgba(0, 0, 0, 0.2);
+      padding: 15px;
+      margin: 10px 0;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+    
+    .test-item:hover {
+      background: rgba(0, 0, 0, 0.3);
+      transform: translateX(5px);
+    }
+    
+    .test-item strong {
+      color: #ffd700;
+    }
+    
+    button {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      padding: 15px 30px;
+      font-size: 18px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: transform 0.2s;
+      margin: 10px;
+    }
+    
+    button:hover {
+      transform: scale(1.05);
+    }
+    
+    .price {
+      font-size: 48px;
+      font-weight: bold;
+      margin: 20px 0;
+      display: inline-block;
+      padding: 20px;
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: 8px;
+    }
+    
+    .intervention {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: #ff6b6b;
+      color: white;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+      display: none;
+      animation: slideIn 0.3s ease;
+      max-width: 300px;
+    }
+    
+    .intervention.show {
+      display: block;
+    }
+    
+    @keyframes slideIn {
+      from {
+        transform: translateX(100%);
+        opacity: 0;
+      }
+      to {
+        transform: translateX(0);
+        opacity: 1;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🧠 SentientIQ Demo</h1>
+    <p class="subtitle">This page is detecting your emotions RIGHT NOW</p>
+    
+    <div class="code-block">
+      <strong>The only code on this page:</strong><br><br>
+      &lt;script src="detect.js" data-api-key="DEMO_KEY" data-debug="true"&gt;&lt;/script&gt;
+    </div>
+    
+    <div class="emotion-display">
+      <h2>Your Current Emotional State</h2>
+      <div id="current-emotion">NORMAL</div>
+      <p>Confidence: <span id="confidence">0</span>%</p>
+      
+      <div class="emotion-log" id="emotion-log">
+        <strong>Emotion History:</strong>
+        <div id="log-entries"></div>
+      </div>
+    </div>
+    
+    <div class="test-section">
+      <h3>🧪 Try These Tests:</h3>
+      
+      <div class="test-item">
+        <strong>🤬 Rage Test:</strong> Click this box rapidly 3+ times to trigger rage detection
+      </div>
+      
+      <div class="test-item">
+        <strong>🤔 Hesitation Test:</strong> Hover over the button below for 2+ seconds
+        <br><br>
+        <button>Should I Click This?</button>
+      </div>
+      
+      <div class="test-item">
+        <strong>😵 Confusion Test:</strong> Scroll up and down erratically on this page
+      </div>
+      
+      <div class="test-item">
+        <strong>💸 Sticker Shock Test:</strong> Move your mouse quickly, then suddenly stop when you see this price:
+        <br>
+        <div class="price">$4,997</div>
+      </div>
+    </div>
+    
+    <div class="code-block">
+      <strong>Listen to emotional events in your code:</strong><br><br>
+      window.addEventListener('sentientiq:emotion', (e) => {<br>
+      &nbsp;&nbsp;console.log('Detected:', e.detail.emotion);<br>
+      &nbsp;&nbsp;// Deploy your intervention here<br>
+      });
+    </div>
+    
+    <div class="test-section">
+      <h3>📊 What's Happening Behind the Scenes:</h3>
+      <ul style="list-style: none; padding: 0;">
+        <li>✅ Tracking click intervals for rage detection</li>
+        <li>✅ Monitoring hover duration for hesitation</li>
+        <li>✅ Analyzing scroll patterns for confusion</li>
+        <li>✅ Calculating mouse velocity for sticker shock</li>
+        <li>✅ Sending events to SentientIQ API</li>
+        <li>✅ Building your emotional pattern database</li>
+      </ul>
+    </div>
+  </div>
+  
+  <!-- Intervention popup -->
+  <div class="intervention" id="intervention">
+    <strong id="intervention-title">Emotion Detected!</strong>
+    <p id="intervention-message"></p>
+  </div>
+  
+  <!-- THE ONLY LINE OF CODE NEEDED -->
+  <script src="detect.js" data-api-key="DEMO_KEY" data-debug="true"></script>
+  
+  <!-- Demo UI updates (not required for real implementation) -->
+  <script>
+    // Listen for emotional events
+    window.addEventListener('sentientiq:emotion', function(e) {
+      const emotion = e.detail.emotion;
+      const confidence = e.detail.confidence;
+      
+      // Update current emotion display
+      document.getElementById('current-emotion').textContent = emotion.toUpperCase();
+      document.getElementById('confidence').textContent = confidence;
+      
+      // Add to log
+      const logEntry = document.createElement('div');
+      logEntry.className = 'emotion-entry';
+      logEntry.innerHTML = `
+        <span>${new Date().toLocaleTimeString()}</span>
+        <span><strong>${emotion}</strong></span>
+        <span>${confidence}%</span>
+      `;
+      document.getElementById('log-entries').prepend(logEntry);
+      
+      // Show intervention for certain emotions
+      if (emotion === 'rage') {
+        showIntervention('😤 Rage Detected!', 'We would normally show help chat here');
+      } else if (emotion === 'sticker_shock') {
+        showIntervention('💸 Sticker Shock!', 'Discount intervention would deploy here');
+      } else if (emotion === 'confusion') {
+        showIntervention('😵 Confusion Detected!', 'Guided tour would start here');
+      } else if (emotion === 'hesitation') {
+        showIntervention('🤔 Hesitation Detected!', 'We would provide reassurance here');
+      }
+    });
+    
+    function showIntervention(title, message) {
+      const intervention = document.getElementById('intervention');
+      document.getElementById('intervention-title').textContent = title;
+      document.getElementById('intervention-message').textContent = message;
+      intervention.classList.add('show');
+      
+      setTimeout(() => {
+        intervention.classList.remove('show');
+      }, 5000);
+    }
+    
+    // Make test boxes clickable
+    document.querySelectorAll('.test-item').forEach(item => {
+      item.addEventListener('click', function(e) {
+        // Multiple clicks will trigger rage detection
+      });
+    });
+  </script>
+</body>
+</html>
