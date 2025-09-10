@@ -4,7 +4,7 @@ export default function Footer() {
     <footer className="section py-12 text-sm text-white/60">
       <div className="flex flex-col md:flex-row items-center md:items-start justify-between gap-6">
         <div className="flex items-center gap-2">
-          <img src="/logo.png" className="h-6 w-6" alt="SentientIQ" />
+          <img src="/red_pulse.png" className="h-6 w-6" alt="SentientIQ" />
           <span>SentientIQ</span>
         </div>
         <nav className="flex gap-6">
