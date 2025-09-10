@@ -668,8 +668,8 @@ ${synthesisContract}`;
         return shuffled;
       };
       
-      // Separate Sonnet personas to avoid bunching
-      const SONNET_PERSONAS = ['chaos', 'roi', 'brutal', 'warfare'];
+      // Separate Sonnet personas to avoid bunching - must match hybrid-llm.ts
+      const SONNET_PERSONAS = ['chaos', 'brutal', 'roi', 'warfare', 'truth', 'maverick'];
       const sonnetInDebate = roster.filter(p => SONNET_PERSONAS.includes(p.toLowerCase()));
       const gptInDebate = roster.filter(p => !SONNET_PERSONAS.includes(p.toLowerCase()));
       
