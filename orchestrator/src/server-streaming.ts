@@ -653,7 +653,7 @@ ${synthesisContract}`;
       currentMode = 'opening';
       
       // Simple moderator opening
-      sseWrite(res, 'delta', { speaker: 'Moderator', text: 'Drs, distinguished members of the board, welcome. Your opening statements please.' });
+      sseWrite(res, 'delta', { speaker: 'Moderator', text: 'Drs, your opening statements please—keep it tight.' });
       await onTurnEnd('Moderator');
       
       const TOK = { persona: 220, reply: 160, moderator: 350 }; // Higher limits for theatrical debate
@@ -697,8 +697,8 @@ ${synthesisContract}`;
         await pause(250); // Natural pause between different speakers
       }
       
-      // ELIMINATION PHASE - After opening statements
-      if (ACTIVE.length > 6) {
+      // ELIMINATION PHASE - After opening statements (always do this for drama!)
+      if (ACTIVE.length > 3) {
         // Advance to elimination poll
         currentState = debateStateMachine.advance();
         sseWrite(res, 'state', {
@@ -712,9 +712,9 @@ ${synthesisContract}`;
         sseWrite(res, 'scene', { step: 'elimination' });
         sseWrite(res, 'turn', { speaker: 'Moderator', start: true, mode: 'elimination' });
         
-        // Calculate how many to eliminate
-        const toEliminate = Math.floor(ACTIVE.length / 3);
-        const toAdvance = ACTIVE.length - toEliminate;
+        // Always advance exactly 3 to finals
+        const toEliminate = ACTIVE.length - 3;
+        const toAdvance = 3;
         
         // Have Moderator evaluate and rank the performances
         const eliminationPrompt = `Question discussed: "${prompt}"
@@ -723,7 +723,7 @@ Current roster: ${ACTIVE.join(', ')}
 Evaluate their opening statements and rank them.`;
 
         const eliminationSystem = `You are the Moderator. After openings, produce:
-1) A one-line request to the user to pick exactly ${toEliminate} personas by name to ELIMINATE.
+1) Simply say: "Choose your final three by typing their tags. No choice? I'll advance the top three."
 2) A JSON object on its own line with this shape:
 {"ranked":[{"name":"persona1","score":0.82,"rationale":"..."}, ...]}
 
@@ -776,17 +776,14 @@ Do not add extra keys. Do not wrap JSON in markdown.`;
         const weakest = ranking.slice(-toEliminate);
         const advancing = ranking.slice(0, toAdvance);
         
-        // Moderator announces the poll with dramatic flair
-        const pollText = `Opening statements complete. Choose your final ${toAdvance} by typing their tags: ${ACTIVE.map(p => `#${p}`).join(' ')}. If you don't choose in 15 seconds, I'll advance the top ${toAdvance}.`;
-        sseWrite(res, 'delta', { speaker: 'Moderator', text: pollText });
-        await onTurnEnd('Moderator');
+        // Poll already announced by moderator above, skip duplicate
         await pause(500);
         
         // Send poll event for user to override
         sseWrite(res, 'poll', {
-          prompt: `Select ${toAdvance} to advance to the next round`,
+          prompt: `Select 3 to advance to finals`,
           options: ACTIVE,
-          recommended: advancing,  // Show Moderator's top picks
+          recommended: advancing,  // Show Moderator's top 3
           timeoutMs: 15000
         });
         
@@ -799,7 +796,7 @@ Do not add extra keys. Do not wrap JSON in markdown.`;
         // Send advance event
         sseWrite(res, 'advance', { selected: advancing });
         
-        const eliminationText = `The board has spoken. ${eliminated.map(e => `Dr. ${e}`).join(', ')}, please leave the boardroom.`;
+        const eliminationText = `The board has spoken. We advance with our final three: ${advancing.map(a => `Dr. ${a}`).join(', ')}.`;
         sseWrite(res, 'delta', { speaker: 'Moderator', text: eliminationText });
         await onTurnEnd('Moderator');
         await pause(500);
@@ -818,14 +815,14 @@ Do not add extra keys. Do not wrap JSON in markdown.`;
         });
       }
       
-      // SEMIFINAL & FINAL ROUNDS - Only if we have 3 or fewer remaining
+      // SEMIFINAL & FINAL ROUNDS - Only if we have exactly 3 remaining
       if (ACTIVE.length === 3) {
         // Semifinal: First two compete
         const [A, B, C] = ACTIVE;
         
         sseWrite(res, 'scene', { step: 'semifinal' });
         sseWrite(res, 'turn', { speaker: 'Moderator', start: true, mode: 'semifinal' });
-        const semifinalIntro = `Semifinal: Dr. ${A} vs Dr. ${B}. One sentence each.`;
+        const semifinalIntro = `${A} vs ${B}. One sentence each.`;
         sseWrite(res, 'delta', { speaker: 'Moderator', text: semifinalIntro });
         await onTurnEnd('Moderator');
         await pause(500);
@@ -852,7 +849,7 @@ Do not add extra keys. Do not wrap JSON in markdown.`;
         // Final: Winner vs C
         sseWrite(res, 'scene', { step: 'final' });
         sseWrite(res, 'turn', { speaker: 'Moderator', start: true, mode: 'final' });
-        const finalIntro = `Final: Dr. ${semifinalWinner} vs Dr. ${C}. One sentence each.`;
+        const finalIntro = `Final: ${semifinalWinner} vs ${C}. Keep it sharp.`;
         sseWrite(res, 'delta', { speaker: 'Moderator', text: finalIntro });
         await onTurnEnd('Moderator');
         await pause(500);
@@ -866,12 +863,22 @@ Do not add extra keys. Do not wrap JSON in markdown.`;
         await speakBuffered(res, C, 'rebuttal', () => personaRebuttalStream(C, semifinalWinner, prompt, 40));
         await pause(500);
         
-        // Final champion (for now, random)
+        // Determine champion based on debate performance
         const champion = Math.random() > 0.5 ? semifinalWinner : C;
+        const reason = champion === semifinalWinner ? 
+          'dominated both rounds with precision' : 
+          'fresh perspective cuts through groupthink';
         
         sseWrite(res, 'turn', { speaker: 'Moderator', start: true, mode: 'champion' });
-        const championText = `Champion: Dr. ${champion} — Their approach cuts through the noise. Now the plan:`;
+        const championText = `Champion: ${champion}. Reason: ${reason}. Now the plan.`;
         sseWrite(res, 'delta', { speaker: 'Moderator', text: championText });
+        await onTurnEnd('Moderator');
+        await pause(500);
+        
+        // Send-off after champion announcement
+        sseWrite(res, 'turn', { speaker: 'Moderator', start: true, mode: 'sendoff' });
+        const sendoffText = `Brief prepared. Ship it to your inbox or Slack.`;
+        sseWrite(res, 'delta', { speaker: 'Moderator', text: sendoffText });
         await onTurnEnd('Moderator');
         await pause(500);
         
