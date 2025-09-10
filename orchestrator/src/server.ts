@@ -2,7 +2,7 @@ import 'dotenv/config';
 import express, { Request, Response } from 'express';
 import cors from 'cors';
 import { z } from 'zod';
-import { runChain, sseWrite } from './chain.js';
+import { callAnthropic, sseWrite } from './chain.js';
 import { enqueueDebate } from './queue/redis.js';
 import { createClient } from '@supabase/supabase-js';
 import { 
@@ -133,9 +133,80 @@ const boardroomHandler = async (req: Request, res: Response) => {
 
   try {
     if (mode === 'answer') {
-      // Answer mode: Hidden panel → Moderator-only stream
-      // For now, run normal chain but only stream the Moderator
-      await runChain(prompt, topK, res, roster, true); // true = moderatorOnly flag
+      // Answer mode: Show selected personas' perspectives, then synthesize
+      sseWrite(res, 'phase', { label: 'answer', status: 'begin' });
+      sseWrite(res, 'meta', { requestId, subject: prompt.slice(0, 120), personas: roster });
+      
+      // Collect perspectives from each selected persona
+      const perspectives: Record<string, string> = {};
+      
+      for (const persona of roster) {
+        sseWrite(res, 'turn', { speaker: persona, start: true });
+        
+        // Generate persona's answer (shorter than debate mode)
+        const personaAnswer = await streamPersonaOpening(persona, prompt, 80); // Shorter token limit for answer mode
+        perspectives[persona] = personaAnswer;
+        
+        // Stream the persona's response
+        await speak(res, persona, async () => personaAnswer);
+        sseWrite(res, 'turn', { speaker: persona, end: true, mode: 'opening' });
+      }
+      
+      // Synthesis of all perspectives
+      sseWrite(res, 'turn', { speaker: 'Synthesis', start: true });
+      
+      const synthesisPrompt = `Based on these perspectives:
+${Object.entries(perspectives).map(([p, text]) => `${p}: ${text}`).join('\n\n')}
+
+Provide a synthesis that captures the core tension and non-obvious insight.`;
+      
+      const synthesis = await callAnthropic(
+        'You are the Synthesis voice. Identify tensions, reveal non-obvious insights, and suggest bold actions. Be concise.',
+        synthesisPrompt
+      );
+      
+      await speak(res, 'Synthesis', async () => synthesis);
+      sseWrite(res, 'message', {});
+      sseWrite(res, 'turn', { speaker: 'Synthesis', end: true, mode: 'opening' });
+      sseWrite(res, 'synth', { synthesis: '', personas: roster });
+      sseWrite(res, 'phase', { label: 'answer', status: 'end' });
+      
+      // Final moderator synthesis with CTAs
+      sseWrite(res, 'scene', { step: 'synthesis' });
+      sseWrite(res, 'turn', { speaker: 'Moderator', start: true, mode: 'synthesis' });
+      
+      const moderatorPrompt = `The board has debated: ${roster.join(', ')}.
+
+Challenge: ${prompt}
+
+Synthesize into EXACTLY 3 action items:
+- [Action] — Owner: [Role] — When: [Timeframe]`;
+      
+      const moderatorSynthesis = await callAnthropic(
+        'You are the Moderator. Be decisive. No hedging.',
+        moderatorPrompt
+      );
+      
+      await speak(res, 'Moderator', async () => moderatorSynthesis);
+      sseWrite(res, 'turn', { speaker: 'Moderator', end: true, mode: 'synthesis' });
+      
+      // Extract and send CTAs
+      const bullets = takeTopCTAs(moderatorSynthesis, 3);
+      const ctas = bullets.map(b => {
+        const match = b.match(/(.+?)—\s*Owner:\s*(.+?)—\s*When:\s*(.+)/);
+        if (match) {
+          return { action: match[1].trim(), owner: match[2].trim(), when: match[3].trim() };
+        }
+        return { action: b, owner: 'Team', when: 'ASAP' };
+      });
+      
+      sseWrite(res, 'synth', { title: 'Collective Synthesis', bullets: ctas });
+      
+      if (ctas.length === 0) {
+        sseWrite(res, 'warn', { code: 'NO_CTAS', message: 'No actionable CTAs parsed' });
+      }
+      
+      sseWrite(res, 'done', { ok: true })
     } else {
       // Debate mode: Full theatrical debate with personas
       

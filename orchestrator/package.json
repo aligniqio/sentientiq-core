@@ -4,11 +4,9 @@
   "type": "module",
   "scripts": {
     "dev": "tsx src/server.ts",
-    "dev:streaming": "tsx src/server-streaming.ts",
     "dev:worker": "tsx src/worker.ts",
     "build": "tsc -p tsconfig.json",
     "start": "node dist/server.js",
-    "start:streaming": "node dist/server-streaming.js",
     "worker": "node dist/worker.js"
   },
   "dependencies": {
