@@ -113,7 +113,7 @@ export const SentientIQScorecard: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900 flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center">
         <div className="text-white text-2xl animate-pulse">Loading Truth...</div>
       </div>
     );
@@ -122,7 +122,7 @@ export const SentientIQScorecard: React.FC = () => {
   // Show empty state if no scorecard data
   if (!scorecard) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900 p-8">
+      <div className="min-h-screen p-8 pt-20">
         <div className="max-w-7xl mx-auto">
           <motion.div
             initial={{ opacity: 0, y: -20 }}
@@ -140,7 +140,7 @@ export const SentientIQScorecard: React.FC = () => {
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="backdrop-blur-xl bg-white/10 rounded-3xl p-12 border border-white/20 shadow-2xl text-center"
+            className="backdrop-blur-xl bg-white/5 rounded-3xl p-12 border border-white/10 shadow-2xl text-center"
           >
             <div className="text-6xl mb-4">🚫</div>
             <h2 className="text-3xl font-bold text-white mb-4">No Data Yet</h2>
@@ -157,7 +157,7 @@ export const SentientIQScorecard: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900 p-8">
+    <div className="min-h-screen p-8 pt-20">
       {/* Glass morphism container */}
       <div className="max-w-7xl mx-auto">
         {/* Header */}
@@ -180,7 +180,7 @@ export const SentientIQScorecard: React.FC = () => {
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
-              className="backdrop-blur-xl bg-white/10 rounded-3xl p-8 mb-8 border border-white/20 shadow-2xl"
+              className="backdrop-blur-xl bg-white/5 rounded-3xl p-8 mb-8 border border-white/10 shadow-2xl"
             >
               <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                 {/* Accountability Score */}
