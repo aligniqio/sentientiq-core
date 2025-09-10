@@ -46,7 +46,7 @@ export class DebateStateMachine {
   }
   
   // Transition to next phase
-  advance(userSelection?: string[]): ElimState {
+  advance(toEliminate?: string[]): ElimState {
     switch (this.state.phase) {
       case "opening":
         // After opening, move to elimination poll
@@ -56,14 +56,15 @@ export class DebateStateMachine {
         break;
         
       case "elimination_poll":
-        // User selects or auto-select from recommended
-        this.state.selected = userSelection || this.autoSelect();
-        this.eliminate(this.state.selected);
+        // Eliminate the specified personas
+        if (toEliminate && toEliminate.length > 0) {
+          this.eliminate(toEliminate);
+        }
         
-        // If we have 6 or fewer, go to semifinal
-        if (this.state.active.length <= 6 && this.state.active.length > 3) {
+        // After elimination to exactly 3, go straight to semifinal
+        if (this.state.active.length === 3) {
           this.state.phase = "semifinal";
-        } else if (this.state.active.length <= 3) {
+        } else if (this.state.active.length <= 2) {
           this.state.phase = "final";
         }
         this.state.rid = this.generateRoundId();

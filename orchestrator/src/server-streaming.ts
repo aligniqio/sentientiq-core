@@ -803,7 +803,7 @@ Do not add extra keys. Do not wrap JSON in markdown.`;
         await onTurnEnd('Moderator');
         await pause(500);
         
-        // Auto-advance with eliminations
+        // Auto-advance with the eliminated personas
         currentState = debateStateMachine.advance(eliminated);
         
         // Update ACTIVE list
@@ -817,8 +817,8 @@ Do not add extra keys. Do not wrap JSON in markdown.`;
         });
       }
       
-      // SEMIFINAL & FINAL ROUNDS - Only if we have exactly 3 remaining
-      if (ACTIVE.length === 3) {
+      // SEMIFINAL & FINAL ROUNDS - After elimination, we have exactly 3
+      if (ACTIVE.length === 3 && currentState.phase === 'semifinal') {
         // Semifinal: First two compete
         const [A, B, C] = ACTIVE;
         
@@ -890,8 +890,8 @@ Do not add extra keys. Do not wrap JSON in markdown.`;
         await onTurnEnd('Moderator');
         await pause(500);
         
-      } else if (ACTIVE.length > 3) {
-        // Regular crossfire for larger groups
+      } else if (ACTIVE.length > 3 && currentState.phase !== 'semifinal') {
+        // Regular crossfire for larger groups (only if not in theatrical mode)
         const shuffledForPairs = shuffleArray(ACTIVE);
         const activePairs: string[][] = [];
         
