@@ -59,6 +59,7 @@ const Boardroom = () => {
   const [flashAll, setFlashAll] = useState(false);
   const [currentTypingIndex, setCurrentTypingIndex] = useState(0);
   const [debateMode, setDebateMode] = useState<'answer' | 'debate'>('answer');
+  const [activeSpeaker, setActiveSpeaker] = useState<string | null>(null);
   // const [freeQuestionsRemaining, setFreeQuestionsRemaining] = useState<number>(() => {
   //   const stored = localStorage.getItem('free_questions_remaining');
   //   return stored ? parseInt(stored, 10) : 20;
@@ -247,6 +248,16 @@ const Boardroom = () => {
           // Stream answers line by line just like debates
           const speaker = data.speaker || data.label || 'Answer';
           const text = data.text || '';
+          
+          // Track active speaker for glow effect
+          const personaId = Object.keys(PERSONA_META).find(
+            id => PERSONA_META[id].name === `Dr. ${speaker}` || 
+                   PERSONA_META[id].name.includes(speaker)
+          );
+          if (personaId) {
+            setActiveSpeaker(personaId);
+          }
+          
           if (text.trim()) {
             setDebateLines(prev => {
               // Check if last line is from same speaker
@@ -277,6 +288,7 @@ const Boardroom = () => {
         }
         if (event === 'done') {
           setShowResults(true);
+          setActiveSpeaker(null); // Clear active speaker when done
         }
       });
       
@@ -363,6 +375,16 @@ const Boardroom = () => {
           // Add each sentence as a new line immediately
           const speaker = data.speaker || data.label || 'System';
           const text = data.text || '';
+          
+          // Track active speaker for glow effect
+          const personaId = Object.keys(PERSONA_META).find(
+            id => PERSONA_META[id].name === `Dr. ${speaker}` || 
+                   PERSONA_META[id].name.includes(speaker)
+          );
+          if (personaId) {
+            setActiveSpeaker(personaId);
+          }
+          
           if (text.trim()) {
             setDebateLines(prev => {
               // Check if last line is from same speaker
@@ -394,6 +416,7 @@ const Boardroom = () => {
         if (event === 'done') {
           // Debate complete
           console.log('Debate complete');
+          setActiveSpeaker(null); // Clear active speaker when done
         }
       });
       
@@ -497,6 +520,7 @@ const Boardroom = () => {
                 disabled={false}
                 onToggle={(personaId) => togglePhD(personaId)}
                 flashAll={flashAll}
+                isSpeaking={activeSpeaker === id}
               />
             ))}
           </div>

@@ -107,6 +107,24 @@
     animation: agent-flash .9s ease-in-out 1; 
   }
 
+  /* Speaking glow animation */
+  @keyframes speaking-pulse {
+    0%, 100% { 
+      box-shadow: 0 0 20px var(--glow-color, rgba(255,255,255,0.4)),
+                  0 0 40px var(--glow-color, rgba(255,255,255,0.2));
+      border-color: var(--glow-color, rgba(255,255,255,0.6));
+    }
+    50% { 
+      box-shadow: 0 0 30px var(--glow-color, rgba(255,255,255,0.6)),
+                  0 0 60px var(--glow-color, rgba(255,255,255,0.3));
+      border-color: var(--glow-color, rgba(255,255,255,0.8));
+    }
+  }
+  .speaking-glow {
+    animation: speaking-pulse 1.5s ease-in-out infinite;
+    border: 1px solid var(--glow-color, rgba(255,255,255,0.4));
+  }
+
   /* Colored microchips */
   .agent-chip {
     font-size: 11px;
