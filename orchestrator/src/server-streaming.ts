@@ -890,8 +890,8 @@ Do not add extra keys. Do not wrap JSON in markdown.`;
         await onTurnEnd('Moderator');
         await pause(500);
         
-      } else if (ACTIVE.length > 3 && currentState.phase !== 'semifinal') {
-        // Regular crossfire for larger groups (only if not in theatrical mode)
+      } else if (false) {
+        // DISABLED: Regular crossfire - we always do theatrical elimination now
         const shuffledForPairs = shuffleArray(ACTIVE);
         const activePairs: string[][] = [];
         
