@@ -8,7 +8,8 @@ import {
   X, 
   LogOut,
   Shield,
-  Zap
+  Zap,
+  Crown
 } from 'lucide-react';
 
 interface LayoutProps {
@@ -32,10 +33,14 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
+  // Check if user is super admin (your email)
+  const isSuperAdmin = user?.primaryEmailAddress?.emailAddress === 'info@sentientiq.ai';
+  
   const menuItems = [
     { path: '/boardroom', icon: Brain, label: 'Boardroom', public: false },
     { path: '/recommendations', icon: Zap, label: 'Recommendations', public: false },
     { path: '/billing', icon: Shield, label: 'Billing', public: false },
+    ...(isSuperAdmin ? [{ path: '/super-admin', icon: Crown, label: 'Super Admin', public: false }] : []),
   ];
 
   const handleSignOut = async () => {

@@ -19,6 +19,7 @@ import DynamicRecommendations from '../pages/dynamic-recommendations'
 // Admin pages
 import TenantsPage from './admin/TenantsPage'
 import InvitesPage from './admin/InvitesPage'
+import SuperAdmin from '../pages/super-admin'
 
 // Candy Kit UI enhancements
 import { SenseiCandyProvider } from '../components/ui/SenseiCandy'
@@ -180,6 +181,18 @@ function App() {
             <>
               <SignedIn>
                 <InvitesPage />
+              </SignedIn>
+              <SignedOut>
+                <Navigate to="/auth" replace />
+              </SignedOut>
+            </>
+          } />
+          
+          {/* Super Admin - Tenant Management */}
+          <Route path="/super-admin" element={
+            <>
+              <SignedIn>
+                <SuperAdmin />
               </SignedIn>
               <SignedOut>
                 <Navigate to="/auth" replace />
