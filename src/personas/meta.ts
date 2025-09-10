@@ -88,12 +88,12 @@ export const PERSONA_META: Record<string, PersonaMeta> = {
     icon: Globe,
     color: '#14b8a6' // teal
   },
-  first: {
-    id: 'first',
-    name: 'Dr. First',
-    role: 'Onboarding Intelligence',
-    creds: ['Activation', 'Time-to-value'],
-    voice: 'Engineers first-run joy; removes the "first 3 seconds" friction.',
+  maverick: {
+    id: 'maverick',
+    name: 'Dr. Maverick',
+    role: 'Contrarian VC',
+    creds: ['Anti-consensus', '100x returns'],
+    voice: 'Bets against the crowd; finds alpha where others see failure.',
     icon: Compass,
     color: '#6366f1' // indigo
   },

@@ -7,7 +7,7 @@ const SONNET_PERSONAS = [
   'chaos',      // Dr. Chaos - needs to be truly chaotic
   'brutal',     // Dr. Brutal - needs harsh honesty
   'roi',        // Dr. ROI - needs ruthless financial focus
-  'warfare',    // Dr. Warfare - needs aggressive competitive stance
+  'warfare',    // Dr. Warfare - needs aggressive competitive stance (GPT-4 refuses)
   'truth',      // Dr. Truth - needs unfiltered honesty
   'maverick',   // Dr. Maverick - contrarian VC who bets against consensus
 ];
