@@ -16,6 +16,7 @@ import Boardroom from '../pages/boardroom'
 import Onboarding from '../pages/onboarding'
 import DynamicRecommendations from '../pages/dynamic-recommendations'
 import SentientIQScorecard from '../components/SentientIQScorecard'
+import EmotionalDashboard from '../components/EmotionalDashboard'
 
 // Admin pages
 import TenantsPage from './admin/TenantsPage'
@@ -171,6 +172,18 @@ function App() {
             <>
               <SignedIn>
                 <SentientIQScorecard />
+              </SignedIn>
+              <SignedOut>
+                <Navigate to="/auth" replace />
+              </SignedOut>
+            </>
+          } />
+
+          {/* Emotional Dashboard - Real-time Emotional Intelligence */}
+          <Route path="/emotional-dashboard" element={
+            <>
+              <SignedIn>
+                <EmotionalDashboard />
               </SignedIn>
               <SignedOut>
                 <Navigate to="/auth" replace />

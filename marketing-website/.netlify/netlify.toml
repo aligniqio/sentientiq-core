@@ -1,5 +1,5 @@
 functionsDirectory = "/Users/matthewkiselstein/projects/sentientiq-core/marketing-website/netlify/functions"
-functionsDirectoryOrigin = "default"
+functionsDirectoryOrigin = "ui"
 headersOrigin = "config"
 redirectsOrigin = "config"
 plugins = []
@@ -9,11 +9,10 @@ publish = "/Users/matthewkiselstein/projects/sentientiq-core/marketing-website/d
 publishOrigin = "config"
 commandOrigin = "config"
 base = "/Users/matthewkiselstein/projects/sentientiq-core/marketing-website"
-command = "npm install && npm run build"
+command = "npm run build"
 functions = "/Users/matthewkiselstein/projects/sentientiq-core/marketing-website/netlify/functions"
 
 [build.environment]
-NODE_VERSION = "18"
 
 [build.processing]
 
@@ -45,49 +44,16 @@ Strict-Transport-Security = "max-age=31536000; includeSubDomains; preload"
 for = "/*"
 
 [headers.values]
-X-Frame-Options = "DENY"
-X-Content-Type-Options = "nosniff"
 Referrer-Policy = "strict-origin-when-cross-origin"
+X-Content-Type-Options = "nosniff"
+X-Frame-Options = "DENY"
+Permissions-Policy = "camera=(), microphone=(), geolocation=()"
+Strict-Transport-Security = "max-age=31536000; includeSubDomains; preload"
+Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com; img-src 'self' data: https:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; connect-src 'self' https://api.stripe.com; frame-src https://js.stripe.com https://hooks.stripe.com; base-uri 'self'; form-action 'self';"
 
 [[redirects]]
 from = "https://www.sentientiq.ai/*"
 to = "https://sentientiq.ai/:splat"
-status = 301.0
-force = true
-
-[redirects.query]
-
-[redirects.conditions]
-
-[redirects.headers]
-
-[[redirects]]
-from = "/app"
-to = "https://sentientiq.app"
-status = 301.0
-force = true
-
-[redirects.query]
-
-[redirects.conditions]
-
-[redirects.headers]
-
-[[redirects]]
-from = "/login"
-to = "https://sentientiq.app/auth"
-status = 301.0
-force = true
-
-[redirects.query]
-
-[redirects.conditions]
-
-[redirects.headers]
-
-[[redirects]]
-from = "/signup"
-to = "https://sentientiq.app/auth?mode=signup"
 status = 301.0
 force = true
 

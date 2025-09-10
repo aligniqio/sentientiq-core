@@ -9,7 +9,9 @@ import {
   LogOut,
   Shield,
   Zap,
-  Crown
+  Crown,
+  BarChart3,
+  Activity
 } from 'lucide-react';
 
 interface LayoutProps {
@@ -39,7 +41,9 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   
   const menuItems = [
     { path: '/boardroom', icon: Brain, label: 'Boardroom', public: false },
+    { path: '/scorecard', icon: BarChart3, label: 'Scorecard', public: false },
     { path: '/recommendations', icon: Zap, label: 'Recommendations', public: false },
+    { path: '/emotional-dashboard', icon: Activity, label: 'Emotions', public: false },
     { path: '/billing', icon: Shield, label: 'Billing', public: false },
     ...(isSuperAdmin ? [{ path: '/super-admin', icon: Crown, label: 'Super Admin', public: false }] : []),
   ];
