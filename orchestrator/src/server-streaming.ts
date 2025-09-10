@@ -776,11 +776,17 @@ Do not add extra keys. Do not wrap JSON in markdown.`;
         const weakest = ranking.slice(-toEliminate);
         const advancing = ranking.slice(0, toAdvance);
         
+        // Moderator announces the poll with dramatic flair
+        const pollText = `Opening statements complete. Choose your final ${toAdvance} by typing their tags: ${ACTIVE.map(p => `#${p}`).join(' ')}. If you don't choose in 15 seconds, I'll advance the top ${toAdvance}.`;
+        sseWrite(res, 'delta', { speaker: 'Moderator', text: pollText });
+        await onTurnEnd('Moderator');
+        await pause(500);
+        
         // Send poll event for user to override
         sseWrite(res, 'poll', {
-          prompt: `Select ${toAdvance} to advance (Moderator suggests eliminating: ${weakest.join(', ')})`,
+          prompt: `Select ${toAdvance} to advance to the next round`,
           options: ACTIVE,
-          recommended: weakest,  // Show who Moderator wants to eliminate
+          recommended: advancing,  // Show Moderator's top picks
           timeoutMs: 15000
         });
         
@@ -793,7 +799,7 @@ Do not add extra keys. Do not wrap JSON in markdown.`;
         // Send advance event
         sseWrite(res, 'advance', { selected: advancing });
         
-        const eliminationText = `The weakest links have been identified. ${eliminated.map(e => `Dr. ${e}`).join(', ')} - your services are no longer required. ${advancing.length} remain.`;
+        const eliminationText = `The board has spoken. ${eliminated.map(e => `Dr. ${e}`).join(', ')}, please leave the boardroom.`;
         sseWrite(res, 'delta', { speaker: 'Moderator', text: eliminationText });
         await onTurnEnd('Moderator');
         await pause(500);
@@ -812,29 +818,87 @@ Do not add extra keys. Do not wrap JSON in markdown.`;
         });
       }
       
-      // 3) Crossfire - dynamically create pairs from remaining active personas
-      const shuffledForPairs = shuffleArray(ACTIVE);  // Use ACTIVE not roster
-      const activePairs: string[][] = [];
-      
-      // Create random pairs from available personas
-      for (let i = 0; i < shuffledForPairs.length - 1; i += 2) {
-        activePairs.push([shuffledForPairs[i], shuffledForPairs[i + 1]]);
-      }
-      
-      console.log(`⚔️ Crossfire pairs: ${activePairs.map(p => p.join(' vs ')).join(', ')}`);
-      
-      if (activePairs.length > 0) {
-        sseWrite(res, 'scene', { step: 'crossfire' });
-        currentMode = 'rebuttal';
+      // SEMIFINAL & FINAL ROUNDS - Only if we have 3 or fewer remaining
+      if (ACTIVE.length === 3) {
+        // Semifinal: First two compete
+        const [A, B, C] = ACTIVE;
         
-        for (const [a, b] of activePairs) {
-          sseWrite(res, 'turn', { speaker: `Dr. ${a}`, start: true, mode: 'rebuttal' });
-          await speakBuffered(res, a, 'rebuttal', () => personaRebuttalStream(a, b, prompt, TOK?.reply || 60));
-          await pause(200); // Quick pause between rebuttals
+        sseWrite(res, 'scene', { step: 'semifinal' });
+        sseWrite(res, 'turn', { speaker: 'Moderator', start: true, mode: 'semifinal' });
+        const semifinalIntro = `Semifinal: Dr. ${A} vs Dr. ${B}. One sentence each.`;
+        sseWrite(res, 'delta', { speaker: 'Moderator', text: semifinalIntro });
+        await onTurnEnd('Moderator');
+        await pause(500);
+        
+        // A vs B debate
+        sseWrite(res, 'turn', { speaker: `Dr. ${A}`, start: true, mode: 'rebuttal' });
+        await speakBuffered(res, A, 'rebuttal', () => personaRebuttalStream(A, B, prompt, 40));
+        await pause(200);
+        
+        sseWrite(res, 'turn', { speaker: `Dr. ${B}`, start: true, mode: 'rebuttal' });
+        await speakBuffered(res, B, 'rebuttal', () => personaRebuttalStream(B, A, prompt, 40));
+        await pause(500);
+        
+        // Moderator picks winner (for now, random)
+        const semifinalWinner = Math.random() > 0.5 ? A : B;
+        const semifinalLoser = semifinalWinner === A ? B : A;
+        
+        sseWrite(res, 'turn', { speaker: 'Moderator', start: true, mode: 'verdict' });
+        const semifinalVerdict = `Dr. ${semifinalWinner} advances. Dr. ${semifinalLoser}, thank you.`;
+        sseWrite(res, 'delta', { speaker: 'Moderator', text: semifinalVerdict });
+        await onTurnEnd('Moderator');
+        await pause(500);
+        
+        // Final: Winner vs C
+        sseWrite(res, 'scene', { step: 'final' });
+        sseWrite(res, 'turn', { speaker: 'Moderator', start: true, mode: 'final' });
+        const finalIntro = `Final: Dr. ${semifinalWinner} vs Dr. ${C}. One sentence each.`;
+        sseWrite(res, 'delta', { speaker: 'Moderator', text: finalIntro });
+        await onTurnEnd('Moderator');
+        await pause(500);
+        
+        // Final debate
+        sseWrite(res, 'turn', { speaker: `Dr. ${semifinalWinner}`, start: true, mode: 'rebuttal' });
+        await speakBuffered(res, semifinalWinner, 'rebuttal', () => personaRebuttalStream(semifinalWinner, C, prompt, 40));
+        await pause(200);
+        
+        sseWrite(res, 'turn', { speaker: `Dr. ${C}`, start: true, mode: 'rebuttal' });
+        await speakBuffered(res, C, 'rebuttal', () => personaRebuttalStream(C, semifinalWinner, prompt, 40));
+        await pause(500);
+        
+        // Final champion (for now, random)
+        const champion = Math.random() > 0.5 ? semifinalWinner : C;
+        
+        sseWrite(res, 'turn', { speaker: 'Moderator', start: true, mode: 'champion' });
+        const championText = `Champion: Dr. ${champion} — Their approach cuts through the noise. Now the plan:`;
+        sseWrite(res, 'delta', { speaker: 'Moderator', text: championText });
+        await onTurnEnd('Moderator');
+        await pause(500);
+        
+      } else if (ACTIVE.length > 3) {
+        // Regular crossfire for larger groups
+        const shuffledForPairs = shuffleArray(ACTIVE);
+        const activePairs: string[][] = [];
+        
+        for (let i = 0; i < shuffledForPairs.length - 1; i += 2) {
+          activePairs.push([shuffledForPairs[i], shuffledForPairs[i + 1]]);
+        }
+        
+        console.log(`⚔️ Crossfire pairs: ${activePairs.map(p => p.join(' vs ')).join(', ')}`);
+        
+        if (activePairs.length > 0) {
+          sseWrite(res, 'scene', { step: 'crossfire' });
+          currentMode = 'rebuttal';
+          
+          for (const [a, b] of activePairs) {
+            sseWrite(res, 'turn', { speaker: `Dr. ${a}`, start: true, mode: 'rebuttal' });
+            await speakBuffered(res, a, 'rebuttal', () => personaRebuttalStream(a, b, prompt, TOK?.reply || 60));
+            await pause(200);
 
-          sseWrite(res, 'turn', { speaker: `Dr. ${b}`, start: true, mode: 'rebuttal' });
-          await speakBuffered(res, b, 'rebuttal', () => personaRebuttalStream(b, a, prompt, TOK?.reply || 60));
-          await pause(300); // Slightly longer pause between pairs
+            sseWrite(res, 'turn', { speaker: `Dr. ${b}`, start: true, mode: 'rebuttal' });
+            await speakBuffered(res, b, 'rebuttal', () => personaRebuttalStream(b, a, prompt, TOK?.reply || 60));
+            await pause(300);
+          }
         }
       }
       
