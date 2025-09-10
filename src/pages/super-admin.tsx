@@ -188,11 +188,16 @@ export default function SuperAdmin() {
 
   useEffect(() => {
     // Check if user is actually a super admin
-    const isSuperAdmin = user?.emailAddresses?.[0]?.emailAddress === 'truth@sentientiq.ai' || 
-                        user?.emailAddresses?.[0]?.emailAddress === 'admin@sentientiq.ai' ||
-                        user?.emailAddresses?.[0]?.emailAddress?.includes('kiselstein') ||
-                        user?.emailAddresses?.[0]?.emailAddress === 'info@sentientiq.ai' ||
-                        true; // Temporarily allowing all for testing
+    const adminEmails = [
+      'info@sentientiq.ai',
+      'matt@aligniq.ai'
+    ];
+    
+    const userEmail = user?.emailAddresses?.[0]?.emailAddress;
+    const isSuperAdmin = userEmail && (
+      adminEmails.includes(userEmail) ||
+      userEmail.includes('kiselstein')
+    );
     
     if (!isSuperAdmin) {
       window.location.href = '/';

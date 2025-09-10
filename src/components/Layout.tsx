@@ -33,8 +33,9 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  // Check if user is super admin (your email)
-  const isSuperAdmin = user?.primaryEmailAddress?.emailAddress === 'info@sentientiq.ai';
+  // Check if user is super admin
+  const isSuperAdmin = user?.primaryEmailAddress?.emailAddress === 'info@sentientiq.ai' || 
+                       user?.primaryEmailAddress?.emailAddress === 'matt@aligniq.ai';
   
   const menuItems = [
     { path: '/boardroom', icon: Brain, label: 'Boardroom', public: false },

@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { Brain, Mic } from 'lucide-react';
+import { useUser } from '@clerk/clerk-react';
 import { useChime } from '../components/ui/useChime';
 import NeuronCursor from '../components/ui/NeuronCursor';
 import PulseDot from '../components/ui/PulseDot';
@@ -63,7 +64,7 @@ const PERSONA_COLORS: Record<string, string> = {
 };
 
 const Boardroom = () => {
-  // const { user } = useUser(); // Not needed with hardcoded tenant ID
+  const { user } = useUser();
   // const subscription = useSubscription();
   const [selectedPhDs, setSelectedPhDs] = useState<Set<string>>(new Set()); // Start with none selected
   const [question, setQuestion] = useState('');
@@ -256,9 +257,9 @@ const Boardroom = () => {
       await ssePost(`/api/v1/debate`, {
         prompt: question,
         mode: 'answer',
-        topK: 3,
+        topK: selectedPhDs.size || 12, // Use all selected personas
         personas: Array.from(selectedPhDs), // Send selected personas for answer mode too
-        tenantId: '7a6c61c4-95e4-4b15-94b8-02995f81c291' // Your enterprise tenant ID
+        tenantId: user?.organizationMemberships?.[0]?.organization?.id || '7a6c61c4-95e4-4b15-94b8-02995f81c291' // Use org ID or fallback
       }, ({ event, data }) => {
         console.log('SSE Event:', event, data); // Debug all events
         if (event === 'meta') {
@@ -391,8 +392,8 @@ const Boardroom = () => {
         prompt: questionToSend,
         personas: personas,
         mode: 'debate',
-        topK: 3,
-        tenantId: '7a6c61c4-95e4-4b15-94b8-02995f81c291' // Your enterprise tenant ID
+        topK: selectedPhDs.size || 12, // Use all selected personas
+        tenantId: user?.organizationMemberships?.[0]?.organization?.id || '7a6c61c4-95e4-4b15-94b8-02995f81c291' // Use org ID or fallback
       }, ({ event, data }) => {
         console.log('SSE event:', event, data);
         if (event === 'delta') {
