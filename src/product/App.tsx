@@ -29,15 +29,19 @@ import { SenseiCandyProvider } from '../components/ui/SenseiCandy'
 // Sage - The Crystal Palace of Marketing Truth
 import SageCrystalBall from '../components/SageCrystalBall'
 
+// Emotional Intelligence - Marketing at the Speed of Emotion™
+import EmotionalIntelligenceProvider from '../providers/EmotionalIntelligenceProvider'
+
 function App() {
   return (
     <HelmetProvider>
       <SenseiCandyProvider confetti cursor toasts>
-        <Router>
-          <Layout>
-          {/* Sage watches from the corner, always */}
-          <SageCrystalBall />
-        <Routes>
+        <EmotionalIntelligenceProvider>
+          <Router>
+            <Layout>
+            {/* Sage watches from the corner, always */}
+            <SageCrystalBall />
+          <Routes>
           {/* Root - App only (domain routing handles marketing site) */}
           <Route path="/" element={
             <>
@@ -229,6 +233,7 @@ function App() {
         </Routes>
       </Layout>
     </Router>
+        </EmotionalIntelligenceProvider>
     </SenseiCandyProvider>
     </HelmetProvider>
   )

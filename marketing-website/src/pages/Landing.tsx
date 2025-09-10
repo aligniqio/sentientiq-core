@@ -16,6 +16,7 @@ import Security from '@/components/Security';
 import FAQ from '@/components/FAQ';
 import FinalCTA from '@/components/FinalCTA';
 import Footer from '@/components/Footer';
+import EmotionalTracker from '@/components/EmotionalTracker';
 
 export default function Landing() {
   const siteUrl = (import.meta as any)?.env?.VITE_SITE_URL || 
@@ -30,6 +31,7 @@ export default function Landing() {
         description="We detect rage in 300ms. You prevent abandonment in 3 seconds. Real emotions, real predictions, real accountability. Zero mock data. The antithesis to generateBullshitInsights()."
       />
       <div className="relative min-h-screen bg-black">
+        <EmotionalTracker />
         <NeuralBackground />
         <main className="relative z-10 text-white">
           <NavBar />
