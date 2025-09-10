@@ -4,7 +4,7 @@ export default function Navbar() {
     <header className="section py-6">
       <div className="flex items-center justify-between">
         <a href="/" className="flex items-center gap-2">
-          <img src="/logo.png" alt="SentientIQ" className="h-8 w-8" />
+          <img src="/red_pulse.png" alt="SentientIQ" className="h-8 w-8" />
           <span className="font-semibold">Sentient<span className="gradient-text">IQ</span></span>
         </a>
         <nav className="hidden md:flex items-center gap-6 text-sm text-white/80">
