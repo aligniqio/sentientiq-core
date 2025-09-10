@@ -9,8 +9,11 @@ export default function EmotionalTrails() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const contextRef = useRef<CanvasRenderingContext2D | null>(null);
   const mousePos = useRef({ x: 0, y: 0 });
+  const lastMousePos = useRef({ x: 0, y: 0 });
+  const mouseVelocity = useRef(0);
+  const lastMoveTime = useRef(Date.now());
   const trails = useRef<Array<{ x: number; y: number; age: number; type: 'chaos' | 'intelligence' }>>([]);
-  const emotionalState = useRef<'normal' | 'rage' | 'confusion' | 'hesitation'>('normal');
+  const emotionalState = useRef<'normal' | 'rage' | 'confusion' | 'hesitation' | 'sticker_shock'>('normal');
   const clickTimes = useRef<number[]>([]);
   const lastScrollY = useRef(0);
   const scrollDirections = useRef<number[]>([]);
@@ -34,13 +37,46 @@ export default function EmotionalTrails() {
     if (!ctx) return;
     contextRef.current = ctx;
 
-    // Track mouse movement
+    // Track mouse movement and detect sticker shock
     const handleMouseMove = (e: MouseEvent) => {
       const rect = canvas.getBoundingClientRect();
       const x = e.clientX - rect.left;
       const y = e.clientY - rect.top;
       
+      // Calculate velocity
+      const now = Date.now();
+      const timeDelta = now - lastMoveTime.current;
+      const distance = Math.sqrt(
+        Math.pow(x - lastMousePos.current.x, 2) + 
+        Math.pow(y - lastMousePos.current.y, 2)
+      );
+      const newVelocity = timeDelta > 0 ? distance / timeDelta : 0;
+      
+      // Detect sudden deceleration (sticker shock)
+      if (mouseVelocity.current > 5 && newVelocity < 1 && timeDelta < 100) {
+        // Check if near pricing content
+        const element = document.elementFromPoint(e.clientX, e.clientY);
+        const nearPricing = element?.textContent?.includes('$') || 
+                           element?.closest('#pricing') !== null ||
+                           element?.textContent?.includes('497') ||
+                           element?.textContent?.includes('997');
+        
+        if (nearPricing) {
+          emotionalState.current = 'sticker_shock';
+          trails.current.push({
+            x,
+            y,
+            age: 0,
+            type: 'intelligence'
+          });
+        }
+      }
+      
+      // Update references
+      lastMousePos.current = { x, y };
       mousePos.current = { x, y };
+      mouseVelocity.current = newVelocity;
+      lastMoveTime.current = now;
       
       // Add chaotic trail
       trails.current.push({
@@ -181,9 +217,18 @@ export default function EmotionalTrails() {
             if (emotionalState.current === 'rage') label = 'RAGE DETECTED';
             if (emotionalState.current === 'confusion') label = 'CONFUSION DETECTED';
             if (emotionalState.current === 'hesitation') label = 'HESITATION DETECTED';
+            if (emotionalState.current === 'sticker_shock') label = '💸 STICKER SHOCK!';
             
             if (label) {
               ctx.fillText(label, trail.x, trail.y - 20);
+              
+              // Special intervention for sticker shock
+              if (emotionalState.current === 'sticker_shock') {
+                ctx.fillStyle = `rgba(255, 215, 0, ${opacity})`;
+                ctx.font = 'bold 16px monospace';
+                ctx.fillText('DEPLOY DISCOUNT', trail.x, trail.y + 30);
+                ctx.fillText('INTERVENTION NOW!', trail.x, trail.y + 50);
+              }
             }
           }
         }
