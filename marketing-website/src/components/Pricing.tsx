@@ -57,68 +57,73 @@ export default function Pricing() {
 
   const tiers = [
     {
-      name: 'Free',
-      price: '$0',
-      period: '',
-      tagline: 'Start with EI micro-debates.',
+      name: 'Starter',
+      price: '$497',
+      period: '/month',
+      tagline: 'Real emotions. Real predictions.',
       features: [
-        '1 insight per day (Daily Refresh)',
-        'Two-persona micro-debates',
-        'Boardroom preview (4 personas, limited runs)',
-        'Short answer + Why (no export)',
-        'Shareable evidence snippets (recent 5)'
+        'Detect rage in 300ms, prevent abandonment in 3s',
+        'Live emotional state tracking across your site',
+        'Behavioral physics engine (no probabilities)',
+        'Weekly accountability scorecard',
+        'PhD Collective Boardroom (included free)',
+        'Up to 10,000 monthly sessions'
       ],
-      cta: 'Start free',
-      href: 'https://sentientiq.app/signup',
-      priceId: null,
+      cta: 'Start Detecting',
+      priceId: import.meta.env.VITE_STRIPE_STARTER_PRICE_ID,
       popular: false
     },
     {
-      name: 'Pro',
-      price: '$99',
+      name: 'Growth',
+      price: '$1,997',
       period: '/month',
-      tagline: 'Full Boardroom + executive briefs.',
+      tagline: 'Learn. Predict. Intervene.',
       features: [
-        '12-persona Boardroom debates',
-        'Executive brief (email + Save to Library)',
-        'Schedule weekly debates',
-        'Edit & publish personas',
-        '3 seats for team collaboration'
+        'Everything in Starter, plus:',
+        'Machine learning pattern evolution',
+        'Predictive abandonment interventions',
+        'Revenue impact tracking & attribution',
+        'Custom emotional triggers & responses',
+        'Unlimited Boardroom debates',
+        'Up to 100,000 monthly sessions'
       ],
-      cta: 'Start Pro',
-      priceId: import.meta.env.VITE_STRIPE_PRO_PRICE_ID,
+      cta: 'Start Predicting',
+      priceId: import.meta.env.VITE_STRIPE_GROWTH_PRICE_ID,
       popular: true
     },
     {
-      name: 'Team',
-      price: '$399',
+      name: 'Scale',
+      price: '$4,997',
       period: '/month',
-      tagline: 'Shared library, scheduling, admin.',
+      tagline: 'Your proprietary data moat.',
       features: [
-        '10–25 seats with RBAC',
-        'Recurring debates (multi-cadence)',
-        'Persona collections (versioning & approvals)',
-        'API/Webhooks + Slack/email notifications',
-        'Admin console & audit trail (SSO-ready)'
+        'Everything in Growth, plus:',
+        'Unlimited sessions & pattern storage',
+        'Cross-property emotional journey mapping',
+        'API access for custom integrations',
+        'Custom PhD personas for your industry',
+        'Dedicated success manager',
+        'Quarterly business reviews with ROI analysis'
       ],
-      cta: 'Start Team',
-      priceId: import.meta.env.VITE_STRIPE_TEAM_PRICE_ID,
+      cta: 'Build Your Moat',
+      priceId: import.meta.env.VITE_STRIPE_SCALE_PRICE_ID,
       popular: false
     },
     {
       name: 'Enterprise',
       price: 'Custom',
       period: '',
-      tagline: 'Private, compliant, custom models.',
+      tagline: 'White-glove emotional intelligence.',
       features: [
-        'Private/VPC options & data residency',
-        'Custom persona libraries & playbooks',
-        'Model routing (OpenAI / Anthropic / Groq)',
-        'SCIM, advanced RBAC, SSO',
-        '99.9%+ SLA & dedicated support'
+        'Custom emotion detection models',
+        'Private deployment options',
+        'Real-time data streaming',
+        'Multi-brand & multi-property support',
+        'SLA with 99.99% uptime guarantee',
+        'Executive quarterly insights briefing'
       ],
       cta: 'Contact Sales',
-      href: 'mailto:enterprise@sentientiq.ai?subject=Enterprise%20Inquiry',
+      href: 'mailto:enterprise@sentientiq.ai?subject=Enterprise%20Emotional%20Intelligence',
       priceId: null,
       popular: false
     }
@@ -127,10 +132,11 @@ export default function Pricing() {
   return (
     <section id="pricing" className="section py-20">
       <div className="text-center">
-        <p className="kicker">Pricing</p>
-        <h2 className="mt-2 text-4xl font-bold">Simple pricing that scales with you</h2>
+        <p className="kicker">Investment</p>
+        <h2 className="mt-2 text-4xl font-bold">The cost of not knowing why they leave</h2>
         <p className="mt-4 text-lg text-white/70 max-w-2xl mx-auto">
-          Start free with micro-debates. Upgrade to full Boardroom when you need decisive answers.
+          We show you exactly how much revenue walks away while you're looking at bounce rates.
+          No free tier. This is behavioral physics, not a GPT wrapper.
         </p>
       </div>
 
