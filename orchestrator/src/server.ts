@@ -33,6 +33,9 @@ import {
 } from './theatrical-helpers.js';
 import { exportBriefHandler } from './services/brief/exportBrief.js';
 import { debateInit, debateMaybeQuote, debateSetSynthesis } from './services/brief/store.js';
+import { emotionalAnalyticsHandlers } from './services/emotional-analytics.js';
+import { recommendationHandlers } from './services/recommendations-engine.js';
+import { startLearningLoop } from './services/emotional-learning.js';
 
 // ---------- Env ----------
 const PORT = Number(process.env.PORT || 8787);
@@ -476,6 +479,29 @@ app.get('/api/health', healthHandler);
 app.get('/api/ping', healthHandler);
 app.get('/', healthHandler);         // root check
 
+// ---------- EMOTIONAL INTELLIGENCE ROUTES ----------
+// The crystal palace of marketing truth
+
+// Emotional Analytics
+app.post('/api/emotional/event', generalLimiter, express.json(), emotionalAnalyticsHandlers.recordEvent);
+app.get('/api/emotional/patterns', generalLimiter, emotionalAnalyticsHandlers.getPatterns);
+app.get('/api/emotional/heatmap', generalLimiter, emotionalAnalyticsHandlers.getHeatmap);
+app.post('/api/emotional/predict', generalLimiter, express.json(), emotionalAnalyticsHandlers.predictAction);
+app.get('/api/emotional/funnel', generalLimiter, emotionalAnalyticsHandlers.getFunnel);
+app.post('/api/emotional/outcome', generalLimiter, express.json(), emotionalAnalyticsHandlers.recordOutcome);
+app.get('/api/emotional/moat', generalLimiter, emotionalAnalyticsHandlers.getDataMoat);
+app.get('/api/emotional/blindspots', generalLimiter, emotionalAnalyticsHandlers.getBlindSpots);
+
+// Recommendations & Accountability
+app.get('/api/recommendations', generalLimiter, recommendationHandlers.getRecommendations);
+app.post('/api/recommendations/action', generalLimiter, express.json(), recommendationHandlers.trackAction);
+app.get('/api/scorecard', generalLimiter, recommendationHandlers.getScorecard);
+app.get('/api/cancellation-report', generalLimiter, recommendationHandlers.getCancellationReport);
+
+// Start the learning loop
+startLearningLoop();
+console.log('🧠 Emotional Learning Engine started - patterns will evolve');
+
 // Error handling middleware (must be last)
 app.use(errorHandler);
 
@@ -492,4 +518,7 @@ process.on('SIGINT', () => {
 
 app.listen(PORT, () => {
   console.log(`orchestrator listening on :${PORT}`);
+  console.log(`✨ Emotional Intelligence Engine active`);
+  console.log(`📊 SentientIQ Scorecard available at /api/scorecard`);
+  console.log(`🎯 Marketing at the Speed of Emotion™`);
 });
