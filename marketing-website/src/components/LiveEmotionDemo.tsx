@@ -219,17 +219,29 @@ export default function LiveEmotionDemo() {
       setTimeout(() => triggerIntervention(emotion), 500);
     }
     
-    // Audio feedback for high confidence detections
-    if (confidence > 85 && 'AudioContext' in window) {
-      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-      const oscillator = audioContext.createOscillator();
-      const gainNode = audioContext.createGain();
-      oscillator.connect(gainNode);
-      gainNode.connect(audioContext.destination);
-      oscillator.frequency.value = emotion === 'rage' ? 200 : 400;
-      gainNode.gain.value = 0.1;
-      oscillator.start();
-      oscillator.stop(audioContext.currentTime + 0.1);
+    // Audio feedback for high confidence detections (only after user interaction)
+    if (confidence > 85 && 'AudioContext' in window && clickCount > 0) {
+      try {
+        const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+        const audioContext = new AudioContextClass();
+        
+        // Resume if suspended (Chrome autoplay policy)
+        if (audioContext.state === 'suspended') {
+          audioContext.resume();
+        }
+        
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+        oscillator.frequency.value = emotion === 'rage' ? 200 : 400;
+        gainNode.gain.value = 0.05; // Even quieter
+        oscillator.start();
+        oscillator.stop(audioContext.currentTime + 0.1);
+      } catch (e) {
+        // Silently fail if audio not allowed
+        console.debug('Audio feedback skipped:', e);
+      }
     }
     
     // Reset to normal after 2.5 seconds
