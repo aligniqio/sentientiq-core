@@ -36,6 +36,7 @@ import { debateInit, debateMaybeQuote, debateSetSynthesis } from './services/bri
 import { emotionalAnalyticsHandlers } from './services/emotional-analytics.js';
 import { recommendationHandlers } from './services/recommendations-engine.js';
 import { startLearningLoop } from './services/emotional-learning.js';
+import identityInterventionApi from './api/identity-intervention-api.js';
 
 // ---------- Env ----------
 const PORT = Number(process.env.PORT || 8787);
@@ -499,6 +500,9 @@ app.get('/api/recommendations', generalLimiter, recommendationHandlers.getRecomm
 app.post('/api/recommendations/action', generalLimiter, express.json(), recommendationHandlers.trackAction);
 app.get('/api/scorecard', generalLimiter, recommendationHandlers.getScorecard);
 app.get('/api/cancellation-report', generalLimiter, recommendationHandlers.getCancellationReport);
+
+// Identity Resolution & Intervention API routes
+app.use('/api', generalLimiter, identityInterventionApi);
 
 // Start the learning loop
 startLearningLoop();

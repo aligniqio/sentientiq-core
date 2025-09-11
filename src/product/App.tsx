@@ -6,7 +6,7 @@ import { HelmetProvider } from 'react-helmet-async'
 import Layout from '../components/Layout'
 import Auth from '../pages/auth'
 import HowItWorks from '../pages/how-it-works'
-import AlwaysOnFaculty from '../pages/always-on-faculty'
+// import AlwaysOnFaculty from '../pages/always-on-faculty' // REMOVED
 // import Ask from '../pages/ask' // REMOVED - replaced by Boardroom
 import Settings from '../pages/settings'
 import Pricing from '../pages/pricing'
@@ -15,7 +15,7 @@ import SageInbox from '../pages/sage-inbox'
 import Boardroom from '../pages/boardroom'
 import Onboarding from '../pages/onboarding'
 import DynamicRecommendations from '../pages/dynamic-recommendations'
-import SentientIQScorecard from '../components/SentientIQScorecard'
+import AccountabilityScorecard from '../components/AccountabilityScorecard'
 import EmotionalLiveFeed from '../components/EmotionalLiveFeed'
 
 // Admin pages
@@ -69,7 +69,7 @@ function App() {
             element={
               <>
                 <SignedIn>
-                  <AlwaysOnFaculty />
+                  <HowItWorks />
                 </SignedIn>
                 <SignedOut>
                   <Navigate to="/auth" replace />
@@ -173,7 +173,7 @@ function App() {
           <Route path="/scorecard" element={
             <>
               <SignedIn>
-                <SentientIQScorecard />
+                <AccountabilityScorecard />
               </SignedIn>
               <SignedOut>
                 <Navigate to="/auth" replace />

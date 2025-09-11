@@ -587,13 +587,6 @@ export default function LiveEmotionDemo() {
                   <p className="text-xs text-white/60 mt-1">Click once</p>
                 </button>
               </div>
-              
-              {/* Scroll Velocity Prompt */}
-              <div className="text-center mt-4 p-3 glass-card bg-amber-500/10 border border-amber-500/30">
-                <p className="text-sm text-amber-400 font-semibold">💡 TRY THIS</p>
-                <p className="text-xs text-white/80">Scroll down really fast to trigger velocity detection</p>
-              </div>
-              
               {/* Metrics */}
               <div className="grid grid-cols-2 gap-3 mt-4">
                 <div className="glass-card p-3 text-center">
