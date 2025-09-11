@@ -320,6 +320,41 @@
     getCurrentEmotion: () => state.currentEmotion,
     getEmotions: () => state.detectedEmotions,
     
+    // Identity resolution
+    identify: (params) => {
+      if (!params) return;
+      
+      const identifyEvent = {
+        session_id: config.sessionId,
+        user_id: params.userId || params.id,
+        email: params.email,
+        traits: params.traits || {},
+        source: 'direct',
+        timestamp: new Date().toISOString()
+      };
+      
+      // Send identification to backend
+      fetch(config.apiEndpoint.replace('/emotional/event', '/identify'), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-API-Key': config.apiKey
+        },
+        body: JSON.stringify(identifyEvent)
+      }).catch(err => {
+        if (config.debug) console.error('SentientIQ: Failed to identify user', err);
+      });
+      
+      // Store user info for future events
+      state.userId = identifyEvent.user_id;
+      state.email = identifyEvent.email;
+      state.traits = identifyEvent.traits;
+      
+      if (config.debug) {
+        console.log('🧠 SentientIQ: User identified', identifyEvent.user_id || identifyEvent.email);
+      }
+    },
+    
     // Allow custom emotion events
     track: (emotion, confidence, metadata) => {
       sendEvent(emotion, confidence, metadata);
