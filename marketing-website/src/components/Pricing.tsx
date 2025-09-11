@@ -38,7 +38,7 @@ export default function Pricing() {
   const [loading, setLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const handleCheckout = async (priceId: string | undefined, tierName: string) => {
+  const handleCheckout = async (priceId: string | undefined | null, tierName: string) => {
     if (!priceId) {
       setError(`Price ID not configured for ${tierName}`);
       return;
@@ -70,7 +70,7 @@ export default function Pricing() {
         'Up to 10,000 identified sessions/mo'
       ],
       cta: 'Start Today',
-      priceId: import.meta.env.VITE_STRIPE_STARTER_PRICE_ID,
+      priceId: import.meta.env.VITE_STRIPE_STARTER_PRICE_ID as string,
       popular: false
     },
     {
@@ -88,7 +88,7 @@ export default function Pricing() {
         'Up to 100,000 identified sessions/mo'
       ],
       cta: 'Start Today',
-      priceId: import.meta.env.VITE_STRIPE_GROWTH_PRICE_ID,
+      priceId: import.meta.env.VITE_STRIPE_GROWTH_PRICE_ID as string,
       popular: true
     },
     {
@@ -106,7 +106,7 @@ export default function Pricing() {
         'Quarterly ROI analysis'
       ],
       cta: 'Start Today',
-      priceId: import.meta.env.VITE_STRIPE_SCALE_PRICE_ID,
+      priceId: import.meta.env.VITE_STRIPE_SCALE_PRICE_ID as string,
       popular: false
     },
     {
