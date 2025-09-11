@@ -57,7 +57,7 @@ exports.handler = async (event, context) => {
       cancel_url: cancelUrl || `${siteUrl}/#pricing`,
       allow_promotion_codes: true,
       billing_address_collection: 'required',
-      // customer_creation is not needed for subscription mode - customers are always created
+      // Customers are automatically created for subscription mode
       payment_method_collection: 'if_required',
       tax_id_collection: {
         enabled: true,
