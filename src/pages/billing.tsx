@@ -4,11 +4,54 @@ import { CreditCard, Calendar, TrendingUp, AlertCircle, Check, X, Zap, Shield, B
 import { useUser } from '@clerk/clerk-react';
 import { useSubscription } from '../hooks/useSubscription';
 import PageHeader from '../components/PageHeader';
+import { Tier } from '../lib/billing';
+
+// Extended subscription data for billing page
+interface ExtendedSubscriptionData {
+  tier: Tier | 'free' | 'starter' | 'growth' | 'scale' | 'enterprise';
+  status: 'active' | 'trialing' | 'past_due' | 'canceled' | 'incomplete' | null;
+  currentPeriodEnd: Date | null;
+  questionsUsed: number;
+  questionsLimit: number;
+  canAsk: boolean;
+  canAccessEvi: boolean;
+  canExport: boolean;
+  loading: boolean;
+  vertical?: string;
+  // Additional fields for emotion detection
+  sessionsUsed?: number;
+  sessionsLimit?: number;
+  emotionsToday?: number;
+  rageDetections?: number;
+  hesitationDetections?: number;
+  confusionDetections?: number;
+  abandonmentsSaved?: number;
+  revenueSaved?: number;
+  interventionsTriggered?: number;
+  accuracyRate?: number;
+}
 
 export default function Billing() {
   const { user } = useUser();
-  const subscription = useSubscription();
+  const baseSubscription = useSubscription();
   const [loading, setLoading] = useState(false);
+  
+  // Extend subscription data with demo values for emotion detection
+  const subscription: ExtendedSubscriptionData = {
+    ...baseSubscription,
+    sessionsUsed: 3847,
+    sessionsLimit: baseSubscription.tier === 'free' ? 10 : 
+                   baseSubscription.tier === 'pro' ? 10000 :
+                   baseSubscription.tier === 'team' ? 100000 : -1,
+    emotionsToday: 342,
+    rageDetections: 23,
+    hesitationDetections: 47,
+    confusionDetections: 31,
+    abandonmentsSaved: 12,
+    revenueSaved: 42000,
+    interventionsTriggered: 89,
+    accuracyRate: 95
+  };
 
   const handleUpgrade = async () => {
     setLoading(true);
@@ -58,8 +101,10 @@ export default function Billing() {
   const getTierBadgeColor = (tier: string) => {
     switch (tier) {
       case 'starter':
+      case 'pro':
         return 'from-purple-500 to-blue-500';
       case 'growth':
+      case 'team':
         return 'from-emerald-500 to-teal-500';
       case 'scale':
         return 'from-amber-500 to-orange-500';
@@ -73,8 +118,10 @@ export default function Billing() {
   const getTierIcon = (tier: string) => {
     switch (tier) {
       case 'starter':
+      case 'pro':
         return Zap;
       case 'growth':
+      case 'team':
         return TrendingUp;
       case 'scale':
         return BarChart3;
@@ -150,11 +197,11 @@ export default function Billing() {
                     <span className="text-white/60">Identified sessions this month</span>
                     <span>
                       {subscription.sessionsUsed || 0}
-                      {subscription.sessionsLimit > 0 && ` / ${subscription.sessionsLimit.toLocaleString()}`}
+                      {subscription.sessionsLimit && subscription.sessionsLimit > 0 && ` / ${subscription.sessionsLimit.toLocaleString()}`}
                       {subscription.sessionsLimit === -1 && ' / Unlimited'}
                     </span>
                   </div>
-                  {subscription.sessionsLimit > 0 && (
+                  {subscription.sessionsLimit && subscription.sessionsLimit > 0 && (
                     <div className="h-2 w-full rounded-full bg-white/10">
                       <div
                         className="h-2 rounded-full bg-gradient-to-r from-purple-500 to-blue-500 transition-all"
@@ -193,7 +240,7 @@ export default function Billing() {
                         <CreditCard className="h-4 w-4" />
                         Manage Subscription
                       </button>
-                      {currentTier !== 'scale' && currentTier !== 'enterprise' && (
+                      {currentTier !== 'enterprise' && currentTier !== 'team' && (
                         <button
                           onClick={handleUpgrade}
                           disabled={loading}
@@ -221,8 +268,8 @@ export default function Billing() {
                 <FeatureRow
                   name={
                     isFreeTier ? "10 sessions/mo" : 
-                    currentTier === 'starter' ? "10,000 sessions/mo" : 
-                    currentTier === 'growth' ? "100,000 sessions/mo" : 
+                    currentTier === 'starter' || currentTier === 'pro' ? "10,000 sessions/mo" : 
+                    currentTier === 'growth' || currentTier === 'team' ? "100,000 sessions/mo" : 
                     "Unlimited sessions"
                   }
                   enabled={true}
@@ -237,15 +284,15 @@ export default function Billing() {
                 />
                 <FeatureRow
                   name="CRM sync"
-                  enabled={currentTier === 'growth' || currentTier === 'scale' || currentTier === 'enterprise'}
+                  enabled={currentTier === 'growth' || currentTier === 'team' || currentTier === 'enterprise'}
                 />
                 <FeatureRow
                   name="API access"
-                  enabled={currentTier === 'scale' || currentTier === 'enterprise'}
+                  enabled={currentTier === 'team' || currentTier === 'enterprise'}
                 />
                 <FeatureRow
                   name="Success manager"
-                  enabled={currentTier === 'scale' || currentTier === 'enterprise'}
+                  enabled={currentTier === 'team' || currentTier === 'enterprise'}
                 />
               </div>
             </motion.div>

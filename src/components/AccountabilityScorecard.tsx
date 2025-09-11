@@ -188,7 +188,7 @@ export default function AccountabilityScorecard() {
         estimatedRevenueLoss: 150000,
         deadline: new Date(Date.now() - 3600000).toISOString(),
         actionTaken: false,
-        outcome: 'lost',
+        outcome: 'lost' as const,
         actualRevenueLoss: 150000
       }
     ],
@@ -205,7 +205,7 @@ export default function AccountabilityScorecard() {
         estimatedRevenueLoss: 36000,
         deadline: new Date(Date.now() - 23 * 3600000).toISOString(),
         actionTaken: true,
-        outcome: 'saved',
+        outcome: 'saved' as const,
         actualRevenueLoss: 0
       }
     ]
