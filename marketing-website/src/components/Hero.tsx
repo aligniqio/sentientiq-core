@@ -15,11 +15,13 @@ export default function Hero() {
     <section className="section pt-6 pb-16 md:pt-10 md:pb-24 text-center">
       <div className="max-w-5xl mx-auto">
         <h2 className="text-2xl md:text-3xl font-bold text-purple-400 mb-6 uppercase tracking-wider">
-          YOUR CUSTOMERS ARE SCREAMING. YOU JUST CAN'T HEAR THEM.
+          YOUR CUSTOMERS ARE SCREAMING.<br className="hidden md:block" />
+          YOU JUST CAN'T HEAR THEM.
         </h2>
         <p className="kicker">Marketing at the Speed of Emotion™</p>
         <h1 className="mt-3 text-4xl md:text-6xl font-semibold leading-tight">
-          Your $100k customer just felt <span className="gradient-text">{emotions[emotionIndex]}</span>.
+          Your $100k customer just felt<br />
+          <span className="gradient-text">{emotions[emotionIndex]}</span>.
           <br />
           <span className="text-white/80">You have 3 seconds to save them.</span>
         </h1>
@@ -28,6 +30,22 @@ export default function Hero() {
           behavioral physics. When john@fortune500.com shows rage at checkout, 
           you'll know instantly. With their name, company, and lifetime value attached.
         </p>
+        
+        {/* CTA Buttons */}
+        <div className="mt-8 flex flex-col sm:flex-row gap-4 justify-center">
+          <a 
+            href="#pricing" 
+            className="btn-primary px-6 py-3"
+          >
+            Get Started
+          </a>
+          <button 
+            onClick={() => window.location.href = 'mailto:info@sentientiq.ai?subject=Demo%20Request&body=I%20want%20to%20see%20SentientIQ%20in%20action.'}
+            className="btn-ghost px-6 py-3"
+          >
+            Book Demo
+          </button>
+        </div>
         
         <div className="mt-8 grid grid-cols-2 md:grid-cols-4 gap-4 max-w-2xl mx-auto">
           <div className="glass-card p-3 text-center">

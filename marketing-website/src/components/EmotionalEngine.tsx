@@ -232,16 +232,16 @@ export default function EmotionalEngine() {
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <a 
-                href="https://app.sentientiq.com/scorecard" 
+                href="#pricing" 
                 className="btn-primary px-8 py-4 text-lg"
               >
-                See Your Scorecard
+                See Pricing
               </a>
               <a 
-                href="https://app.sentientiq.com/start" 
+                href="mailto:info@sentientiq.ai?subject=Request%20Demo%20-%20SentientIQ&body=Hi%2C%0A%0AI'd%20like%20to%20learn%20more%20about%20SentientIQ's%20emotion%20detection%20platform.%0A%0ACompany%3A%20%0AWebsite%3A%20%0AMonthly%20Traffic%3A%20%0A%0AThanks!" 
                 className="btn-ghost px-8 py-4 text-lg"
               >
-                Start Detecting Emotions
+                Request Live Demo
               </a>
             </div>
             <p className="mt-4 text-xs text-white/50">

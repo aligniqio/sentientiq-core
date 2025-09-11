@@ -5,7 +5,6 @@ import NavBar from '@/components/NavBar';
 import Hero from '@/components/Hero';
 import TrustBar from '@/components/TrustBar';
 import EmotionalEngine from '@/components/EmotionalEngine';
-import LiveDemo from '@/components/LiveDemo';
 import Pricing from '@/components/Pricing';
 import Footer from '@/components/Footer';
 // import EmotionalTracker from '@/components/EmotionalTracker'; // Removed - too distracting
@@ -15,6 +14,7 @@ import IdentityReveal from '@/components/IdentityReveal';
 import InterventionShowcase from '@/components/InterventionShowcase';
 import AccountabilityProof from '@/components/AccountabilityProof';
 import TransparencyManifesto from '@/components/TransparencyManifesto';
+import LiveEmotionDemo from '@/components/LiveEmotionDemo';
 
 export default function Landing() {
   const siteUrl = (import.meta as any)?.env?.VITE_SITE_URL || 
@@ -36,17 +36,21 @@ export default function Landing() {
           
           {/* Act 1: The Problem - Marketing is blind */}
           <Hero />
+          
+          {/* IMMEDIATE HOOK - Live Demo (moved up!) */}
+          <LiveEmotionDemo />
+          
           <TrustBar />
           
           {/* Act 2: The Revelation - WHO is feeling WHAT */}
           <IdentityReveal />
+          
           <div id="emotional-engine">
             <EmotionalEngine />
           </div>
           
           {/* Act 3: The Power - Interventions that work */}
           <InterventionShowcase />
-          <LiveDemo />
           
           {/* Act 4: The Accountability - What inaction costs */}
           <AccountabilityProof />

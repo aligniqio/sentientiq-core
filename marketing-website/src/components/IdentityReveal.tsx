@@ -149,15 +149,94 @@ export default function IdentityReveal() {
           </div>
         </div>
         
-        {/* The Hook */}
-        <div className="text-center mt-12">
-          <p className="text-lg text-white/70">
-            <span className="text-white font-semibold">One line of code</span> to know every customer's emotional state.
-            <br />
-            <code className="text-sm bg-white/10 px-2 py-1 rounded mt-2 inline-block">
-              SentientIQ.identify({`{userId, email, value}`})
-            </code>
-          </p>
+        {/* The HOW - This is the differentiator */}
+        <div className="glass-card p-8 mt-12 bg-gradient-to-br from-blue-500/10 to-purple-500/10">
+          <h3 className="text-2xl font-semibold mb-6 text-center">
+            "How do you know WHO?" The answer that changes everything.
+          </h3>
+          
+          <div className="grid md:grid-cols-2 gap-8">
+            <div>
+              <h4 className="text-lg font-medium text-red-400 mb-4">What Everyone Else Does</h4>
+              <ul className="space-y-3 text-white/70">
+                <li className="flex items-start gap-2">
+                  <span className="text-red-400">×</span>
+                  <span>IP lookup → guess company (30% accurate)</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-red-400">×</span>
+                  <span>Cookie matching → maybe get email (2% match rate)</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-red-400">×</span>
+                  <span>Fingerprinting → anonymous ID (legally questionable)</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-red-400">×</span>
+                  <span>Result: "Someone from Microsoft" clicked something</span>
+                </li>
+              </ul>
+            </div>
+            
+            <div>
+              <h4 className="text-lg font-medium text-green-400 mb-4">What SentientIQ Does</h4>
+              <ul className="space-y-3 text-white/70">
+                <li className="flex items-start gap-2">
+                  <span className="text-green-400">✓</span>
+                  <span>YOUR app tells us who's logged in (100% accurate)</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-green-400">✓</span>
+                  <span>We link their identity to their emotions (permanent)</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-green-400">✓</span>
+                  <span>Sync with YOUR CRM data (real customer value)</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-green-400">✓</span>
+                  <span>Result: "john@fortune500.com ($100k/yr) is raging"</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+          
+          <div className="mt-8 p-6 bg-black/30 rounded-lg">
+            <h4 className="text-lg font-medium mb-4">The Integration That Changes Everything</h4>
+            <div className="grid md:grid-cols-3 gap-4 text-sm">
+              <div>
+                <div className="text-purple-400 font-medium mb-2">Your App</div>
+                <code className="text-xs bg-white/10 px-2 py-1 rounded block">
+                  SentientIQ.identify({`{`}<br/>
+                  &nbsp;&nbsp;userId: user.id,<br/>
+                  &nbsp;&nbsp;email: user.email,<br/>
+                  &nbsp;&nbsp;value: user.ltv<br/>
+                  {`}`})
+                </code>
+              </div>
+              <div className="flex items-center justify-center">
+                <span className="text-2xl">→</span>
+              </div>
+              <div>
+                <div className="text-purple-400 font-medium mb-2">We Detect</div>
+                <div className="space-y-1 text-white/80">
+                  <div>✓ Who they are</div>
+                  <div>✓ What they feel</div>
+                  <div>✓ When to intervene</div>
+                  <div>✓ How much they're worth</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div className="text-center mt-8">
+            <p className="text-lg text-white/90 font-medium">
+              We don't guess who your users are. You tell us. Then we tell you what they're feeling.
+            </p>
+            <p className="text-sm text-white/60 mt-2">
+              No IP guessing. No cookie matching. No privacy violations. Just truth.
+            </p>
+          </div>
         </div>
       </div>
     </section>

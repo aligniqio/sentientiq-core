@@ -206,15 +206,6 @@ export default function WhyDifferent() {
                           </p>
                         </div>
                       </div>
-                      <div className="flex items-start gap-4">
-                        <Check className="w-6 h-6 text-green-500 mt-1 flex-shrink-0" />
-                        <div>
-                          <p className="font-bold text-lg mb-2">PhD Collective included free</p>
-                          <p className="text-white/60">
-                            12 expert personas debating your strategy at no extra charge.
-                          </p>
-                        </div>
-                      </div>
                     </div>
                   </div>
                 </div>
