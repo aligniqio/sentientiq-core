@@ -68,6 +68,7 @@ export default function LiveEmotionDemo() {
   const [showExplanation, setShowExplanation] = useState(false);
   const [activeInterventions, setActiveInterventions] = useState<Intervention[]>([]);
   const [sessionId] = useState(() => Math.random().toString(36).substring(2, 11)); // Stable session ID
+  const [isMobile] = useState(() => typeof window !== 'undefined' && ('ontouchstart' in window || navigator.maxTouchPoints > 0))
   
   // Refs for tracking - optimized for speed
   const clickTimesRef = useRef<number[]>([]);
@@ -384,9 +385,36 @@ export default function LiveEmotionDemo() {
       });
     };
     
+    // Touch event handlers for mobile
+    const handleTouchStart = (e: TouchEvent) => {
+      if (isMobile) {
+        const now = performance.now();
+        clickTimesRef.current.push(now);
+        clickTimesRef.current = clickTimesRef.current.filter(t => now - t < 2000);
+        setClickCount(prev => prev + 1);
+        
+        // Detect rapid taps (mobile rage)
+        if (clickTimesRef.current.length >= 3) {
+          const intervals: number[] = [];
+          for (let i = 1; i < clickTimesRef.current.length; i++) {
+            intervals.push(clickTimesRef.current[i] - clickTimesRef.current[i - 1]);
+          }
+          const avgInterval = intervals.reduce((a, b) => a + b, 0) / intervals.length;
+          
+          if (avgInterval < 500) {
+            triggerEmotion('frustration', 85, `Rapid taps: ${clickTimesRef.current.length}x`);
+            clickTimesRef.current = [];
+          }
+        }
+      }
+    };
+    
     // Attach listeners
     document.addEventListener('click', handleClick);
-    document.addEventListener('mousemove', handleMouseMove);
+    if (!isMobile) {
+      document.addEventListener('mousemove', handleMouseMove);
+    }
+    document.addEventListener('touchstart', handleTouchStart);
     window.addEventListener('scroll', handleScroll);
     
     // Add click ripple styles
@@ -415,7 +443,10 @@ export default function LiveEmotionDemo() {
     
     return () => {
       document.removeEventListener('click', handleClick);
-      document.removeEventListener('mousemove', handleMouseMove);
+      if (!isMobile) {
+        document.removeEventListener('mousemove', handleMouseMove);
+      }
+      document.removeEventListener('touchstart', handleTouchStart);
       window.removeEventListener('scroll', handleScroll);
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
       style.remove();
@@ -570,23 +601,57 @@ export default function LiveEmotionDemo() {
                 </p>
               </motion.div>
               
-              {/* Interactive Targets */}
-              <div className="grid grid-cols-3 gap-2">
-                <button className="demo-target glass-card p-4 hover:border-purple-400/50 transition-all">
-                  <div className="text-base font-semibold">Hesitate</div>
-                  <p className="text-xs text-white/60 mt-1">Hover 2s</p>
-                </button>
-                
-                <button className="demo-target glass-card p-4 hover:border-purple-400/50 transition-all">
-                  <div className="text-base font-semibold">Rage Click</div>
-                  <p className="text-xs text-white/60 mt-1">Click 3x fast</p>
-                </button>
-                
-                <button className="demo-target glass-card p-4 hover:border-purple-400/50 transition-all">
-                  <div className="text-base font-semibold">Confidence</div>
-                  <p className="text-xs text-white/60 mt-1">Click once</p>
-                </button>
-              </div>
+              {/* Interactive Targets - Mobile Responsive */}
+              <div className={`grid ${isMobile ? 'grid-cols-1' : 'grid-cols-3'} gap-3`}>
+                {!isMobile ? (
+                  <>
+                    <button className="demo-target glass-card p-4 hover:border-purple-400/50 transition-all">
+                      <div className="text-base font-semibold">Hesitate</div>
+                      <p className="text-xs text-white/60 mt-1">Hover 2s</p>
+                    </button>
+                    
+                    <button className="demo-target glass-card p-4 hover:border-purple-400/50 transition-all">
+                      <div className="text-base font-semibold">Rage Click</div>
+                      <p className="text-xs text-white/60 mt-1">Click 3x fast</p>
+                    </button>
+                    
+                    <button className="demo-target glass-card p-4 hover:border-purple-400/50 transition-all">
+                      <div className="text-base font-semibold">Confidence</div>
+                      <p className="text-xs text-white/60 mt-1">Click once</p>
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <div className="glass-card p-6 text-center bg-gradient-to-r from-purple-500/10 to-blue-500/10">
+                      <div className="text-4xl mb-3">📱</div>
+                      <h4 className="text-lg font-semibold mb-2">Mobile Detection Active</h4>
+                      <p className="text-sm text-white/70 mb-4">
+                        We detect emotions differently on mobile:
+                      </p>
+                      <div className="space-y-2 text-left text-sm">
+                        <div className="flex items-center gap-2">
+                          <span className="text-green-400">✓</span>
+                          <span>Rapid taps = Frustration</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-green-400">✓</span>
+                          <span>Swipe velocity = Searching</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-green-400">✓</span>
+                          <span>Pinch/zoom = Confusion</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-green-400">✓</span>
+                          <span>App switch = Abandonment</span>
+                        </div>
+                      </div>
+                      <p className="text-xs text-white/50 mt-4">
+                        Try tapping rapidly or scrolling fast!
+                      </p>
+                    </div>
+                  </>
+                )}</div>
               {/* Metrics */}
               <div className="grid grid-cols-2 gap-3 mt-4">
                 <div className="glass-card p-3 text-center">
