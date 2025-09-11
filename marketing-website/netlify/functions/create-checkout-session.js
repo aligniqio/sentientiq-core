@@ -53,7 +53,7 @@ exports.handler = async (event, context) => {
         },
       ],
       mode: 'subscription',
-      success_url: successUrl || `${siteUrl}/thanks?session_id={CHECKOUT_SESSION_ID}`,
+      success_url: successUrl || `${siteUrl}/auth?checkout_session={CHECKOUT_SESSION_ID}&success=true`,
       cancel_url: cancelUrl || `${siteUrl}/#pricing`,
       allow_promotion_codes: true,
       billing_address_collection: 'required',
