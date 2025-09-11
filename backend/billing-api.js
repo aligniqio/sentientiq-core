@@ -309,6 +309,37 @@ app.get('/api/usage/:userId', async (req, res) => {
 });
 
 // =====================================
+// CREATE STRIPE CUSTOMER PORTAL SESSION
+// =====================================
+app.post('/api/create-portal-session', express.json(), async (req, res) => {
+  try {
+    const { userId } = req.body;
+    
+    // Get user's Stripe customer ID
+    const { data: user } = await supabase
+      .from('users')
+      .select('stripe_customer_id')
+      .eq('clerk_user_id', userId)
+      .single();
+    
+    if (!user?.stripe_customer_id) {
+      return res.status(404).json({ error: 'No subscription found' });
+    }
+    
+    // Create portal session
+    const session = await stripe.billingPortal.sessions.create({
+      customer: user.stripe_customer_id,
+      return_url: `${process.env.APP_URL}/billing`,
+    });
+    
+    res.json({ url: session.url });
+  } catch (error) {
+    console.error('Portal session error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// =====================================
 // CREATE STRIPE CHECKOUT SESSION
 // =====================================
 app.post('/api/create-checkout-session', express.json(), async (req, res) => {
