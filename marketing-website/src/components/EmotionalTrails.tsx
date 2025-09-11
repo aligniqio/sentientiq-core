@@ -78,16 +78,18 @@ export default function EmotionalTrails() {
       mouseVelocity.current = newVelocity;
       lastMoveTime.current = now;
       
-      // Add chaotic trail
-      trails.current.push({
-        x,
-        y,
-        age: 0,
-        type: 'chaos'
-      });
+      // Add chaotic trail less frequently (only if moved enough distance)
+      if (distance > 15) {  // Reduced density - only add trail if mouse moved at least 15 pixels
+        trails.current.push({
+          x,
+          y,
+          age: 0,
+          type: 'chaos'
+        });
+      }
 
-      // Keep trails limited
-      if (trails.current.length > 100) {
+      // Keep trails more limited for less density
+      if (trails.current.length > 50) {  // Reduced from 100 to 50
         trails.current.shift();
       }
     };
@@ -162,24 +164,34 @@ export default function EmotionalTrails() {
         trail.age += 1;
         
         if (trail.type === 'chaos') {
-          // Chaotic customer trail - red, erratic
+          // Chaotic customer trail - purple to blue gradient, subtle
           const opacity = Math.max(0, 1 - trail.age / 50);
-          ctx.strokeStyle = `rgba(239, 68, 68, ${opacity * 0.3})`;
-          ctx.lineWidth = 2;
           
-          // Draw erratic line
+          // Create gradient effect by interpolating between purple and blue based on age
+          const purpleR = 147, purpleG = 51, purpleB = 234;  // Purple: rgb(147, 51, 234)
+          const blueR = 59, blueG = 130, blueB = 246;        // Blue: rgb(59, 130, 246)
+          const t = trail.age / 50;  // Interpolation factor
+          
+          const r = Math.round(purpleR + (blueR - purpleR) * t);
+          const g = Math.round(purpleG + (blueG - purpleG) * t);
+          const b = Math.round(purpleB + (blueB - purpleB) * t);
+          
+          ctx.strokeStyle = `rgba(${r}, ${g}, ${b}, ${opacity * 0.2})`;  // More subtle opacity
+          ctx.lineWidth = 1;  // Thinner lines
+          
+          // Draw subtle trail line
           ctx.beginPath();
           ctx.moveTo(trail.x, trail.y);
           ctx.lineTo(
-            trail.x + (Math.random() - 0.5) * 20,
-            trail.y + (Math.random() - 0.5) * 20
+            trail.x + (Math.random() - 0.5) * 15,  // Reduced movement from 20 to 15
+            trail.y + (Math.random() - 0.5) * 15
           );
           ctx.stroke();
           
-          // Small chaos particle
-          ctx.fillStyle = `rgba(239, 68, 68, ${opacity * 0.5})`;
+          // Small trail particle with gradient color
+          ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${opacity * 0.3})`;  // More subtle
           ctx.beginPath();
-          ctx.arc(trail.x, trail.y, 2, 0, Math.PI * 2);
+          ctx.arc(trail.x, trail.y, 1.5, 0, Math.PI * 2);  // Smaller particle
           ctx.fill();
         } else {
           // Intelligence detection - purple/blue, precise
@@ -278,8 +290,8 @@ export default function EmotionalTrails() {
         <h3 className="text-sm font-bold text-white mb-3">Emotional Trail Visualization</h3>
         <div className="space-y-2 text-xs">
           <div className="flex items-center gap-2">
-            <div className="w-3 h-3 bg-red-500 rounded-full opacity-50"></div>
-            <span className="text-red-400">Your customers: Chaotic, confused</span>
+            <div className="w-3 h-3 bg-gradient-to-r from-purple-500 to-blue-500 rounded-full opacity-50"></div>
+            <span className="text-purple-400">Your customers: Chaotic, confused</span>
           </div>
           <div className="flex items-center gap-2">
             <div className="w-3 h-3 bg-purple-500 rounded-full"></div>
