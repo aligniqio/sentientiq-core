@@ -16,7 +16,7 @@ import InterventionShowcase from '@/components/InterventionShowcase';
 import AccountabilityProof from '@/components/AccountabilityProof';
 import TransparencyManifesto from '@/components/TransparencyManifesto';
 
-export default function Landing() {
+export default function LandingV2() {
   const siteUrl = (import.meta as any)?.env?.VITE_SITE_URL || 
     (typeof window !== 'undefined' ? window.location.origin : 'https://sentientiq.ai');
   

@@ -60,16 +60,16 @@ export default function Pricing() {
       name: 'Starter',
       price: '$497',
       period: '/month',
-      tagline: 'Real emotions. Real predictions.',
+      tagline: 'Know WHO is feeling WHAT',
       features: [
-        'Detect rage in 300ms, prevent abandonment in 3s',
-        'Live emotional state tracking across your site',
-        'Behavioral physics engine (no probabilities)',
+        'Identity resolution: Name + Company + Value',
+        'Detect 12 emotions with 95% confidence',
+        'Basic interventions (email, Slack alerts)',
         'Weekly accountability scorecard',
-        'PhD Collective Boardroom (included free)',
-        'Up to 10,000 monthly sessions'
+        'What you saved vs. what you lost',
+        'Up to 10,000 identified sessions/mo'
       ],
-      cta: 'Start Detecting',
+      cta: 'Start Today',
       priceId: import.meta.env.VITE_STRIPE_STARTER_PRICE_ID,
       popular: false
     },
@@ -77,17 +77,17 @@ export default function Pricing() {
       name: 'Growth',
       price: '$1,997',
       period: '/month',
-      tagline: 'Learn. Predict. Intervene.',
+      tagline: 'Intervene before they leave',
       features: [
         'Everything in Starter, plus:',
-        'Machine learning pattern evolution',
-        'Predictive abandonment interventions',
-        'Revenue impact tracking & attribution',
-        'Custom emotional triggers & responses',
-        'Unlimited Boardroom debates',
-        'Up to 100,000 monthly sessions'
+        'CRM sync (Salesforce, HubSpot)',
+        'Automated interventions by value tier',
+        'Custom webhook endpoints',
+        'Real-time Slack/email alerts',
+        'Revenue attribution tracking',
+        'Up to 100,000 identified sessions/mo'
       ],
-      cta: 'Start Predicting',
+      cta: 'Start Today',
       priceId: import.meta.env.VITE_STRIPE_GROWTH_PRICE_ID,
       popular: true
     },
@@ -95,34 +95,34 @@ export default function Pricing() {
       name: 'Scale',
       price: '$4,997',
       period: '/month',
-      tagline: 'Your proprietary data moat.',
+      tagline: 'Your emotional data moat',
       features: [
         'Everything in Growth, plus:',
-        'Unlimited sessions & pattern storage',
-        'Cross-property emotional journey mapping',
-        'API access for custom integrations',
-        'Custom PhD personas for your industry',
+        'Unlimited identified sessions',
+        'Custom intervention rules',
+        'API access for your stack',
+        'Cross-domain tracking',
         'Dedicated success manager',
-        'Quarterly business reviews with ROI analysis'
+        'Quarterly ROI analysis'
       ],
-      cta: 'Build Your Moat',
+      cta: 'Start Today',
       priceId: import.meta.env.VITE_STRIPE_SCALE_PRICE_ID,
       popular: false
     },
     {
       name: 'Enterprise',
-      price: 'Custom',
+      price: 'Let\'s talk',
       period: '',
-      tagline: 'White-glove emotional intelligence.',
+      tagline: 'Your rules. Your infrastructure.',
       features: [
-        'Custom emotion detection models',
-        'Private deployment options',
-        'Real-time data streaming',
-        'Multi-brand & multi-property support',
-        'SLA with 99.99% uptime guarantee',
-        'Executive quarterly insights briefing'
+        'Self-hosted deployment option',
+        'Custom emotion models',
+        'White-label capability',
+        'Multi-brand support',
+        'SLA with 99.99% uptime',
+        'Executive briefings'
       ],
-      cta: 'Contact Sales',
+      cta: 'Schedule Call',
       href: 'mailto:enterprise@sentientiq.ai?subject=Enterprise%20Emotional%20Intelligence',
       priceId: null,
       popular: false
@@ -132,11 +132,11 @@ export default function Pricing() {
   return (
     <section id="pricing" className="section py-20">
       <div className="text-center">
-        <p className="kicker">Investment</p>
-        <h2 className="mt-2 text-4xl font-bold">The cost of not knowing why they leave</h2>
+        <p className="kicker">Transparent Pricing</p>
+        <h2 className="mt-2 text-4xl font-bold">What it costs. What you get. No games.</h2>
         <p className="mt-4 text-lg text-white/70 max-w-2xl mx-auto">
-          We show you exactly how much revenue walks away while you're looking at bounce rates.
-          No free tier. This is behavioral physics, not a GPT wrapper.
+          Every tier includes identity resolution, interventions, and accountability scoring.
+          No hidden fees. No seat limits. No "Contact Sales" for basic pricing.
         </p>
       </div>
 

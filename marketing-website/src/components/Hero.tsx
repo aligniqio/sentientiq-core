@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 
 export default function Hero() {
   const [emotionIndex, setEmotionIndex] = useState(0);
-  const emotions = ['rage', 'hesitation', 'confusion', 'delight', 'urgency'];
+  const emotions = ['rage', 'hesitation', 'confusion', 'abandonment', 'paralysis'];
   
   useEffect(() => {
     const interval = setInterval(() => {
@@ -15,18 +15,18 @@ export default function Hero() {
     <section className="section pt-6 pb-16 md:pt-10 md:pb-24 text-center">
       <div className="max-w-5xl mx-auto">
         <h2 className="text-2xl md:text-3xl font-bold text-purple-400 mb-6 uppercase tracking-wider">
-          MARKETING MOVES TOO SLOW FOR EMOTION. WE FIXED THAT.
+          YOUR CUSTOMERS ARE SCREAMING. YOU JUST CAN'T HEAR THEM.
         </h2>
         <p className="kicker">Marketing at the Speed of Emotion™</p>
         <h1 className="mt-3 text-4xl md:text-6xl font-semibold leading-tight">
-          We detect <span className="gradient-text">{emotions[emotionIndex]}</span> in 300ms.
+          Your $100k customer just felt <span className="gradient-text">{emotions[emotionIndex]}</span>.
           <br />
-          <span className="text-white/80">You prevent abandonment in 3 seconds.</span>
+          <span className="text-white/80">You have 3 seconds to save them.</span>
         </h1>
         <p className="mt-5 text-lg text-white/70 max-w-3xl mx-auto">
-          While everyone else is tracking clicks and generating "intent signals", 
-          we're reading actual emotions through micro-behaviors. No Math.random(). 
-          No bullshit insights. Just pure behavioral physics that predicts what happens next.
+          We don't count clicks. We identify <span className="text-white">WHO is feeling WHAT</span> through 
+          behavioral physics. When john@fortune500.com shows rage at checkout, 
+          you'll know instantly. With their name, company, and lifetime value attached.
         </p>
         
         <div className="mt-8 grid grid-cols-2 md:grid-cols-4 gap-4 max-w-2xl mx-auto">
