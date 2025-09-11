@@ -4,8 +4,6 @@ import SEO from '@/components/SEO';
 import NeuralBackground from '@/components/NeuralBackground';
 import NavBar from '@/components/NavBar';
 import Footer from '@/components/Footer';
-import EmotionalTracker from '@/components/EmotionalTracker';
-import EmotionalTrails from '@/components/EmotionalTrails';
 
 export default function WhyDifferent() {
   const [activePhase, setActivePhase] = useState(0);
@@ -69,8 +67,6 @@ export default function WhyDifferent() {
       />
       
       <div className="relative min-h-screen bg-black">
-        <EmotionalTracker />
-        <EmotionalTrails />
         <NeuralBackground />
         
         <main className="relative z-10 text-white">
@@ -224,63 +220,6 @@ export default function WhyDifferent() {
             </div>
           </section>
 
-          {/* Live Behavioral Physics Demo */}
-          <section className="py-20">
-            <div className="container mx-auto px-6">
-              <div className="card border-amber-500/20 bg-gradient-to-r from-amber-900/10 to-red-900/10">
-                <div className="p-12">
-                  <h2 className="text-4xl md:text-5xl font-bold mb-6 text-center">BEHAVIORAL PHYSICS IN ACTION</h2>
-                  <p className="text-2xl text-white/80 mb-12 text-center">
-                    This page is tracking your emotions right now. No setup required.
-                  </p>
-                  
-                  <div className="grid md:grid-cols-2 gap-8">
-                    <div className="space-y-4">
-                      <h3 className="text-2xl font-bold text-amber-400 mb-4">Try These:</h3>
-                      <div className="p-4 bg-black/30 rounded-lg border border-amber-500/20">
-                        <p className="font-bold mb-2">🤬 Rage Click</p>
-                        <p className="text-sm text-white/60">Click anywhere rapidly 3+ times</p>
-                      </div>
-                      <div className="p-4 bg-black/30 rounded-lg border border-amber-500/20">
-                        <p className="font-bold mb-2">🤔 Hesitation</p>
-                        <p className="text-sm text-white/60">Hover over a button for 2+ seconds</p>
-                      </div>
-                      <div className="p-4 bg-black/30 rounded-lg border border-amber-500/20">
-                        <p className="font-bold mb-2">😵 Confusion</p>
-                        <p className="text-sm text-white/60">Scroll up and down erratically</p>
-                      </div>
-                    </div>
-                    
-                    <div className="space-y-4">
-                      <h3 className="text-2xl font-bold text-green-400 mb-4">What Happens:</h3>
-                      <div className="p-4 bg-black/30 rounded-lg border border-green-500/20">
-                        <p className="font-bold mb-2">Instant Detection</p>
-                        <p className="text-sm text-white/60">We'll show you a notification within 300ms</p>
-                      </div>
-                      <div className="p-4 bg-black/30 rounded-lg border border-green-500/20">
-                        <p className="font-bold mb-2">No Configuration</p>
-                        <p className="text-sm text-white/60">Already working. No code added to this page.</p>
-                      </div>
-                      <div className="p-4 bg-black/30 rounded-lg border border-green-500/20">
-                        <p className="font-bold mb-2">Real Intervention</p>
-                        <p className="text-sm text-white/60">In production, we'd prevent you from leaving</p>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="mt-12 p-6 bg-black/50 rounded-lg border border-white/10">
-                    <p className="text-center text-lg">
-                      <span className="text-purple-400 font-bold">This is not a demo.</span>{' '}
-                      <span className="text-white/80">This is the actual emotional intelligence engine running.</span>
-                    </p>
-                    <p className="text-center text-sm text-white/50 mt-2">
-                      Zero mock data. Zero Math.random(). Pure behavioral physics.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </section>
 
           {/* The $47 Billion Comparison */}
           <section className="py-20">
