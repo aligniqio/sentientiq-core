@@ -8,7 +8,7 @@ import EmotionalEngine from '@/components/EmotionalEngine';
 import LiveDemo from '@/components/LiveDemo';
 import Pricing from '@/components/Pricing';
 import Footer from '@/components/Footer';
-import EmotionalTracker from '@/components/EmotionalTracker';
+// import EmotionalTracker from '@/components/EmotionalTracker'; // Removed - too distracting
 
 // New focused components for the cohesive story
 import IdentityReveal from '@/components/IdentityReveal';
@@ -29,7 +29,7 @@ export default function Landing() {
         description="Your $100k customer is raging. We detect it in 300ms. You intervene in 3 seconds. Identity + Emotion + Action = Revenue saved. See exactly what ignoring emotions costs you."
       />
       <div className="relative min-h-screen bg-black">
-        <EmotionalTracker />
+        {/* <EmotionalTracker /> -- Removed: Too distracting on mobile */}
         <NeuralBackground />
         <main className="relative z-10 text-white">
           <NavBar />
