@@ -155,14 +155,15 @@
     }
   }
   
-  // HESITATION DETECTION - Hovering >1.5s on interactive elements
+  // HESITATION DETECTION - Hovering >2.5s on truly interactive elements
   function detectHesitation(target) {
     const hoverDuration = Date.now() - state.hoverStartTime;
     
-    if (hoverDuration > 1500 && state.hoverTarget) {
-      // More inclusive: anything clickable or with text content
-      const isActionable = ['BUTTON', 'A', 'INPUT', 'SELECT', 'SPAN', 'DIV', 'P', 'H1', 'H2', 'H3'].includes(state.hoverTarget.tagName) ||
+    if (hoverDuration > 2500 && state.hoverTarget) {
+      // Only truly interactive elements - not generic containers
+      const isActionable = ['BUTTON', 'A', 'INPUT', 'SELECT'].includes(state.hoverTarget.tagName) ||
                           state.hoverTarget.onclick || 
+                          state.hoverTarget.hasAttribute('role') && ['button', 'link'].includes(state.hoverTarget.getAttribute('role')) ||
                           state.hoverTarget.style.cursor === 'pointer';
       
       if (isActionable && state.currentEmotion !== 'hesitation') { // Prevent duplicate triggers
@@ -266,6 +267,31 @@
     }
   }
   
+  // CONFIDENCE DETECTION - Quick, decisive clicks on CTAs
+  function detectConfidence(target) {
+    const timeSincePageLoad = Date.now() - config.startTime;
+    const isDecisive = timeSincePageLoad > 2000; // Not immediate
+    
+    // Check if it's a CTA or important button
+    const isCTA = target && (
+      ['BUTTON', 'A'].includes(target.tagName) ||
+      target.classList?.contains('btn') ||
+      target.classList?.contains('button') ||
+      target.textContent?.match(/buy|purchase|start|get|sign|submit|continue/i)
+    );
+    
+    if (isCTA && isDecisive && state.mouseVelocity > 2) {
+      state.currentEmotion = 'confidence';
+      sendEvent('confidence', 85, {
+        intensity: 75,
+        element: target.tagName,
+        text: target.textContent?.slice(0, 50),
+        micro_behaviors: ['decisive_click', 'confident_navigation'],
+        predicted_action: 'convert'
+      });
+    }
+  }
+  
   // ABANDONMENT DETECTION - Idle >60s
   function detectAbandonment() {
     const idleTime = Date.now() - state.idleStartTime;
@@ -285,8 +311,13 @@
   // Event Handlers
   document.addEventListener('click', function(e) {
     detectRage();
+    detectConfidence(e.target);
     state.idleStartTime = Date.now();
     state.lastInteraction = 'click';
+    // Reset hover state on click
+    state.hoverTarget = null;
+    state.hoverStartTime = 0;
+    state.currentEmotion = 'normal';
   });
   
   document.addEventListener('mousemove', function(e) {
@@ -307,29 +338,39 @@
   });
   
   document.addEventListener('mouseover', function(e) {
-    state.hoverTarget = e.target;
-    state.hoverStartTime = Date.now();
+    // Only track hover on interactive elements, and not immediately on page load
+    const timeSincePageLoad = Date.now() - config.startTime;
+    if (timeSincePageLoad > 1000) { // Ignore first second after page load
+      state.hoverTarget = e.target;
+      state.hoverStartTime = Date.now();
+    }
   });
   
   document.addEventListener('mouseout', function(e) {
     if (state.hoverTarget === e.target) {
-      detectHesitation(e.target);
+      // Only check hesitation if we've been tracking for enough time
+      const hoverDuration = Date.now() - state.hoverStartTime;
+      if (hoverDuration > 2500) {
+        detectHesitation(e.target);
+      }
       state.hoverTarget = null;
       state.hoverStartTime = 0;
+      // Reset emotion state when leaving element
+      if (state.currentEmotion === 'hesitation') {
+        state.currentEmotion = 'normal';
+      }
     }
   });
   
-  // Also check for hesitation while hovering (every 500ms)
+  // Check for hesitation periodically but less aggressively
   setInterval(function() {
     if (state.hoverTarget && state.hoverStartTime) {
       const hoverDuration = Date.now() - state.hoverStartTime;
-      if (hoverDuration > 1500) {
+      if (hoverDuration > 2500 && state.currentEmotion !== 'hesitation') {
         detectHesitation(state.hoverTarget);
-        state.hoverStartTime = Date.now(); // Reset to avoid repeated triggers
-        state.currentEmotion = 'normal'; // Reset emotion state
       }
     }
-  }, 500);
+  }, 1000);
   
   window.addEventListener('scroll', function() {
     detectConfusion();

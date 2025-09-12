@@ -6,6 +6,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useEmotionalIntelligence, EmotionalState } from '../services/emotional-intelligence';
+import EVIDisplay from './EVIDisplay';
 
 // Emotion colors - these matter psychologically
 const EMOTION_COLORS: Record<EmotionalState, string> = {
@@ -141,6 +142,15 @@ export const EmotionalDashboard: React.FC = () => {
           </button>
         </div>
         <p className="text-gray-400 mt-2">Reading emotional signals in real-time</p>
+      </div>
+
+      {/* Emotional Volatility Index - The Data Moat */}
+      <div className="relative z-10 mb-8">
+        <EVIDisplay 
+          value={emotionalState?.volatilityIndex || 50} 
+          trend={momentum === 'volatile' ? 'up' : momentum === 'locked' ? 'down' : 'stable'}
+          className="w-full"
+        />
       </div>
 
       {/* Current State Display */}

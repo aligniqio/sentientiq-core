@@ -1,10 +1,7 @@
-import { createClient } from '@supabase/supabase-js';
+import { getSupabaseClient } from '../lib/supabase';
 // import OpenAI from 'openai'; // Move to backend
 
-const supabase = createClient(
-  import.meta.env.VITE_SUPABASE_URL!,
-  import.meta.env.VITE_SUPABASE_ANON_KEY!
-);
+const supabase = getSupabaseClient();
 
 // OpenAI should be called through backend, not directly from browser
 // const openai = new OpenAI({
@@ -199,7 +196,7 @@ export class SageService {
       };
     }
 
-    const avgAuthenticity = recentMemories.reduce((sum, m) => sum + (m.authenticity_score || 0.5), 0) / recentMemories.length;
+    const avgAuthenticity = recentMemories.reduce((sum: number, m: any) => sum + (m.authenticity_score || 0.5), 0) / recentMemories.length;
     
     let mood = 'Professionally skeptical';
     let snarkLevel = 5;
@@ -215,7 +212,7 @@ export class SageService {
       snarkLevel = 3;
     }
 
-    const themes = [...new Set(recentMemories.map(m => m.memory_type))];
+    const themes = [...new Set(recentMemories.map((m: any) => m.memory_type))].filter(Boolean) as string[];
 
     return { mood, snarkLevel, recentThemes: themes };
   }

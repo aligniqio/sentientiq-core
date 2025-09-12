@@ -44,6 +44,7 @@ class EmotionalStreamService {
   private js: JetStreamClient | null = null;
   private wss: WebSocket.Server | null = null;
   private tenantConnections: Map<string, Set<WebSocket>> = new Map();
+  private tenantEvents: Map<string, EmotionalEvent[]> = new Map();
   
   // Stream configuration
   private readonly STREAM_NAME = 'EMOTIONAL_EVENTS';
@@ -179,8 +180,21 @@ class EmotionalStreamService {
   }
 
   private async processEmotionalEvent(event: EmotionalEvent) {
+    // Store event for EVI calculation
+    if (!this.tenantEvents.has(event.tenant_id)) {
+      this.tenantEvents.set(event.tenant_id, []);
+    }
+    const events = this.tenantEvents.get(event.tenant_id)!;
+    events.push(event);
+    
+    // Keep only recent events (last 100)
+    if (events.length > 100) {
+      events.shift();
+    }
+    
     // Calculate Emotional Volatility Index™ contribution
     const eviContribution = this.calculateEVIContribution(event);
+    const currentEVI = await this.calculateCurrentEVI(event.tenant_id);
     
     // Broadcast to tenant connections
     const connections = this.tenantConnections.get(event.tenant_id);
@@ -189,6 +203,7 @@ class EmotionalStreamService {
         type: 'event',
         payload: event,
         evi: eviContribution,
+        currentEVI,
         timestamp: Date.now()
       });
       
@@ -200,7 +215,7 @@ class EmotionalStreamService {
     }
     
     // Publish to EVI calculation stream
-    if (eviContribution > 0) {
+    if (eviContribution !== 0) {
       await this.publishEVI(event.tenant_id, eviContribution);
     }
   }
@@ -260,24 +275,28 @@ class EmotionalStreamService {
   }
   
   private async calculateCurrentEVI(tenantId: string): Promise<number> {
-    // Calculate current EVI from recent emotional events
-    // This would aggregate recent contributions with time decay
-    // For now, return a simulated value that fluctuates
-    
+    // Calculate current EVI from recent emotional events with time decay
     const recentEvents = this.tenantEvents.get(tenantId) || [];
     if (recentEvents.length === 0) return 50; // Baseline
     
-    // Count emotion types in recent events
-    const emotionCounts: Record<string, number> = {};
+    // Apply time decay and calculate weighted average
+    const now = Date.now();
+    let weightedSum = 0;
     let totalWeight = 0;
     
-    recentEvents.slice(-20).forEach(event => {
+    recentEvents.slice(-50).forEach(event => {
+      const age = (now - event.timestamp) / 1000; // Age in seconds
+      const decayFactor = Math.exp(-age / 300); // 5-minute half-life
       const contribution = this.calculateEVIContribution(event);
-      totalWeight += contribution;
+      
+      weightedSum += contribution * decayFactor;
+      totalWeight += decayFactor;
     });
     
-    // Average contribution over recent events, centered at 50
-    const evi = Math.max(0, Math.min(100, 50 + totalWeight / Math.max(1, recentEvents.length)));
+    // Calculate EVI centered at 50 (normal conditions)
+    const evi = totalWeight > 0 
+      ? Math.max(0, Math.min(100, 50 + (weightedSum / totalWeight)))
+      : 50;
     
     return Math.round(evi * 100) / 100; // Round to 2 decimals
   }

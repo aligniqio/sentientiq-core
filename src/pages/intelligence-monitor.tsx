@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Activity, Users, AlertCircle, CheckCircle2, Clock, Zap } from 'lucide-react';
 import PageHeader from '../components/PageHeader';
-import SwarmAnalysisPanel from '../components/SwarmAnalysisPanel';
+// SwarmAnalysisPanel removed - Sage works alone now
 
 // Plutchik's Wheel of Emotions - 8 primary emotions
 const PLUTCHIK_EMOTIONS = {
@@ -169,7 +169,7 @@ const IntelligenceMonitor: React.FC = () => {
   const [moatMetrics] = useState<MoatMetrics | null>(null);
   const [isConnected] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [analyzingPost, setAnalyzingPost] = useState<SocialPost | null>(null);
+  // const [analyzingPost, setAnalyzingPost] = useState<SocialPost | null>(null);
   const eventSourceRef = useRef<EventSource | null>(null);
 
   // Connect to backend SSE for real-time posts
@@ -300,7 +300,7 @@ const IntelligenceMonitor: React.FC = () => {
                     key={post.id || `post-${index}-${post.timestamp}`} 
                     post={post} 
                     index={index}
-                    onAnalyze={(post) => setAnalyzingPost(post)} 
+                    onAnalyze={(post) => console.log('Analyzing:', post)} 
                   />
                 ))}
               </AnimatePresence>
@@ -309,15 +309,7 @@ const IntelligenceMonitor: React.FC = () => {
         </div>
       </div>
       
-      {/* Swarm Analysis Panel */}
-      <AnimatePresence>
-        {analyzingPost && (
-          <SwarmAnalysisPanel
-            post={analyzingPost}
-            onClose={() => setAnalyzingPost(null)}
-          />
-        )}
-      </AnimatePresence>
+      {/* Sage works alone now - no swarm analysis */}
     </div>
   );
 };

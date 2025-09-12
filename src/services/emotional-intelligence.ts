@@ -64,6 +64,7 @@ interface EmotionalSignature {
   microBehaviors: MicroBehavior[];
   predictedAction: string;
   interventionWindow: number; // milliseconds until emotion shifts
+  volatilityIndex?: number; // 0-100, the EVI™ - our data moat
 }
 
 export class EmotionalIntelligence extends EventEmitter {

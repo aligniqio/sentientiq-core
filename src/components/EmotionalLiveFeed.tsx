@@ -9,6 +9,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useUser } from '@clerk/clerk-react';
 import { Activity, Users, TrendingUp, AlertCircle, Zap } from 'lucide-react';
 import PageHeader from './PageHeader';
+import EVIDisplay from './EVIDisplay';
 
 interface EmotionalEvent {
   id: string;
@@ -293,6 +294,15 @@ const EmotionalLiveFeed = () => {
             EVI: {stats.volatilityIndex.toFixed(2)}
           </span>
         )}
+      </div>
+
+      {/* Emotional Volatility Index - Our Data Moat */}
+      <div className="mb-8">
+        <EVIDisplay 
+          value={stats.volatilityIndex || 50} 
+          trend={stats.volatilityIndex && stats.volatilityIndex > 60 ? 'up' : stats.volatilityIndex && stats.volatilityIndex < 40 ? 'down' : 'stable'}
+          className="w-full"
+        />
       </div>
 
       {/* Stats Grid */}

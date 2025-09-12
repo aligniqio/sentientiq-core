@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useUser } from '@clerk/clerk-react';
+import { getSupabaseClient } from '../lib/supabase';
 
 /**
  * Hook to check if the current user is a super admin
@@ -9,27 +10,7 @@ export function useSuperAdmin() {
   const { user } = useUser();
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [supabase, setSupabase] = useState<any>(null);
-
-  useEffect(() => {
-    const initSupabase = async () => {
-      try {
-        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-        const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-        
-        if (supabaseUrl && supabaseKey) {
-          const { createClient } = await import('@supabase/supabase-js');
-          const client = createClient(supabaseUrl, supabaseKey);
-          setSupabase(client);
-        }
-      } catch (error) {
-        console.error('Failed to initialize Supabase:', error);
-        setIsLoading(false);
-      }
-    };
-    
-    initSupabase();
-  }, []);
+  const supabase = getSupabaseClient();
 
   useEffect(() => {
     const checkSuperAdmin = async () => {

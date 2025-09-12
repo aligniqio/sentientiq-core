@@ -1,4 +1,4 @@
-import { createClient } from '@supabase/supabase-js';
+import { getSupabaseClient } from '../lib/supabase';
 
 // Sage's context awareness system
 export class SageContextAwareness {
@@ -20,10 +20,7 @@ export class SageContextAwareness {
   }> = new Map();
 
   constructor() {
-    this.supabase = createClient(
-      import.meta.env.VITE_SUPABASE_URL!,
-      import.meta.env.VITE_SUPABASE_ANON_KEY!
-    );
+    this.supabase = getSupabaseClient();
     
     // Clean up old sessions every hour
     setInterval(() => this.cleanupOldSessions(), 3600000);
