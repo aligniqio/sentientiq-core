@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { useUser } from '@clerk/clerk-react';
 import PageHeader from '../components/PageHeader';
+import { useSuperAdmin } from '../hooks/useSuperAdmin';
 
 interface Tenant {
   id: string;
@@ -36,6 +37,7 @@ interface Tenant {
 
 export default function SuperAdmin() {
   const { user } = useUser();
+  const { isSuperAdmin, isLoading: checkingAdmin, supabase } = useSuperAdmin();
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [showAddTenant, setShowAddTenant] = useState(false);
   const [showAddUser, setShowAddUser] = useState(false);
@@ -47,7 +49,6 @@ export default function SuperAdmin() {
   });
   const [stats, setStats] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [supabase, setSupabase] = useState<any>(null);
   const [newTenant, setNewTenant] = useState({
     company_name: '',
     email: '',
@@ -55,26 +56,6 @@ export default function SuperAdmin() {
     revenue_share: 0.30, // Default 30% revenue share
     demo_days: 7 // For demo accounts
   });
-
-  // Initialize Supabase client lazily
-  useEffect(() => {
-    const initSupabase = async () => {
-      try {
-        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-        const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-        
-        if (supabaseUrl && supabaseKey) {
-          const { createClient } = await import('@supabase/supabase-js');
-          const client = createClient(supabaseUrl, supabaseKey);
-          setSupabase(client);
-        }
-      } catch (error) {
-        console.error('Failed to initialize Supabase:', error);
-      }
-    };
-    
-    initSupabase();
-  }, []);
 
   // Real stats from actual data - NO DEMO DATA
   const fetchStats = async () => {
@@ -163,13 +144,43 @@ export default function SuperAdmin() {
     const domain = newTenant.email.split('@')[1];
     
     try {
-      // Create tenant in Supabase
+      // First create organization in Clerk
+      const apiUrl = import.meta.env.DEV 
+        ? 'http://localhost:8888/.netlify/functions/create-organization'
+        : '/.netlify/functions/create-organization';
+      
+      const clerkResponse = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          companyName: newTenant.company_name,
+          adminEmail: newTenant.email,
+          tenantType: newTenant.tenant_type,
+          subscriptionTier: newTenant.tenant_type === 'agency' ? 'agency' : 
+                           newTenant.tenant_type === 'enterprise' ? 'enterprise' :
+                           newTenant.tenant_type === 'scale' ? 'scale' :
+                           newTenant.tenant_type === 'growth' ? 'growth' : 'starter',
+          userId: user?.id // Associate current user with the org
+        })
+      });
+
+      if (!clerkResponse.ok) {
+        const errorData = await clerkResponse.json();
+        throw new Error(errorData.error || 'Failed to create Clerk organization');
+      }
+
+      const { organizationId } = await clerkResponse.json();
+      
+      // Then create tenant in Supabase with Clerk org ID
       const { error } = await supabase
         .from('organizations')
         .insert({
           company_name: newTenant.company_name,
           domain,
           admin_email: newTenant.email,
+          clerk_organization_id: organizationId,
           is_white_label: newTenant.tenant_type === 'agency',
           is_demo: false,
           subscription_tier: newTenant.tenant_type === 'agency' ? 'agency' : newTenant.tenant_type,
@@ -200,10 +211,10 @@ export default function SuperAdmin() {
       setNewTenant({ company_name: '', email: '', tenant_type: 'standard', revenue_share: 0.30, demo_days: 7 });
       
       // Show success message
-      alert(`✅ Organization ${newTenant.company_name} created successfully.`);
+      alert(`✅ Organization ${newTenant.company_name} created successfully and you've been added as an admin.`);
     } catch (error) {
       console.error('Failed to add tenant:', error);
-      alert('Failed to create tenant. Check console for details.');
+      alert(`Failed to create organization: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   };
 
@@ -326,25 +337,16 @@ export default function SuperAdmin() {
   };
 
   useEffect(() => {
-    // Check if user is actually a super admin
-    const adminEmails = [
-      'info@sentientiq.ai',
-      'matt@aligniq.ai'
-    ];
-    
-    const userEmail = user?.emailAddresses?.[0]?.emailAddress;
-    const isSuperAdmin = userEmail && (
-      adminEmails.includes(userEmail) ||
-      userEmail.includes('kiselstein')
-    );
+    // Check super admin status from database
+    if (checkingAdmin) return; // Still checking
     
     if (!isSuperAdmin) {
       window.location.href = '/';
       return;
     }
     
-    // Only fetch data when supabase is ready
-    if (supabase) {
+    // Only fetch data when supabase is ready and user is super admin
+    if (supabase && isSuperAdmin) {
       fetchTenants();
       fetchStats();
       
@@ -352,7 +354,7 @@ export default function SuperAdmin() {
       const interval = setInterval(fetchStats, 30000);
       return () => clearInterval(interval);
     }
-  }, [user, supabase]);
+  }, [isSuperAdmin, checkingAdmin, supabase]);
 
   return (
     <div className="min-h-screen bg-black text-white">
