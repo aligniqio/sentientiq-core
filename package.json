@@ -15,10 +15,12 @@
     "@clerk/clerk-sdk-node": "^4.13.23",
     "@stripe/stripe-js": "^7.9.0",
     "@supabase/supabase-js": "^2.45.0",
+    "@types/ws": "^8.18.1",
     "cors": "^2.8.5",
     "express": "^5.1.0",
     "framer-motion": "^11.3.0",
     "lucide-react": "^0.400.0",
+    "nats": "^2.29.3",
     "openai": "^5.19.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
@@ -26,7 +28,8 @@
     "react-router-dom": "^6.25.0",
     "recharts": "^3.1.2",
     "resend": "^6.0.3",
-    "stripe": "^18.5.0"
+    "stripe": "^18.5.0",
+    "ws": "^8.18.3"
   },
   "devDependencies": {
     "@types/node": "^20.14.0",
