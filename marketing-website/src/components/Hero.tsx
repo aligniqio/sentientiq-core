@@ -66,14 +66,6 @@ export default function Hero() {
           </div>
         </div>
         
-        <div className="mt-8 flex flex-col sm:flex-row gap-3 justify-center">
-          <a className="btn-primary text-base px-6 py-3" href="https://app.sentientiq.com/scorecard">
-            See Your Accountability Scorecard
-          </a>
-          <a className="btn-ghost text-base px-6 py-3" href="#emotional-engine">
-            Watch emotions in real-time
-          </a>
-        </div>
         <p className="mt-4 text-xs text-white/50">
           The antithesis to generateBullshitInsights() • Real emotions • Real accountability
         </p>

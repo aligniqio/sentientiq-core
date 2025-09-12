@@ -63,6 +63,10 @@
       'abandonment': 'exit',
       'delight': 'convert',
       'interest': 'explore',
+      'curiosity': 'explore',
+      'purchase_intent': 'evaluate_purchase',
+      'confidence': 'convert',
+      'engagement': 'continue_reading',
       'session_start': 'browse'
     };
     return predictions[emotion] || 'observe';
@@ -148,7 +152,6 @@
           intensity: 90,
           clickCount: state.clickTimes.length,
           avgInterval: Math.round(avgInterval),
-          target: event.target?.tagName,
           micro_behaviors: ['rapid_clicking', 'frustration_pattern']
         });
       }
@@ -180,6 +183,50 @@
     }
   }
   
+  // ENGAGEMENT DETECTION - Consistent one-direction scrolling (reading)
+  function detectEngagement() {
+    const now = Date.now();
+    const scrollY = window.scrollY;
+    
+    if (state.scrollPositions.length >= 4) {
+      let consistentDirection = true;
+      let firstDirection = 0;
+      let totalDistance = 0;
+      
+      for (let i = 1; i < state.scrollPositions.length; i++) {
+        const distance = state.scrollPositions[i].y - state.scrollPositions[i-1].y;
+        totalDistance += Math.abs(distance);
+        const direction = distance > 0 ? 1 : -1;
+        
+        if (i === 1) {
+          firstDirection = direction;
+        } else if (direction !== firstDirection && Math.abs(distance) > 50) {
+          consistentDirection = false;
+          break;
+        }
+      }
+      
+      const timeSpan = now - state.scrollPositions[0].time;
+      const scrollVelocity = totalDistance / timeSpan;
+      
+      // Consistent direction, moderate speed = engaged reading
+      if (consistentDirection && scrollVelocity > 0.5 && scrollVelocity < 2 && 
+          totalDistance > 200 && state.currentEmotion !== 'engagement') {
+        state.currentEmotion = 'engagement';
+        sendEvent('engagement', 80, {
+          intensity: 70,
+          scrollPattern: 'reading',
+          direction: firstDirection > 0 ? 'down' : 'up',
+          velocity: scrollVelocity.toFixed(2),
+          distance: Math.round(totalDistance),
+          micro_behaviors: ['content_consumption', 'active_reading'],
+          predicted_action: 'continue_reading'
+        });
+        console.log('🧠 Engagement detected: consistent reading scroll');
+      }
+    }
+  }
+  
   // CONFUSION DETECTION - Erratic scrolling (more sensitive)
   function detectConfusion() {
     const now = Date.now();
@@ -194,6 +241,9 @@
     if (state.scrollPositions.length > 8) {
       state.scrollPositions.shift();
     }
+    
+    // First check for engagement (consistent scrolling)
+    detectEngagement();
     
     // Check for rapid direction changes (confusion/searching)
     if (state.scrollPositions.length >= 4) {
@@ -211,11 +261,12 @@
         lastDirection = direction;
       }
       
-      // Detect if: 2+ direction changes OR rapid scrolling with high distance
+      // Detect if: 3+ direction changes (back and forth) OR rapid erratic scrolling
       const timeSpan = now - state.scrollPositions[0].time;
       const scrollVelocity = totalDistance / timeSpan;
       
-      if ((directionChanges >= 2 || scrollVelocity > 2) && state.currentEmotion !== 'confusion') {
+      // Need at least 3 direction changes for confusion (up-down-up or down-up-down)
+      if ((directionChanges >= 3 || (scrollVelocity > 3 && directionChanges >= 2)) && state.currentEmotion !== 'confusion') {
         state.currentEmotion = 'confusion';
         const confidence = Math.min(88, 60 + (directionChanges * 10) + (scrollVelocity * 5));
         sendEvent('confusion', confidence, {
@@ -277,10 +328,13 @@
       ['BUTTON', 'A'].includes(target.tagName) ||
       target.classList?.contains('btn') ||
       target.classList?.contains('button') ||
-      target.textContent?.match(/buy|purchase|start|get|sign|submit|continue/i)
+      target.textContent?.match(/buy|purchase|start|get started|sign|submit|continue|try|demo/i)
     );
     
-    if (isCTA && isDecisive && state.mouseVelocity > 2) {
+    // Remove velocity requirement - just check for decisive action without hesitation
+    const wasNotHesitating = state.currentEmotion !== 'hesitation';
+    
+    if (isCTA && isDecisive && wasNotHesitating) {
       state.currentEmotion = 'confidence';
       sendEvent('confidence', 85, {
         intensity: 75,
@@ -289,6 +343,68 @@
         micro_behaviors: ['decisive_click', 'confident_navigation'],
         predicted_action: 'convert'
       });
+      console.log('🧠 Confidence detected: decisive click on', target.textContent?.slice(0, 30));
+    }
+  }
+  
+  // CURIOSITY DETECTION - Quick navigation clicks
+  function detectCuriosity(target) {
+    const timeSincePageLoad = Date.now() - config.startTime;
+    const isAfterInitialLoad = timeSincePageLoad > 1500;
+    
+    // Check if it's a navigation link or exploratory element
+    const isNavigation = target && (
+      (target.tagName === 'A' && !target.textContent?.match(/buy|purchase|start|get|sign|submit/i)) ||
+      target.closest('nav') ||
+      target.classList?.contains('nav') ||
+      target.textContent?.match(/learn|about|features|how|what|explore|discover|view|see/i)
+    );
+    
+    // Quick, exploratory click without hesitation
+    if (isNavigation && isAfterInitialLoad && state.currentEmotion !== 'hesitation') {
+      state.currentEmotion = 'curiosity';
+      sendEvent('curiosity', 75, {
+        intensity: 65,
+        element: target.tagName,
+        text: target.textContent?.slice(0, 50),
+        href: target.href || target.closest('a')?.href,
+        micro_behaviors: ['exploratory_click', 'information_seeking'],
+        predicted_action: 'explore'
+      });
+      console.log('🧠 Curiosity detected: exploring', target.textContent?.slice(0, 30));
+    }
+  }
+  
+  // PURCHASE INTENT DETECTION - Hovering on buy buttons with engagement
+  function detectPurchaseIntent(target) {
+    const hoverDuration = Date.now() - state.hoverStartTime;
+    
+    // More specific: Only pricing links, price cards, and actual buy buttons
+    const isPurchaseButton = target && (
+      // Specific pricing navigation link
+      (target.tagName === 'A' && target.textContent?.toLowerCase().trim() === 'pricing') ||
+      // Price card elements (containing dollar amounts)
+      (target.textContent?.includes('$') && target.textContent?.match(/\$\d{1,3}/)) ||
+      // Actual purchase/checkout buttons
+      target.textContent?.match(/buy now|purchase|checkout|add.to.cart|get.started now|subscribe/i) ||
+      // Price card containers
+      target.closest('[class*="price-card"], [class*="pricing-card"], [class*="tier"], [data-price]')
+    );
+    
+    // Hovering for 1-3 seconds on purchase buttons indicates intent
+    if (isPurchaseButton && hoverDuration > 1000 && hoverDuration < 3000 && 
+        state.currentEmotion !== 'purchase_intent') {
+      state.currentEmotion = 'purchase_intent';
+      sendEvent('purchase_intent', 80, {
+        intensity: 70,
+        duration: hoverDuration,
+        element: target.tagName,
+        text: target.textContent?.slice(0, 50),
+        micro_behaviors: ['price_evaluation', 'purchase_consideration'],
+        predicted_action: 'evaluate_purchase',
+        intervention_window: 10
+      });
+      console.log('🧠 Purchase intent detected: considering', target.textContent?.slice(0, 30));
     }
   }
   
@@ -311,13 +427,31 @@
   // Event Handlers
   document.addEventListener('click', function(e) {
     detectRage();
-    detectConfidence(e.target);
+    
+    // Priority: Curiosity over Confidence for exploratory actions
+    // Check curiosity first for navigation/exploration
+    const isCuriosity = e.target && (
+      (e.target.tagName === 'A' && !e.target.textContent?.match(/buy|purchase|start|get started|sign|submit/i)) ||
+      e.target.closest('nav') ||
+      e.target.textContent?.match(/learn|about|features|how|what|explore|discover|view|see|scorecard|watch/i)
+    );
+    
+    if (isCuriosity) {
+      detectCuriosity(e.target);
+    } else {
+      // Only check confidence if it's not a curiosity action
+      detectConfidence(e.target);
+    }
+    
     state.idleStartTime = Date.now();
     state.lastInteraction = 'click';
     // Reset hover state on click
     state.hoverTarget = null;
     state.hoverStartTime = 0;
-    state.currentEmotion = 'normal';
+    // Only reset emotion if it's not a detected state
+    if (['confidence', 'curiosity', 'rage'].indexOf(state.currentEmotion) === -1) {
+      state.currentEmotion = 'normal';
+    }
   });
   
   document.addEventListener('mousemove', function(e) {
@@ -348,29 +482,43 @@
   
   document.addEventListener('mouseout', function(e) {
     if (state.hoverTarget === e.target) {
-      // Only check hesitation if we've been tracking for enough time
+      // Check for different emotions based on hover duration
       const hoverDuration = Date.now() - state.hoverStartTime;
+      
+      // Check purchase intent first (1-3 seconds on buy buttons)
+      detectPurchaseIntent(e.target);
+      
+      // Then check hesitation (>2.5 seconds)
       if (hoverDuration > 2500) {
         detectHesitation(e.target);
       }
+      
       state.hoverTarget = null;
       state.hoverStartTime = 0;
       // Reset emotion state when leaving element
-      if (state.currentEmotion === 'hesitation') {
+      if (['hesitation', 'purchase_intent'].indexOf(state.currentEmotion) !== -1) {
         state.currentEmotion = 'normal';
       }
     }
   });
   
-  // Check for hesitation periodically but less aggressively
+  // Check for hover-based emotions periodically
   setInterval(function() {
     if (state.hoverTarget && state.hoverStartTime) {
       const hoverDuration = Date.now() - state.hoverStartTime;
+      
+      // Check purchase intent (1-3 seconds on buy buttons)
+      if (hoverDuration > 1000 && hoverDuration < 3000 && 
+          state.currentEmotion !== 'purchase_intent') {
+        detectPurchaseIntent(state.hoverTarget);
+      }
+      
+      // Check hesitation (>2.5 seconds)
       if (hoverDuration > 2500 && state.currentEmotion !== 'hesitation') {
         detectHesitation(state.hoverTarget);
       }
     }
-  }, 1000);
+  }, 500); // Check more frequently for better responsiveness
   
   window.addEventListener('scroll', function() {
     detectConfusion();
@@ -419,7 +567,7 @@
 ║     🧠 SENTIENTIQ EMOTIONAL INTELLIGENCE ACTIVE     ║
 ║                                                      ║
 ║  Session: ${config.sessionId}          ║
-║  Detecting: Rage, Hesitation, Confusion, Shock      ║
+║  Detecting: Rage, Hesitation, Confusion, Intent     ║
 ║  API Key: ${apiKey.slice(0, 8)}...                       ║
 ║                                                      ║
 ║  Marketing at the Speed of Emotion™                 ║
@@ -427,14 +575,17 @@
     `);
   }
   
-  // Send initialization event
-  sendEvent('session_start', 100, {
-    intensity: 50,
-    url: window.location.href,
-    referrer: document.referrer,
-    micro_behaviors: ['page_load', 'initial_impression'],
-    predicted_action: 'browse',
-    intervention_window: 30
-  });
+  // Send initialization event only once per page load
+  if (!window.SentientIQ_Initialized) {
+    window.SentientIQ_Initialized = true;
+    sendEvent('session_start', 100, {
+      intensity: 50,
+      url: window.location.href,
+      referrer: document.referrer,
+      micro_behaviors: ['page_load', 'initial_impression'],
+      predicted_action: 'browse',
+      intervention_window: 30
+    });
+  }
   
 })();
