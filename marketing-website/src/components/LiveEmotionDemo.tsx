@@ -741,7 +741,7 @@ export default function LiveEmotionDemo() {
                       <span style={{ color: EMOTION_COLORS[event.emotion] }}>
                         {event.emotion.toUpperCase()}
                       </span>
-                      <span className="text-white/40">({event.confidence}%)</span>
+                      <span className="text-white/40">({event.confidence.toFixed(1)}%)</span>
                     </motion.div>
                   ))}
                   {emotionHistory.length === 0 && (
@@ -780,7 +780,7 @@ export default function LiveEmotionDemo() {
                 </div>
                 <div className="p-3 bg-black/30 rounded text-center">
                   <div className="text-2xl font-bold text-yellow-400">
-                    {emotionHistory.length > 0 ? Math.max(...emotionHistory.map(e => e.confidence)) : 0}%
+                    {emotionHistory.length > 0 ? Math.max(...emotionHistory.map(e => e.confidence)).toFixed(1) : '0'}%
                   </div>
                   <div className="text-xs text-white/60">Peak Confidence</div>
                 </div>
