@@ -192,6 +192,8 @@
     scrollPosition: 0,
     mouseVelocity: 0,
     scrollVelocity: 0,
+    mousePresent: true,
+    lastMouseSeen: Date.now(),
     
     // Interaction tracking
     interactions: {
@@ -424,6 +426,8 @@
   
   function trackMouseBehavior(e) {
     const now = Date.now();
+    state.lastMouseSeen = now;
+    state.mousePresent = true;
     const timeDelta = now - state.lastInteractionTime;
     
     if (timeDelta > 0) {
@@ -575,6 +579,38 @@
   
   document.addEventListener('mousemove', trackMouseBehavior);
   document.addEventListener('scroll', trackScrollBehavior);
+  
+  // Track mouse leaving viewport - disinterest → exit risk pattern
+  document.addEventListener('mouseleave', function(e) {
+    state.mousePresent = false;
+    const timeSinceLastInteraction = Date.now() - state.lastInteractionTime;
+    
+    // Sudden disappearance = disinterest
+    if (timeSinceLastInteraction < 3000) {
+      emitEmotion('disinterest', {
+        trigger: 'sudden_mouse_exit',
+        confidence: 85,
+        section: state.currentSection
+      });
+      
+      // After disinterest, escalate to exit risk
+      setTimeout(() => {
+        if (!state.mousePresent) {
+          emitEmotion('abandonment_risk', {
+            trigger: 'mouse_disappeared',
+            confidence: 90,
+            section: state.currentSection
+          });
+        }
+      }, 2000);
+    }
+  });
+  
+  // Track mouse returning
+  document.addEventListener('mouseenter', function(e) {
+    state.mousePresent = true;
+    state.lastMouseSeen = Date.now();
+  });
   
   document.addEventListener('click', function(e) {
     trackInteraction('click', e.target);
