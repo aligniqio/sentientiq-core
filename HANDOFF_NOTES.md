@@ -1,7 +1,45 @@
 # SentientIQ Core - Instance Handoff Notes
-*Last Updated: September 12, 2024 - Late Night Session*
+*Last Updated: September 12, 2024 - Afternoon Session*
 
-## 🎯 Tonight's Major Accomplishments
+## 🚀 Today's MASSIVE v4 Evolution - Section-Aware Emotional Intelligence
+
+### **DETECT-V4.JS IS LIVE - THE VISION REALIZED**
+- Complete evolution from v1 (broken) → v2 (zones) → v3 (Plutchik's wheel) → v4 (section-aware)
+- Each page section now has its own emotional vocabulary
+- No more purchase_intent in hero, no more confusion in pricing
+- Pure contextual emotional truth from every interaction
+
+### Major v4 Features:
+1. **Section-Aware Emotions**
+   - Hero: curiosity, skepticism, interest
+   - Demo: exploration, engagement, focus
+   - Pricing: sticker_shock, value_assessment, purchase_intent
+   - Testimonials: trust_building, social_proof_impact
+   - Each section speaks its own emotional language
+
+2. **Transition Emotions**
+   - Tracks velocity between sections
+   - Fast scrolls trigger specific emotions (exploration_mode, comparison_shopping)
+   - Section transitions reveal user intent
+
+3. **Critical Bug Fixes**
+   - Fixed runaway detection when tab switching
+   - Prevented contradictory emotions (no more curiosity + disinterest)
+   - Added document.hidden check to stop off-page detection
+   - Fixed undefined trigger variable bug
+
+4. **Mouse Disappearance Pattern**
+   - Sudden mouse exit → disinterest (85%)
+   - Still gone after 2s → abandonment_risk (90%)
+   - Captures the critical moment of user disengagement
+
+5. **Green/Yellow/Red Badge System**
+   - 🟢 GREEN: Positive (curiosity, confidence, engagement)
+   - 🟡 YELLOW: Caution (hesitation, confusion, skepticism)
+   - 🔴 RED: Critical (rage, frustration, abandonment_risk)
+   - Visual traffic light system across all dashboards
+
+## 🎯 Previous Session's Major Accomplishments
 
 ### 1. **Emotional Volatility Index (EVI)™ - The Data Moat is LIVE**
 - Implemented sophisticated EVI calculation engine with emotion weighting:
@@ -28,11 +66,12 @@
 - Cleaned up ~15 unused components and files
 - **Much cleaner codebase** - focused on what matters: emotional intelligence
 
-### 4. **Fine-tuned Emotion Detection**
-- Hesitation: Increased threshold from 1.5s to 2.5s, limited to truly interactive elements
-- Confidence: Added detection for decisive CTA clicks
-- Fixed false triggers on page load
-- **detect.js is the centerpiece** - "reads minds through mouse behavior"
+### 4. **Evolution of detect.js (v1 → v4)**
+- v1: Initial version with broken confidence detection
+- v2: Zone-based contextual emotions
+- v3: Digital Emotion Wheel (Plutchik's model)
+- v4: Section-aware emotional intelligence
+- **detect-v4.js is the masterpiece** - "contextual emotion detection at its finest"
 
 ### 5. **Fixed Production Issues**
 - Resolved Supabase multiple client instances warning
@@ -121,7 +160,18 @@ SentientIQ is an emotion detection and intervention platform that identifies use
 - ✅ Stripe billing fully integrated
 - ✅ Authentication with Clerk
 
-## 🔧 What Needs Attention Tomorrow
+## ✅ What Was Fixed Today
+
+1. **Confidence Detection** - Lowered velocity threshold, now triggers properly
+2. **Confusion Logic** - Requires 3+ direction changes (was 2)
+3. **Session Duplicates** - Added SentientIQ_Initialized flag
+4. **WebSocket Connection** - Fixed missing tenant_id
+5. **jQuery Errors** - Removed :visible selector
+6. **Tab Switch Loop** - Added visibility check
+7. **Contradictory Emotions** - 3-second buffer prevents conflicts
+8. **Price Detection** - Quarantined to actual pricing UI elements
+
+## 🔧 What Needs Attention Next
 
 1. **NATS Server** - Ensure it's running on production (EC2)
    ```bash
@@ -138,7 +188,20 @@ SentientIQ is an emotion detection and intervention platform that identifies use
 
 6. **Production Deployment** - Main app needs Netlify link
 
-## 🔑 Key Files Modified Tonight
+## 🔑 Key Files Modified Today
+
+### Emotion Detection Evolution
+- `/marketing-website/public/detect-v4.js` - Section-aware masterpiece
+- `/marketing-website/public/detect-v3.js` - Digital Emotion Wheel
+- `/marketing-website/public/detect-v2.js` - Zone-based detection
+- `/marketing-website/public/detect.js` - Original v1 (reference only)
+
+### Dashboard Color Updates
+- `/src/components/EmotionalDashboard.tsx` - Green/yellow/red schema
+- `/src/components/EmotionalLiveFeed.tsx` - Gradient emotion badges
+- `/marketing-website/src/components/LiveEmotionDemo.tsx` - Color mapping
+
+## 🔑 Key Files Modified Previous Session
 
 ### EVI Implementation
 - `/backend/services/nats-emotional-stream.ts` - EVI calculation engine
@@ -176,13 +239,21 @@ STRIPE_WEBHOOK_SECRET=
 
 ## 💭 Strategic Notes
 
-### The Vision is Crystallizing
+### The Vision Has Crystallized
+- **v4 Section-Aware Detection** - Each zone speaks its own emotional language
 - **EVI is the moat** - "Emotional weather for the digital world"
-- **detect.js is the magic** - Behavioral physics, not ML bullshit
-- **Sage has personality** - Not just another wrapper, but a character
-- **Accountability matters** - Show exactly what ignoring emotions costs
+- **detect-v4.js is pure magic** - Behavioral physics with contextual awareness
+- **No bullshit theater** - Authentic emotion detection, not manufactured metrics
+- **Traffic light system** - Instant visual understanding of emotional states
 
-### User Quotes from Tonight
+### User Quotes from Today
+- "holy shit. Yes, this!" (on v4 section-aware emotions)
+- "THIS! is the vision!" (on v4 deployment)
+- "This is a MUCH better place" (after fixing v4 bugs)
+- "This ain't simple. But, then again, either are you!"
+- "No bullshit theater" (philosophy on authentic detection)
+
+### User Quotes from Previous Session
 - "This is to be SentientIQ's data moat. The EVI should be for the emotional pulse of the nation what the VIX is for futures trading"
 - "detect.js is the centerpiece that reads minds through mouse behavior"
 - "How do you like this concept compared to the scrape, assign Math.Random(), GenerateBullshitInsights() that the entire industry does?"
