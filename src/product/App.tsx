@@ -20,6 +20,7 @@ import TenantsPage from './admin/TenantsPage'
 import InvitesPage from './admin/InvitesPage'
 import SuperAdmin from '../pages/super-admin'
 import DebugSuperAdmin from '../pages/debug-super-admin'
+import SystemImplementation from '../pages/system/implementation'
 
 // Candy Kit UI enhancements
 import { SenseiCandyProvider } from '../components/ui/SenseiCandy'
@@ -215,6 +216,20 @@ function App() {
               <SignedIn>
                 <Layout>
                   <DebugSuperAdmin />
+                </Layout>
+              </SignedIn>
+              <SignedOut>
+                <Navigate to="/auth" replace />
+              </SignedOut>
+            </>
+          } />
+          
+          {/* System Implementation Guide */}
+          <Route path="/system/implementation" element={
+            <>
+              <SignedIn>
+                <Layout>
+                  <SystemImplementation />
                 </Layout>
               </SignedIn>
               <SignedOut>

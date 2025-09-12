@@ -13,9 +13,11 @@ import {
   Eye,
   Crown,
   Trash2,
-  UserPlus
+  UserPlus,
+  Shield
 } from 'lucide-react';
 import { useUser } from '@clerk/clerk-react';
+import { useNavigate } from 'react-router-dom';
 import PageHeader from '../components/PageHeader';
 import { useSuperAdmin } from '../hooks/useSuperAdmin';
 
@@ -37,6 +39,7 @@ interface Tenant {
 
 export default function SuperAdmin() {
   const { user } = useUser();
+  const navigate = useNavigate();
   const { isSuperAdmin, isLoading: checkingAdmin, supabase } = useSuperAdmin();
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [showAddTenant, setShowAddTenant] = useState(false);
@@ -416,72 +419,77 @@ export default function SuperAdmin() {
             ))}
           </div>
 
-          {/* Implementation Guide Section */}
+          {/* Admin Control Cards */}
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="glass-card p-6 mb-8"
+            className="mb-8"
           >
-            <h2 className="text-2xl font-bold text-white mb-4">🚀 Implementation Guide</h2>
-            <p className="text-white/60 mb-6">One-line emotional intelligence for any website</p>
-            
-            <div className="grid md:grid-cols-2 gap-6">
-              <div>
-                <h3 className="text-lg font-semibold text-purple-400 mb-3">Quick Start</h3>
-                <div className="bg-black/30 rounded-lg p-4 font-mono text-sm">
-                  <code className="text-green-400">
-                    &lt;script src="https://cdn.sentientiq.ai/v1/detect.js"<br/>
-                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;data-api-key="YOUR_KEY"&gt;&lt;/script&gt;
-                  </code>
+            <h2 className="text-2xl font-bold text-white mb-6">Admin Controls</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              {/* Debug Tool Card */}
+              <motion.div
+                whileHover={{ scale: 1.02 }}
+                className="glass-card p-6 cursor-pointer hover:border-purple-500/50 transition-all"
+                onClick={() => navigate('/debug-super-admin')}
+              >
+                <div className="flex items-center justify-between mb-4">
+                  <div className="p-3 bg-gradient-to-br from-purple-500/20 to-pink-500/20 rounded-xl">
+                    <Zap className="w-6 h-6 text-purple-400" />
+                  </div>
+                  <span className="text-xs text-purple-400 font-mono">DEBUG</span>
                 </div>
-                <p className="text-xs text-white/40 mt-2">Add before &lt;/body&gt; tag</p>
-              </div>
-              
-              <div>
-                <h3 className="text-lg font-semibold text-purple-400 mb-3">What Gets Detected</h3>
-                <ul className="space-y-1 text-sm text-white/80">
-                  <li>🤬 <strong>Rage:</strong> 3+ clicks in &lt;300ms</li>
-                  <li>🤔 <strong>Hesitation:</strong> 2+ second hovers</li>
-                  <li>😵 <strong>Confusion:</strong> Erratic scrolling</li>
-                  <li>💸 <strong>Sticker Shock:</strong> Mouse deceleration near prices</li>
-                  <li>🚪 <strong>Abandonment:</strong> 60+ seconds idle</li>
-                </ul>
-              </div>
-            </div>
-            
-            <div className="mt-6 p-4 bg-gradient-to-r from-purple-500/10 to-blue-500/10 rounded-lg border border-purple-500/20">
-              <h3 className="text-lg font-semibold text-white mb-2">Listen for Emotions</h3>
-              <div className="bg-black/30 rounded-lg p-3 font-mono text-sm">
-                <code className="text-blue-400">
-                  window.addEventListener('sentientiq:emotion', (e) =&gt; {'{'}<br/>
-                  &nbsp;&nbsp;console.log('Detected:', e.detail.emotion, e.detail.confidence + '%');<br/>
-                  &nbsp;&nbsp;// Deploy your intervention here<br/>
-                  {'}'});
-                </code>
-              </div>
-            </div>
-            
-            <div className="flex gap-4 mt-6">
-              <a 
-                href="/demo.html" 
-                target="_blank"
-                className="px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg hover:from-purple-700 hover:to-pink-700 transition-all"
+                <h3 className="text-white font-semibold mb-2">System Debug</h3>
+                <p className="text-white/60 text-sm">Check auth status, database connections, and permissions</p>
+              </motion.div>
+
+              {/* Implementation Guide Card */}
+              <motion.div
+                whileHover={{ scale: 1.02 }}
+                className="glass-card p-6 cursor-pointer hover:border-blue-500/50 transition-all"
+                onClick={() => navigate('/system/implementation')}
               >
-                View Live Demo
-              </a>
-              <a 
-                href="/detect.js" 
-                target="_blank"
-                className="px-4 py-2 bg-white/10 text-white rounded-lg hover:bg-white/20 transition-all"
+                <div className="flex items-center justify-between mb-4">
+                  <div className="p-3 bg-gradient-to-br from-blue-500/20 to-cyan-500/20 rounded-xl">
+                    <Network className="w-6 h-6 text-blue-400" />
+                  </div>
+                  <span className="text-xs text-blue-400 font-mono">SETUP</span>
+                </div>
+                <h3 className="text-white font-semibold mb-2">Implementation</h3>
+                <p className="text-white/60 text-sm">Script setup guide and detect.js configuration</p>
+              </motion.div>
+
+              {/* Database Health Card */}
+              <motion.div
+                whileHover={{ scale: 1.02 }}
+                className="glass-card p-6 cursor-pointer hover:border-green-500/50 transition-all"
+                onClick={() => alert('Database health dashboard coming soon')}
               >
-                Download Script
-              </a>
-              <button 
-                onClick={() => navigator.clipboard.writeText('<script src="https://cdn.sentientiq.ai/v1/detect.js" data-api-key="YOUR_KEY"></script>')}
-                className="px-4 py-2 bg-white/10 text-white rounded-lg hover:bg-white/20 transition-all"
+                <div className="flex items-center justify-between mb-4">
+                  <div className="p-3 bg-gradient-to-br from-green-500/20 to-emerald-500/20 rounded-xl">
+                    <Brain className="w-6 h-6 text-green-400" />
+                  </div>
+                  <span className="text-xs text-green-400 font-mono">HEALTHY</span>
+                </div>
+                <h3 className="text-white font-semibold mb-2">Database Health</h3>
+                <p className="text-white/60 text-sm">Monitor Supabase and system performance</p>
+              </motion.div>
+
+              {/* API Keys Card */}
+              <motion.div
+                whileHover={{ scale: 1.02 }}
+                className="glass-card p-6 cursor-pointer hover:border-orange-500/50 transition-all"
+                onClick={() => alert('API key management coming soon')}
               >
-                Copy Script Tag
-              </button>
+                <div className="flex items-center justify-between mb-4">
+                  <div className="p-3 bg-gradient-to-br from-orange-500/20 to-red-500/20 rounded-xl">
+                    <Shield className="w-6 h-6 text-orange-400" />
+                  </div>
+                  <span className="text-xs text-orange-400 font-mono">SECURE</span>
+                </div>
+                <h3 className="text-white font-semibold mb-2">API Keys</h3>
+                <p className="text-white/60 text-sm">Manage tenant API keys and access tokens</p>
+              </motion.div>
             </div>
           </motion.div>
 
