@@ -4,7 +4,7 @@
  * NO MOCK DATA - Only real emotions from real users
  */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useUser } from '@clerk/clerk-react';
 import { Activity, Users, TrendingUp, AlertCircle, Zap } from 'lucide-react';
@@ -67,46 +67,76 @@ const EmotionalLiveFeed = () => {
     activeUsers: 0
   });
   const [isConnected, setIsConnected] = useState(false);
+  const [lastEtag, setLastEtag] = useState<string | null>(null);
+  const pollingInterval = useRef<NodeJS.Timeout>();
 
-  // Connect to real-time emotional event stream
+  // Polling with smart caching for emotional event stream
+  // Future: Will be replaced with NATS JetStream WebSocket bridge
   useEffect(() => {
     if (!user) return;
 
-    // Connect to EventSource for real-time updates
-    const eventSource = new EventSource(
-      `${import.meta.env.VITE_API_URL || 'https://api.sentientiq.app'}/api/emotional/stream?tenant_id=${user.id}`
-    );
-
-    eventSource.onopen = () => {
-      setIsConnected(true);
-      setIsLoading(false);
-    };
-
-    eventSource.onmessage = (event) => {
+    const fetchEmotionalData = async () => {
       try {
-        const data = JSON.parse(event.data);
-        
-        if (data.type === 'event') {
-          // Add new emotional event
-          setEvents(prev => [data.payload, ...prev].slice(0, 50)); // Keep last 50
-        } else if (data.type === 'stats') {
-          // Update stats
-          setStats(data.payload);
+        const headers: HeadersInit = {};
+        if (lastEtag) {
+          headers['If-None-Match'] = lastEtag;
         }
+
+        const response = await fetch(
+          `${import.meta.env.VITE_API_URL || 'https://api.sentientiq.app'}/api/emotional/poll?tenant_id=${user.id}`,
+          { headers }
+        );
+
+        // 304 Not Modified - no new data
+        if (response.status === 304) {
+          return;
+        }
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+
+        // Store ETag for next request
+        const etag = response.headers.get('ETag');
+        if (etag) {
+          setLastEtag(etag);
+        }
+
+        const data = await response.json();
+        
+        if (data.events && data.events.length > 0) {
+          // Add new emotional events
+          setEvents(prev => {
+            const newEvents = [...data.events, ...prev];
+            return newEvents.slice(0, 50); // Keep last 50
+          });
+        }
+        
+        if (data.stats) {
+          // Update stats
+          setStats(data.stats);
+        }
+
+        setIsConnected(true);
+        setIsLoading(false);
       } catch (error) {
-        console.error('Failed to parse event:', error);
+        console.error('Failed to fetch emotional data:', error);
+        setIsConnected(false);
       }
     };
 
-    eventSource.onerror = () => {
-      setIsConnected(false);
-      console.error('EventSource connection lost');
-    };
+    // Initial fetch
+    fetchEmotionalData();
+
+    // Poll every 2 seconds (will be replaced by NATS push)
+    pollingInterval.current = setInterval(fetchEmotionalData, 2000);
 
     return () => {
-      eventSource.close();
+      if (pollingInterval.current) {
+        clearInterval(pollingInterval.current);
+      }
     };
-  }, [user]);
+  }, [user, lastEtag]);
 
   // Listen for detect.js events on the current page (if instrumented)
   useEffect(() => {
@@ -147,8 +177,9 @@ const EmotionalLiveFeed = () => {
       <div className="mb-6 flex items-center gap-2">
         <div className={`h-2 w-2 rounded-full ${isConnected ? 'bg-green-400' : 'bg-red-400'}`} />
         <span className="text-sm text-white/60">
-          {isConnected ? 'Connected to live feed' : 'Reconnecting...'}
+          {isConnected ? 'Connected to Emotional Volatility Index™' : 'Connecting to EVI™...'}
         </span>
+        {/* Future: NATS JetStream connection indicator */}
       </div>
 
       {/* Stats Grid */}
@@ -237,7 +268,7 @@ const EmotionalLiveFeed = () => {
                 <AlertCircle className="w-12 h-12 mx-auto mb-4 text-white/20" />
                 <p className="text-lg mb-2">No emotional events detected yet</p>
                 <p className="text-sm mb-4">
-                  Add detect.js to your websites to start tracking real emotions
+                  Add detect.js to start contributing to the Emotional Volatility Index™
                 </p>
                 <code className="block p-4 bg-black/30 rounded-lg text-xs font-mono text-purple-400">
                   {/* NEVER expose user IDs as API keys - always use YOUR_KEY placeholder */}
@@ -298,7 +329,7 @@ const EmotionalLiveFeed = () => {
         {events.length > 0 && (
           <div className="mt-4 pt-4 border-t border-white/10 text-center">
             <p className="text-xs text-white/40">
-              Showing last {events.length} events from your instrumented websites
+              Showing last {events.length} events • Powered by Emotional Volatility Index™
             </p>
           </div>
         )}
