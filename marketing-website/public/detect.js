@@ -305,6 +305,17 @@
     }
   });
   
+  // Also check for hesitation while hovering (every 500ms)
+  setInterval(function() {
+    if (state.hoverTarget && state.hoverStartTime) {
+      const hoverDuration = Date.now() - state.hoverStartTime;
+      if (hoverDuration > 2000) {
+        detectHesitation(state.hoverTarget);
+        state.hoverStartTime = Date.now(); // Reset to avoid repeated triggers
+      }
+    }
+  }, 500);
+  
   window.addEventListener('scroll', function() {
     detectConfusion();
     state.idleStartTime = Date.now();
