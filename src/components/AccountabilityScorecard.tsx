@@ -13,7 +13,6 @@ import {
 } from 'lucide-react';
 import { useUser } from '@clerk/clerk-react';
 import PageHeader from './PageHeader';
-import { track } from '../lib/track';
 
 interface AccountabilityScore {
   companyId: string;
@@ -115,11 +114,6 @@ export default function AccountabilityScorecard() {
         setInsights(generateDemoInsights());
       }
       
-      track('accountability_scorecard_viewed', {
-        score: score?.score,
-        grade: score?.grade,
-        period
-      });
     } catch (error) {
       console.error('Failed to fetch accountability data:', error);
       // Use demo data
