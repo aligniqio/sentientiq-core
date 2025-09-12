@@ -63,8 +63,24 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
   return (
     <div className="min-h-screen bg-black text-white relative overflow-hidden">
-      {/* Neural Cathedral Background - Standardized from Scorecard */}
+      {/* Neural Cathedral Background - Layered for depth */}
       <div className="neural-bg" />
+      
+      {/* Neural Network Pattern - Above the animated orbs for visual depth */}
+      <div className="fixed inset-0 z-[1] pointer-events-none opacity-[0.03]">
+        <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <pattern id="neural-grid" x="0" y="0" width="60" height="60" patternUnits="userSpaceOnUse">
+              <circle cx="30" cy="30" r="1" fill="currentColor" className="text-purple-400" />
+              <line x1="30" y1="30" x2="60" y2="30" stroke="currentColor" strokeWidth="0.5" className="text-purple-400/50" />
+              <line x1="30" y1="30" x2="30" y2="60" stroke="currentColor" strokeWidth="0.5" className="text-purple-400/50" />
+              <line x1="30" y1="30" x2="0" y2="30" stroke="currentColor" strokeWidth="0.5" className="text-purple-400/50" />
+              <line x1="30" y1="30" x2="30" y2="0" stroke="currentColor" strokeWidth="0.5" className="text-purple-400/50" />
+            </pattern>
+          </defs>
+          <rect width="100%" height="100%" fill="url(#neural-grid)" />
+        </svg>
+      </div>
 
 
       {/* Mobile Menu Button */}

@@ -9,7 +9,7 @@
   }
 }
 
-/* Global Purple Backlit Background */
+/* Global Neural Cathedral Background */
 .neural-bg {
   position: fixed;
   inset: 0;
@@ -17,6 +17,7 @@
   overflow: hidden;
 }
 
+/* Layer 1: Animated purple/blue orbs (furthest back for depth) */
 .neural-bg::before,
 .neural-bg::after {
   content: '';
@@ -25,18 +26,33 @@
   height: 24rem;
   border-radius: 50%;
   filter: blur(75px);
+  animation: subtle-pulse 8s ease-in-out infinite; /* Slowed from 2s to 8s (25% speed) */
 }
 
 .neural-bg::before {
   top: 10rem;
   left: 10rem;
   background-color: rgb(147, 51, 234, 0.2); /* purple-600/20 */
+  animation-delay: 0s;
 }
 
 .neural-bg::after {
   bottom: 10rem;
   right: 10rem;
   background-color: rgb(37, 99, 235, 0.2); /* blue-600/20 */
+  animation-delay: 4s; /* Half the duration for offset */
+}
+
+/* Subtle pulse animation - barely noticeable unless you stare */
+@keyframes subtle-pulse {
+  0%, 100% {
+    opacity: 0.2;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.25;
+    transform: scale(1.05);
+  }
 }
 
 @layer components {
