@@ -1,0 +1,21 @@
+version: '3.8'
+
+services:
+  nats:
+    image: nats:latest
+    container_name: sentientiq-nats
+    ports:
+      - "4222:4222"  # Client connections
+      - "8222:8222"  # HTTP monitoring
+      - "6222:6222"  # Cluster
+    command: ["-js", "-m", "8222"]  # Enable JetStream and monitoring
+    volumes:
+      - nats-data:/data
+    environment:
+      - NATS_JETSTREAM_MAX_MEMORY=1G
+      - NATS_JETSTREAM_MAX_FILE=10G
+    restart: unless-stopped
+
+volumes:
+  nats-data:
+    driver: local

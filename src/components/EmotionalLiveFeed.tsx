@@ -68,70 +68,165 @@ const EmotionalLiveFeed = () => {
   });
   const [isConnected, setIsConnected] = useState(false);
   const [lastEtag, setLastEtag] = useState<string | null>(null);
+  const [connectionType, setConnectionType] = useState<'websocket' | 'polling'>('polling');
   const pollingInterval = useRef<NodeJS.Timeout>();
+  const ws = useRef<WebSocket | null>(null);
 
-  // Polling with smart caching for emotional event stream
-  // Future: Will be replaced with NATS JetStream WebSocket bridge
+  // Hybrid connection: WebSocket with NATS JetStream backing, polling fallback
   useEffect(() => {
     if (!user) return;
 
-    const fetchEmotionalData = async () => {
+    let reconnectTimeout: NodeJS.Timeout;
+    let isCleaningUp = false;
+
+    const connectWebSocket = async () => {
       try {
-        const headers: HeadersInit = {};
-        if (lastEtag) {
-          headers['If-None-Match'] = lastEtag;
-        }
-
-        const response = await fetch(
-          `${import.meta.env.VITE_API_URL || 'https://api.sentientiq.app'}/api/emotional/poll?tenant_id=${user.id}`,
-          { headers }
+        // First, get WebSocket info
+        const wsInfoResponse = await fetch(
+          `${import.meta.env.VITE_API_URL || 'https://api.sentientiq.app'}/api/emotional/ws-info`
         );
-
-        // 304 Not Modified - no new data
-        if (response.status === 304) {
-          return;
-        }
-
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}`);
-        }
-
-        // Store ETag for next request
-        const etag = response.headers.get('ETag');
-        if (etag) {
-          setLastEtag(etag);
-        }
-
-        const data = await response.json();
         
-        if (data.events && data.events.length > 0) {
-          // Add new emotional events
-          setEvents(prev => {
-            const newEvents = [...data.events, ...prev];
-            return newEvents.slice(0, 50); // Keep last 50
-          });
+        if (!wsInfoResponse.ok) {
+          throw new Error('WebSocket not available');
         }
         
-        if (data.stats) {
-          // Update stats
-          setStats(data.stats);
-        }
-
-        setIsConnected(true);
-        setIsLoading(false);
+        const wsInfo = await wsInfoResponse.json();
+        const wsUrl = `${wsInfo.ws_url}?tenant_id=${user.id}`;
+        
+        // Connect to WebSocket
+        ws.current = new WebSocket(wsUrl);
+        
+        ws.current.onopen = () => {
+          console.log('Connected to NATS JetStream WebSocket');
+          setIsConnected(true);
+          setConnectionType('websocket');
+          setIsLoading(false);
+          
+          // Clear polling if active
+          if (pollingInterval.current) {
+            clearInterval(pollingInterval.current);
+            pollingInterval.current = undefined;
+          }
+        };
+        
+        ws.current.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data);
+            
+            if (data.type === 'event') {
+              // Add new emotional event with EVI contribution
+              setEvents(prev => [data.payload, ...prev].slice(0, 50));
+              
+              // Show EVI contribution if significant
+              if (data.evi && Math.abs(data.evi) > 0.5) {
+                console.log(`EVI™ Impact: ${data.evi > 0 ? '+' : ''}${data.evi.toFixed(2)}`);
+              }
+            } else if (data.type === 'stats') {
+              // Update stats including volatility index
+              setStats(data.payload);
+            }
+          } catch (error) {
+            console.error('Failed to parse WebSocket message:', error);
+          }
+        };
+        
+        ws.current.onerror = (error) => {
+          console.error('WebSocket error:', error);
+        };
+        
+        ws.current.onclose = () => {
+          setIsConnected(false);
+          ws.current = null;
+          
+          // Reconnect after 3 seconds if not cleaning up
+          if (!isCleaningUp) {
+            console.log('WebSocket closed, will reconnect or fall back to polling');
+            reconnectTimeout = setTimeout(() => {
+              connectWebSocket().catch(startPolling);
+            }, 3000);
+          }
+        };
       } catch (error) {
-        console.error('Failed to fetch emotional data:', error);
-        setIsConnected(false);
+        console.log('WebSocket not available, falling back to polling');
+        startPolling();
       }
     };
 
-    // Initial fetch
-    fetchEmotionalData();
+    const startPolling = () => {
+      setConnectionType('polling');
+      
+      const fetchEmotionalData = async () => {
+        try {
+          const headers: HeadersInit = {};
+          if (lastEtag) {
+            headers['If-None-Match'] = lastEtag;
+          }
 
-    // Poll every 2 seconds (will be replaced by NATS push)
-    pollingInterval.current = setInterval(fetchEmotionalData, 2000);
+          const response = await fetch(
+            `${import.meta.env.VITE_API_URL || 'https://api.sentientiq.app'}/api/emotional/poll?tenant_id=${user.id}`,
+            { headers }
+          );
+
+          // 304 Not Modified - no new data
+          if (response.status === 304) {
+            return;
+          }
+
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+          }
+
+          // Store ETag for next request
+          const etag = response.headers.get('ETag');
+          if (etag) {
+            setLastEtag(etag);
+          }
+
+          const data = await response.json();
+          
+          if (data.events && data.events.length > 0) {
+            // Add new emotional events
+            setEvents(prev => {
+              const newEvents = [...data.events, ...prev];
+              return newEvents.slice(0, 50); // Keep last 50
+            });
+          }
+          
+          if (data.stats) {
+            // Update stats
+            setStats(data.stats);
+          }
+
+          setIsConnected(true);
+          setIsLoading(false);
+        } catch (error) {
+          console.error('Failed to fetch emotional data:', error);
+          setIsConnected(false);
+        }
+      };
+
+      // Initial fetch
+      fetchEmotionalData();
+
+      // Poll every 2 seconds
+      pollingInterval.current = setInterval(fetchEmotionalData, 2000);
+    };
+
+    // Try WebSocket first, fall back to polling
+    connectWebSocket().catch(startPolling);
 
     return () => {
+      isCleaningUp = true;
+      
+      if (reconnectTimeout) {
+        clearTimeout(reconnectTimeout);
+      }
+      
+      if (ws.current) {
+        ws.current.close();
+        ws.current = null;
+      }
+      
       if (pollingInterval.current) {
         clearInterval(pollingInterval.current);
       }
@@ -177,9 +272,15 @@ const EmotionalLiveFeed = () => {
       <div className="mb-6 flex items-center gap-2">
         <div className={`h-2 w-2 rounded-full ${isConnected ? 'bg-green-400' : 'bg-red-400'}`} />
         <span className="text-sm text-white/60">
-          {isConnected ? 'Connected to Emotional Volatility Index™' : 'Connecting to EVI™...'}
+          {isConnected ? 
+            `Connected to Emotional Volatility Index™ (${connectionType === 'websocket' ? 'NATS JetStream' : 'Polling'})` : 
+            'Connecting to EVI™...'}
         </span>
-        {/* Future: NATS JetStream connection indicator */}
+        {stats.volatilityIndex !== undefined && stats.volatilityIndex > 0 && (
+          <span className="ml-auto text-sm font-semibold text-purple-400">
+            EVI: {stats.volatilityIndex.toFixed(2)}
+          </span>
+        )}
       </div>
 
       {/* Stats Grid */}

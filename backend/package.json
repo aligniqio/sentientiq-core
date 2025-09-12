@@ -6,22 +6,36 @@
   "scripts": {
     "start:sage": "node sage-api.js",
     "start:posts": "node posts-server.cjs",
-    "start:all": "npm run start:sage & npm run start:posts",
-    "dev:sage": "node --watch sage-api.js"
+    "start:emotional": "tsx services/emotional-api.ts",
+    "start:all": "npm run start:sage & npm run start:posts & npm run start:emotional",
+    "dev:sage": "node --watch sage-api.js",
+    "dev:emotional": "tsx watch services/emotional-api.ts",
+    "nats": "docker run -p 4222:4222 -p 8222:8222 nats:latest -js"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.32.1",
     "@supabase/supabase-js": "^2.45.0",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.3",
+    "@types/ws": "^8.18.1",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
+    "nats": "^2.29.3",
     "node-fetch": "^3.3.2",
     "openai": "^4.73.1",
     "resend": "^6.0.3",
     "stripe": "^18.5.0",
-    "svix": "^1.76.1"
+    "svix": "^1.76.1",
+    "tsx": "^4.20.5",
+    "typescript": "^5.9.2",
+    "ws": "^8.18.3"
   },
   "devDependencies": {
     "@types/node": "^20.14.0"
-  }
+  },
+  "main": "billing-api.js",
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
 }
