@@ -320,6 +320,9 @@
   // ==========================================
   
   function detectSectionEmotions() {
+    // Stop detection when tab is not visible
+    if (document.hidden) return;
+    
     if (!state.currentSection) return;
     
     const sectionConfig = SECTION_EMOTIONS[state.currentSection];
@@ -332,6 +335,7 @@
     for (const [emotion, config] of Object.entries(sectionConfig.emotions)) {
       const triggers = config.triggers;
       let shouldTrigger = false;
+      let matchedTrigger = null;
       
       for (const trigger of triggers) {
         switch(trigger) {
@@ -353,8 +357,13 @@
             break;
             
           case 'hover_price':
-            shouldTrigger = recentInteractions.hovers.some(h => 
-              h.element.includes('$') || h.element.match(/price|tier|plan/i));
+            // Only trigger on actual pricing elements, not just any text mentioning price
+            shouldTrigger = recentInteractions.hovers.some(h => {
+              const elem = h.element.toLowerCase();
+              // Must be a button, card, or specific pricing element
+              return (elem.includes('$') && (elem.includes('button') || elem.includes('card'))) ||
+                     elem.match(/pricing-card|price-tier|plan-selector|checkout|subscribe/i);
+            });
             break;
             
           case 'mouse_recoil':
@@ -384,7 +393,10 @@
             break;
         }
         
-        if (shouldTrigger) break;
+        if (shouldTrigger) {
+          matchedTrigger = trigger;
+          break;
+        }
       }
       
       if (shouldTrigger) {
@@ -396,7 +408,7 @@
           emitEmotion(emotion, {
             confidence: config.confidence,
             section: state.currentSection,
-            trigger: trigger,
+            trigger: matchedTrigger,
             timeInSection: timeInSection
           });
           
