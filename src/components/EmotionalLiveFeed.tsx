@@ -28,6 +28,7 @@ interface EmotionalStats {
   dominantEmotion?: string;
   interventionRate: number;
   activeUsers: number;
+  volatilityIndex?: number;
 }
 
 const EMOTION_COLORS: Record<string, string> = {
