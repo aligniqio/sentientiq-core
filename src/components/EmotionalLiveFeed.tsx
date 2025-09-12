@@ -400,7 +400,7 @@ const EmotionalLiveFeed = () => {
                   <div className="flex-1">
                     <div className="flex items-center gap-3">
                       <span className="text-white font-medium">
-                        Session {event.session_id.slice(-6)}
+                        Session {event.session_id ? event.session_id.slice(-6) : 'Unknown'}
                       </span>
                       <span className="text-white/40">•</span>
                       <span className="text-white/60 text-sm">
