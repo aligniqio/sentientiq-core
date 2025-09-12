@@ -8,20 +8,25 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useEmotionalIntelligence, EmotionalState } from '../services/emotional-intelligence';
 import EVIDisplay from './EVIDisplay';
 
-// Emotion colors - these matter psychologically
+// Emotion colors - Green/Yellow/Red traffic light schema
 const EMOTION_COLORS: Record<EmotionalState, string> = {
-  [EmotionalState.CURIOSITY]: '#10B981', // Emerald - growth
-  [EmotionalState.FRUSTRATION]: '#F59E0B', // Amber - warning
-  [EmotionalState.ANXIETY]: '#8B5CF6', // Violet - tension
-  [EmotionalState.CONFIDENCE]: '#3B82F6', // Blue - trust
-  [EmotionalState.HESITATION]: '#F97316', // Orange - caution
-  [EmotionalState.URGENCY]: '#EF4444', // Red - action
-  [EmotionalState.CONFUSION]: '#6B7280', // Gray - uncertainty
-  [EmotionalState.DELIGHT]: '#EC4899', // Pink - joy
-  [EmotionalState.RAGE]: '#DC2626', // Deep red - danger
-  [EmotionalState.ABANDONMENT]: '#991B1B', // Dark red - loss
-  [EmotionalState.DISCOVERY]: '#06B6D4', // Cyan - exploration
-  [EmotionalState.DECISION_PARALYSIS]: '#A855F7' // Purple - stuck
+  // GREEN - Positive engagement signals
+  [EmotionalState.CURIOSITY]: '#10B981', // Green - healthy interest
+  [EmotionalState.CONFIDENCE]: '#22C55E', // Green - moving forward
+  [EmotionalState.DELIGHT]: '#16A34A', // Green - highly positive
+  [EmotionalState.DISCOVERY]: '#15803D', // Green - active exploration
+  
+  // YELLOW - Caution/attention needed
+  [EmotionalState.HESITATION]: '#F59E0B', // Yellow - slow down
+  [EmotionalState.CONFUSION]: '#EAB308', // Yellow - needs clarity
+  [EmotionalState.ANXIETY]: '#FCD34D', // Yellow - elevated concern
+  [EmotionalState.DECISION_PARALYSIS]: '#FACC15', // Yellow - stuck state
+  
+  // RED - Critical/intervention needed
+  [EmotionalState.FRUSTRATION]: '#F87171', // Light red - building tension
+  [EmotionalState.URGENCY]: '#EF4444', // Red - immediate action
+  [EmotionalState.RAGE]: '#DC2626', // Red - extreme negative
+  [EmotionalState.ABANDONMENT]: '#991B1B', // Dark red - exit risk
 };
 
 // Emotion icons - visual language

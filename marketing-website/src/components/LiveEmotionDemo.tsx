@@ -32,15 +32,29 @@ interface Intervention {
 }
 
 const EMOTION_COLORS: Record<string, string> = {
-  rage: '#ef4444',
-  frustration: '#f97316',
-  hesitation: '#eab308',
-  confusion: '#a855f7',
-  curiosity: '#3b82f6',
-  delight: '#10b981',
-  confidence: '#14b8a6',
-  abandonment: '#dc2626',
-  normal: '#6b7280'
+  // RED - Critical states
+  rage: '#DC2626',
+  abandonment: '#991B1B',
+  abandonment_intent: '#B91C1C',
+  abandonment_risk: '#991B1B',
+  frustration: '#F87171',
+  
+  // YELLOW - Caution states  
+  hesitation: '#F59E0B',
+  confusion: '#EAB308',
+  anxiety: '#FCD34D',
+  skepticism: '#FACC15',
+  
+  // GREEN - Positive states
+  curiosity: '#10B981',
+  confidence: '#22C55E',
+  delight: '#16A34A',
+  interest: '#15803D',
+  engagement: '#14B8A6',
+  purchase_intent: '#059669',
+  
+  // Neutral
+  normal: '#6B7280'
 };
 
 const EMOTION_MESSAGES: Record<string, string> = {

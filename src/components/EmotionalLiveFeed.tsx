@@ -33,28 +33,56 @@ interface EmotionalStats {
 }
 
 const EMOTION_COLORS: Record<string, string> = {
-  rage: 'from-red-500 to-red-600',
-  frustration: 'from-orange-500 to-amber-500',
-  anxiety: 'from-purple-500 to-indigo-500',
-  confidence: 'from-blue-500 to-cyan-500',
-  hesitation: 'from-yellow-500 to-orange-500',
-  confusion: 'from-gray-500 to-gray-600',
-  delight: 'from-pink-500 to-rose-500',
-  abandonment: 'from-red-700 to-red-900',
+  // RED gradients - Critical states
+  rage: 'from-red-600 to-red-700',
+  abandonment: 'from-red-800 to-red-900',
+  abandonment_intent: 'from-red-700 to-red-800',
+  abandonment_risk: 'from-red-800 to-red-900',
+  frustration: 'from-red-400 to-red-500',
+  
+  // YELLOW gradients - Caution states
+  hesitation: 'from-yellow-500 to-amber-500',
+  confusion: 'from-yellow-400 to-yellow-500',
+  anxiety: 'from-amber-400 to-yellow-500',
+  skepticism: 'from-yellow-500 to-amber-600',
   sticker_shock: 'from-yellow-400 to-amber-500',
-  normal: 'from-green-500 to-emerald-500'
+  
+  // GREEN gradients - Positive states
+  confidence: 'from-green-500 to-emerald-600',
+  curiosity: 'from-emerald-500 to-green-600',
+  delight: 'from-green-400 to-emerald-500',
+  interest: 'from-green-600 to-emerald-700',
+  engagement: 'from-emerald-500 to-teal-600',
+  purchase_intent: 'from-green-600 to-green-700',
+  
+  // Neutral
+  normal: 'from-gray-500 to-gray-600'
 };
 
 const EMOTION_LABELS: Record<string, string> = {
+  // Critical states
   rage: 'Rage Click',
+  abandonment: 'Abandoning',
+  abandonment_intent: 'Exit Intent',
+  abandonment_risk: 'Exit Risk',
   frustration: 'Frustration',
-  anxiety: 'Anxiety',
-  confidence: 'Confident',
+  
+  // Caution states
   hesitation: 'Hesitating',
   confusion: 'Confused',
-  delight: 'Delighted',
-  abandonment: 'Abandoning',
+  anxiety: 'Anxiety',
+  skepticism: 'Skeptical',
   sticker_shock: 'Price Shock',
+  
+  // Positive states
+  confidence: 'Confident',
+  curiosity: 'Curious',
+  delight: 'Delighted',
+  interest: 'Interested',
+  engagement: 'Engaged',
+  purchase_intent: 'Purchase Intent',
+  
+  // Neutral
   normal: 'Normal'
 };
 
