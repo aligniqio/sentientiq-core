@@ -206,25 +206,45 @@ class EmotionalStreamService {
   }
 
   private calculateEVIContribution(event: EmotionalEvent): number {
-    // Emotional Volatility Index™ calculation
-    // Higher confidence + negative emotions = higher volatility
+    // Emotional Volatility Index™ (EVI) - The VIX for Digital Experiences
+    // Scale: 0-100 where:
+    //   0-30: Calm waters (everything flowing smoothly)
+    //   30-50: Normal conditions (typical digital friction)
+    //   50-70: Choppy (users struggling, needs attention)
+    //   70-85: Volatile (significant user distress)
+    //   85-100: Crisis (mass abandonment risk)
+    
     const emotionWeights: Record<string, number> = {
-      rage: 1.0,
-      abandonment: 0.9,
-      frustration: 0.7,
-      anxiety: 0.6,
-      confusion: 0.5,
-      hesitation: 0.3,
-      sticker_shock: 0.8,
-      normal: -0.1,
-      confidence: -0.3,
-      delight: -0.5
+      // High-impact negative emotions (increase volatility)
+      rage: 3.5,           // Rage clicks = system breakdown
+      abandonment: 3.0,    // User giving up = critical failure
+      sticker_shock: 2.5,  // Price rejection = revenue risk
+      frustration: 2.0,    // Building negative momentum
+      confusion: 1.5,      // Lost users = conversion killer
+      anxiety: 1.2,        // Uncertainty building
+      hesitation: 0.8,     // Mild friction
+      
+      // Stabilizing emotions (decrease volatility)
+      confidence: -2.0,    // Smooth, decisive actions
+      delight: -2.5,       // Exceptional experience
+      normal: 0.0,         // Baseline state
+      session_start: 0.2   // New session = slight uncertainty
     };
     
     const weight = emotionWeights[event.emotion] || 0;
-    const confidence = event.confidence / 100;
+    const confidence = (event.confidence || 75) / 100;
     
-    return weight * confidence;
+    // Time decay factor - recent emotions matter more
+    const recencyFactor = 1.0; // Could decay over time
+    
+    // Calculate raw contribution (-2.5 to +3.5 range)
+    const rawContribution = weight * confidence * recencyFactor;
+    
+    // Normalize to 0-100 scale impact
+    // Positive contributions increase EVI, negative decrease it
+    const normalizedContribution = rawContribution * 10;
+    
+    return normalizedContribution;
   }
 
   private async publishEVI(tenantId: string, contribution: number) {
@@ -238,15 +258,41 @@ class EmotionalStreamService {
       }))
     );
   }
+  
+  private async calculateCurrentEVI(tenantId: string): Promise<number> {
+    // Calculate current EVI from recent emotional events
+    // This would aggregate recent contributions with time decay
+    // For now, return a simulated value that fluctuates
+    
+    const recentEvents = this.tenantEvents.get(tenantId) || [];
+    if (recentEvents.length === 0) return 50; // Baseline
+    
+    // Count emotion types in recent events
+    const emotionCounts: Record<string, number> = {};
+    let totalWeight = 0;
+    
+    recentEvents.slice(-20).forEach(event => {
+      const contribution = this.calculateEVIContribution(event);
+      totalWeight += contribution;
+    });
+    
+    // Average contribution over recent events, centered at 50
+    const evi = Math.max(0, Math.min(100, 50 + totalWeight / Math.max(1, recentEvents.length)));
+    
+    return Math.round(evi * 100) / 100; // Round to 2 decimals
+  }
 
   private async sendStats(tenantId: string, ws: WebSocket) {
     // Aggregate stats from JetStream
+    const baselineEVI = 50; // Normal digital experience baseline
+    const currentEVI = await this.calculateCurrentEVI(tenantId);
+    
     const stats: EmotionalStats = {
       totalSessions: 0,
       totalEvents: 0,
       interventionRate: 0,
       activeUsers: 0,
-      volatilityIndex: 0
+      volatilityIndex: currentEVI || baselineEVI
     };
     
     // Send initial stats
