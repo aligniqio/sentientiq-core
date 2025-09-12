@@ -93,14 +93,14 @@ export default function SuperAdmin() {
       const whiteLabel = orgsData.data?.filter((t: any) => t.is_white_label).length || 0;
       const totalMembers = membershipsData.data?.length || 0;
       
-      // Calculate real MRR based on subscription tiers (matching Stripe prices)
+      // Calculate real MRR based on subscription tiers
       const tierPrices: Record<string, number> = { 
         free: 0, 
-        starter: 97,     // price_1QaENFFzLa9P44dP6u24dGfY
-        growth: 297,     // price_1QaEQIFzLa9P44dPEQPJUkJG  
-        scale: 497,      // price_1QaERaFzLa9P44dP7lBHGCOl
-        agency: 999,     // White-label partners
-        enterprise: 2497 // Custom pricing
+        starter: 497,      // Entry level
+        growth: 1997,      // Full platform  
+        scale: 4997,       // Advanced features
+        enterprise: 9997,  // Custom everything
+        agency: 999        // White-label partners (+ rev share)
       };
       
       const mrr = orgsData.data?.reduce((sum: number, org: any) => {
@@ -641,9 +641,10 @@ export default function SuperAdmin() {
                       onChange={(e) => setNewTenant({...newTenant, tenant_type: e.target.value})}
                       className="w-full px-4 py-3 bg-white/5 border border-white/20 rounded-xl text-white focus:outline-none focus:border-purple-400 transition-colors"
                     >
-                      <option value="starter" className="bg-gray-900">Starter - Essential emotion detection ($97/mo)</option>
-                      <option value="growth" className="bg-gray-900">Growth - Full platform access ($297/mo)</option>
-                      <option value="scale" className="bg-gray-900">Scale - Enterprise features ($497/mo)</option>
+                      <option value="starter" className="bg-gray-900">Starter - Essential emotion detection ($497/mo)</option>
+                      <option value="growth" className="bg-gray-900">Growth - Full platform access ($1,997/mo)</option>
+                      <option value="scale" className="bg-gray-900">Scale - Advanced features ($4,997/mo)</option>
+                      <option value="enterprise" className="bg-gray-900">Enterprise - Custom everything ($9,997/mo+)</option>
                       <option value="agency" className="bg-gray-900">Agency - White-label & resell ($999/mo + revenue share)</option>
                       <option value="demo" className="bg-gray-900">Demo - Time-limited clickaround (FREE)</option>
                     </select>
@@ -689,7 +690,7 @@ export default function SuperAdmin() {
                     <p className="text-sm text-white/80">
                       {newTenant.tenant_type === 'demo' ? (
                         <>
-                          <span className="font-bold text-green-400">Demo Account:</span>
+                          <span className="font-bold text-green-400">Demo Account (FREE):</span>
                           <br />• Read-only clickaround access
                           <br />• Pre-populated with sample data
                           <br />• Perfect for investors & skeptics
@@ -707,29 +708,43 @@ export default function SuperAdmin() {
                         </>
                       ) : newTenant.tenant_type === 'starter' ? (
                         <>
-                          <span className="font-bold text-blue-400">Starter ($97/mo):</span>
-                          <br />• Core emotion detection (5 emotions)
-                          <br />• Up to 10k events/month
-                          <br />• Basic interventions
-                          <br />• Email support
+                          <span className="font-bold text-blue-400">Starter - Know WHO is feeling WHAT ($497/mo):</span>
+                          <br />• Identity resolution: Name + Company + Value
+                          <br />• Detect 12 emotions with 95% confidence
+                          <br />• Basic interventions (email, Slack alerts)
+                          <br />• Weekly accountability scorecard
+                          <br />• Up to 10,000 identified sessions/mo
                         </>
                       ) : newTenant.tenant_type === 'growth' ? (
                         <>
-                          <span className="font-bold text-indigo-400">Growth ($297/mo):</span>
-                          <br />• Full emotion spectrum (50+ emotions)
-                          <br />• Identity resolution
-                          <br />• Accountability scorecard
-                          <br />• Up to 100k events/month
-                          <br />• Chat support
+                          <span className="font-bold text-indigo-400">Growth - Intervene before they leave ($1,997/mo):</span>
+                          <br />• Everything in Starter, plus:
+                          <br />• CRM sync (Salesforce, HubSpot)
+                          <br />• Automated interventions by value tier
+                          <br />• Real-time Slack/email alerts
+                          <br />• Revenue attribution tracking
+                          <br />• Up to 100,000 identified sessions/mo
                         </>
                       ) : newTenant.tenant_type === 'scale' ? (
                         <>
-                          <span className="font-bold text-pink-400">Scale ($497/mo):</span>
-                          <br />• Everything in Growth
-                          <br />• Unlimited events
-                          <br />• Custom interventions
-                          <br />• API access
+                          <span className="font-bold text-pink-400">Scale - Your emotional data moat ($4,997/mo):</span>
+                          <br />• Everything in Growth, plus:
+                          <br />• Unlimited identified sessions
+                          <br />• Custom intervention rules
+                          <br />• API access for your stack
+                          <br />• Cross-domain tracking
                           <br />• Dedicated success manager
+                          <br />• Quarterly ROI analysis
+                        </>
+                      ) : newTenant.tenant_type === 'enterprise' ? (
+                        <>
+                          <span className="font-bold text-amber-400">Enterprise - Your rules. Your infrastructure. (Custom):</span>
+                          <br />• Self-hosted deployment option
+                          <br />• Custom emotion models
+                          <br />• White-label capability
+                          <br />• Multi-brand support
+                          <br />• SLA with 99.99% uptime
+                          <br />• Executive briefings
                         </>
                       ) : (
                         <>
