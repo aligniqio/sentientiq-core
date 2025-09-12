@@ -25,7 +25,7 @@
   
   // Configuration
   const config = {
-    apiEndpoint: 'https://api.sentientiq.app/api/emotional/event', // Use HTTPS via nginx
+    apiEndpoint: 'https://api.sentientiq.app/api/emotional/ingest', // NATS JetStream ingestion
     apiKey: apiKey,
     sessionId: generateSessionId(),
     startTime: Date.now(),
