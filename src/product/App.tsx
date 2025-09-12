@@ -19,6 +19,7 @@ import EmotionalLiveFeed from '../components/EmotionalLiveFeed'
 import TenantsPage from './admin/TenantsPage'
 import InvitesPage from './admin/InvitesPage'
 import SuperAdmin from '../pages/super-admin'
+import DebugSuperAdmin from '../pages/debug-super-admin'
 
 // Candy Kit UI enhancements
 import { SenseiCandyProvider } from '../components/ui/SenseiCandy'
@@ -33,7 +34,6 @@ function App() {
     <HelmetProvider>
       <SenseiCandyProvider confetti cursor toasts>
           <Router>
-            <Layout>
             {/* Sage watches from the corner, always */}
             <SageCrystalBall />
           <Routes>
@@ -41,7 +41,9 @@ function App() {
           <Route path="/" element={
             <>
               <SignedIn>
-                <EmotionalLiveFeed /> {/* Main dashboard - real emotions from real users */}
+                <Layout>
+                  <EmotionalLiveFeed /> {/* Main dashboard - real emotions from real users */}
+                </Layout>
               </SignedIn>
               <SignedOut>
                 <Navigate to="/auth" replace />
@@ -57,7 +59,9 @@ function App() {
             element={
               <>
                 <SignedIn>
-                  <SageInbox />
+                  <Layout>
+                    <SageInbox />
+                  </Layout>
                 </SignedIn>
                 <SignedOut>
                   <Navigate to="/auth" replace />
@@ -72,7 +76,9 @@ function App() {
             element={
               <>
                 <SignedIn>
-                  <AccountabilityScorecard />
+                  <Layout>
+                    <AccountabilityScorecard />
+                  </Layout>
                 </SignedIn>
                 <SignedOut>
                   <Navigate to="/auth" replace />
@@ -87,7 +93,9 @@ function App() {
             element={
               <>
                 <SignedIn>
-                  <Settings />
+                  <Layout>
+                    <Settings />
+                  </Layout>
                 </SignedIn>
                 <SignedOut>
                   <Navigate to="/auth" replace />
@@ -103,7 +111,9 @@ function App() {
             element={
               <>
                 <SignedIn>
-                  <Billing />
+                  <Layout>
+                    <Billing />
+                  </Layout>
                 </SignedIn>
                 <SignedOut>
                   <Navigate to="/auth" replace />
@@ -120,7 +130,9 @@ function App() {
           <Route path="/recommendations" element={
             <>
               <SignedIn>
-                <DynamicRecommendations />
+                <Layout>
+                  <DynamicRecommendations />
+                </Layout>
               </SignedIn>
               <SignedOut>
                 <Navigate to="/auth" replace />
@@ -132,7 +144,9 @@ function App() {
           <Route path="/scorecard" element={
             <>
               <SignedIn>
-                <AccountabilityScorecard />
+                <Layout>
+                  <AccountabilityScorecard />
+                </Layout>
               </SignedIn>
               <SignedOut>
                 <Navigate to="/auth" replace />
@@ -144,7 +158,9 @@ function App() {
           <Route path="/emotional-dashboard" element={
             <>
               <SignedIn>
-                <EmotionalLiveFeed />
+                <Layout>
+                  <EmotionalLiveFeed />
+                </Layout>
               </SignedIn>
               <SignedOut>
                 <Navigate to="/auth" replace />
@@ -156,7 +172,9 @@ function App() {
           <Route path="/admin/tenants" element={
             <>
               <SignedIn>
-                <TenantsPage />
+                <Layout>
+                  <TenantsPage />
+                </Layout>
               </SignedIn>
               <SignedOut>
                 <Navigate to="/auth" replace />
@@ -167,7 +185,9 @@ function App() {
           <Route path="/admin/invites" element={
             <>
               <SignedIn>
-                <InvitesPage />
+                <Layout>
+                  <InvitesPage />
+                </Layout>
               </SignedIn>
               <SignedOut>
                 <Navigate to="/auth" replace />
@@ -179,7 +199,23 @@ function App() {
           <Route path="/super-admin" element={
             <>
               <SignedIn>
-                <SuperAdmin />
+                <Layout>
+                  <SuperAdmin />
+                </Layout>
+              </SignedIn>
+              <SignedOut>
+                <Navigate to="/auth" replace />
+              </SignedOut>
+            </>
+          } />
+          
+          {/* Debug route for super admin issues */}
+          <Route path="/debug-super-admin" element={
+            <>
+              <SignedIn>
+                <Layout>
+                  <DebugSuperAdmin />
+                </Layout>
               </SignedIn>
               <SignedOut>
                 <Navigate to="/auth" replace />
@@ -188,7 +224,6 @@ function App() {
           } />
           
         </Routes>
-      </Layout>
     </Router>
     </SenseiCandyProvider>
     </HelmetProvider>

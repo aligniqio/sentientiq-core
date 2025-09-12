@@ -13,6 +13,7 @@ import {
   BarChart3,
   Activity
 } from 'lucide-react';
+import { useSuperAdmin } from '../hooks/useSuperAdmin';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -25,6 +26,9 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const navigate = useNavigate();
   const { signOut } = useClerk();
   const { user } = useUser();
+  
+  // Use the same super admin check as the super-admin page
+  const { isSuperAdmin } = useSuperAdmin();
 
   useEffect(() => {
     const checkMobile = () => {
@@ -34,10 +38,6 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
-
-  // Check if user is super admin
-  const isSuperAdmin = user?.primaryEmailAddress?.emailAddress === 'info@sentientiq.ai' || 
-                       user?.primaryEmailAddress?.emailAddress === 'matt@aligniq.ai';
   
   const menuItems = [
     { path: '/boardroom', icon: Brain, label: 'Boardroom', public: false },
