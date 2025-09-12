@@ -100,7 +100,7 @@ export default function AccountabilityScorecard() {
       setLoading(true);
       
       // Try to fetch real data
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+      const apiUrl = import.meta.env.VITE_API_URL || 'https://api.sentientiq.app';
       const response = await fetch(`${apiUrl}/api/scorecard/${user?.id || 'demo'}?period=${period}`);
       
       if (response.ok) {

@@ -89,8 +89,14 @@ export function startEmotionalAPI() {
   });
 }
 
-if (require.main === module) {
-  emotionalStream.initialize().then(() => {
-    startEmotionalAPI();
-  });
-}
+// Start the service
+emotionalStream.initialize().then(() => {
+  startEmotionalAPI();
+}).catch(console.error);
+
+// Graceful shutdown
+process.on('SIGTERM', async () => {
+  console.log('Shutting down emotional API...');
+  await emotionalStream.shutdown();
+  process.exit(0);
+});

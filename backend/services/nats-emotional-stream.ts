@@ -9,8 +9,8 @@
  * - Emotional Volatility Index™ calculations
  */
 
-import { connect, NatsConnection, JetStreamManager, JetStreamClient, StringCodec } from 'nats';
-import WebSocket from 'ws';
+import { connect, NatsConnection, JetStreamManager, JetStreamClient, StringCodec, DeliverPolicy, AckPolicy, ReplayPolicy } from 'nats';
+import { WebSocketServer, WebSocket } from 'ws';
 import { createServer } from 'http';
 
 const sc = StringCodec();
@@ -71,8 +71,8 @@ class EmotionalStreamService {
     // Start WebSocket server
     await this.startWebSocketServer();
     
-    // Start consuming messages
-    await this.startConsumer();
+    // Start consuming messages (non-blocking)
+    this.startConsumer().catch(console.error);
   }
 
   private async setupStream() {
@@ -99,7 +99,7 @@ class EmotionalStreamService {
 
   private async startWebSocketServer() {
     const server = createServer();
-    this.wss = new WebSocket.Server({ server });
+    this.wss = new WebSocketServer({ server });
 
     this.wss.on('connection', (ws: WebSocket, req) => {
       const url = new URL(req.url!, `http://${req.headers.host}`);
@@ -143,8 +143,21 @@ class EmotionalStreamService {
   }
 
   private async startConsumer() {
-    // Create durable consumer with queue group for scaling
-    const consumer = await this.js!.consumers.get(this.STREAM_NAME, 'emotional-processor');
+    // Create or get durable consumer with queue group for scaling
+    let consumer;
+    try {
+      consumer = await this.js!.consumers.get(this.STREAM_NAME, 'emotional-processor');
+    } catch (err) {
+      // Create consumer if it doesn't exist
+      await this.jsm!.consumers.add(this.STREAM_NAME, {
+        durable_name: 'emotional-processor',
+        deliver_policy: DeliverPolicy.All,
+        ack_policy: AckPolicy.Explicit,
+        replay_policy: ReplayPolicy.Instant,
+        max_deliver: 3
+      });
+      consumer = await this.js!.consumers.get(this.STREAM_NAME, 'emotional-processor');
+    }
     
     // Process messages
     const messages = await consumer.consume();
@@ -269,15 +282,3 @@ class EmotionalStreamService {
 
 // Export singleton
 export const emotionalStream = new EmotionalStreamService();
-
-// Initialize if running directly
-if (require.main === module) {
-  emotionalStream.initialize().catch(console.error);
-  
-  // Graceful shutdown
-  process.on('SIGTERM', async () => {
-    console.log('Shutting down...');
-    await emotionalStream.shutdown();
-    process.exit(0);
-  });
-}
