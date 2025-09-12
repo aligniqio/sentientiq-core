@@ -186,7 +186,7 @@ node billing-api.js
 
 ## Contact & Resources
 - Production: https://sentientiq.ai
-- App: https://app.sentientiq.com
+- App: https://app.sentientiq.app
 - GitHub: https://github.com/aligniqio/sentientiq-core
 - Billing issues: billing@sentientiq.ai
 

@@ -24,6 +24,7 @@ interface Tenant {
   domain: string;
   subscription_tier: string;
   is_white_label: boolean;
+  is_demo?: boolean;
   created_at: string;
   mrr: number;
   active_users: number;
@@ -51,7 +52,8 @@ export default function SuperAdmin() {
     company_name: '',
     email: '',
     tenant_type: 'standard',
-    revenue_share: 0.30 // Default 30% revenue share
+    revenue_share: 0.30, // Default 30% revenue share
+    demo_days: 7 // For demo accounts
   });
 
   // Initialize Supabase client lazily
@@ -74,14 +76,17 @@ export default function SuperAdmin() {
     initSupabase();
   }, []);
 
-  // Real stats from actual data
+  // Real stats from actual data - NO DEMO DATA
   const fetchStats = async () => {
     if (!supabase) return;
     try {
-      // Fetch real metrics
+      // Fetch ONLY REAL metrics - demos excluded
       const [orgsData, membershipsData] = await Promise.all([
-        supabase.from('organizations').select('*'),
-        supabase.from('memberships').select('*')
+        supabase.from('organizations').select('*').eq('is_demo', false), // TRUTH FILTER
+        supabase.from('memberships').select(`
+          *,
+          organizations!inner(is_demo)
+        `).eq('organizations.is_demo', false) // TRUTH FILTER
       ]);
 
       const totalOrgs = orgsData.data?.length || 0;
@@ -125,6 +130,34 @@ export default function SuperAdmin() {
 
   const handleAddTenant = async () => {
     if (!supabase) return; // Skip if no Supabase client
+    
+    // Handle demo account creation differently
+    if (newTenant.tenant_type === 'demo') {
+      try {
+        const { data, error } = await supabase
+          .rpc('create_demo_account', {
+            p_email: newTenant.email,
+            p_name: newTenant.company_name,
+            p_expires_in_days: newTenant.demo_days
+          });
+        
+        if (error) throw error;
+        
+        console.log('Demo account created:', data);
+        alert(`✅ Demo account created for ${newTenant.company_name}\n\nExpires in ${newTenant.demo_days} days\nEmail: ${newTenant.email}\nPassword: DemoPass123!`);
+        
+        // Refresh tenants list
+        fetchTenants();
+        setShowAddTenant(false);
+        setNewTenant({ company_name: '', email: '', tenant_type: 'standard', revenue_share: 0.30, demo_days: 7 });
+        return;
+      } catch (error) {
+        console.error('Failed to create demo account:', error);
+        alert('Failed to create demo account. Check console for details.');
+        return;
+      }
+    }
+    
     // Extract domain from email
     const domain = newTenant.email.split('@')[1];
     
@@ -137,6 +170,7 @@ export default function SuperAdmin() {
           domain,
           admin_email: newTenant.email,
           is_white_label: newTenant.tenant_type === 'agency',
+          is_demo: false,
           subscription_tier: newTenant.tenant_type === 'agency' ? 'agency' : 'professional',
           revenue_share_percent: newTenant.tenant_type === 'agency' ? newTenant.revenue_share : 0.30,
           created_at: new Date().toISOString(),
@@ -162,7 +196,7 @@ export default function SuperAdmin() {
       // Refresh tenants list
       fetchTenants();
       setShowAddTenant(false);
-      setNewTenant({ company_name: '', email: '', tenant_type: 'standard', revenue_share: 0.30 });
+      setNewTenant({ company_name: '', email: '', tenant_type: 'standard', revenue_share: 0.30, demo_days: 7 });
       
       // Show success message
       alert(`✅ Organization ${newTenant.company_name} created successfully.`);
@@ -208,10 +242,15 @@ export default function SuperAdmin() {
     
     try {
       // Call the backend API to send Clerk invitation
-      const inviteResponse = await fetch('/api/v1/invite-user', {
+      const apiUrl = import.meta.env.DEV 
+        ? 'http://localhost:8888/.netlify/functions/invite-user'
+        : '/.netlify/functions/invite-user';
+      
+      const inviteResponse = await fetch(apiUrl, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'x-clerk-user-id': user?.id || ''
         },
         body: JSON.stringify({
           email: newUser.email,
@@ -496,11 +535,13 @@ export default function SuperAdmin() {
                       <td className="py-4 text-white/80">{tenant.domain}</td>
                       <td className="py-4">
                         <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                          tenant.is_white_label 
+                          tenant.is_demo
+                            ? 'bg-gradient-to-r from-green-500/20 to-emerald-500/20 text-green-300 border border-green-500/30'
+                            : tenant.is_white_label 
                             ? 'bg-gradient-to-r from-purple-500/20 to-pink-500/20 text-purple-300 border border-purple-500/30'
                             : 'bg-blue-500/20 text-blue-300 border border-blue-500/30'
                         }`}>
-                          {tenant.is_white_label ? '👑 Agency' : 'Standard'}
+                          {tenant.is_demo ? '🎭 Demo' : tenant.is_white_label ? '👑 Agency' : 'Standard'}
                         </span>
                       </td>
                       <td className="py-4">
@@ -601,6 +642,7 @@ export default function SuperAdmin() {
                     >
                       <option value="standard" className="bg-gray-900">Standard - Regular tenant ($499/mo)</option>
                       <option value="agency" className="bg-gray-900">Agency - Can white-label & resell ($999/mo + commission)</option>
+                      <option value="demo" className="bg-gray-900">Demo - Time-limited read-only access</option>
                     </select>
                   </div>
 
@@ -622,9 +664,36 @@ export default function SuperAdmin() {
                     </div>
                   )}
 
+                  {newTenant.tenant_type === 'demo' && (
+                    <div>
+                      <label className="block text-white/60 mb-2 text-sm font-medium">Demo Duration (days)</label>
+                      <input
+                        type="number"
+                        min="1"
+                        max="90"
+                        value={newTenant.demo_days}
+                        onChange={(e) => setNewTenant({...newTenant, demo_days: parseInt(e.target.value) || 7})}
+                        className="w-full px-4 py-3 bg-white/5 border border-white/20 rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-purple-400 transition-colors"
+                        placeholder="7"
+                      />
+                      <p className="text-xs text-white/40 mt-1">
+                        Demo account will expire after {newTenant.demo_days} days
+                      </p>
+                    </div>
+                  )}
+
                   <div className="bg-gradient-to-r from-purple-500/10 to-pink-500/10 rounded-xl p-4 border border-purple-500/20">
                     <p className="text-sm text-white/80">
-                      {newTenant.tenant_type === 'agency' ? (
+                      {newTenant.tenant_type === 'demo' ? (
+                        <>
+                          <span className="font-bold text-green-400">Demo Account:</span>
+                          <br />• Read-only access to all features
+                          <br />• Pre-populated with sample data
+                          <br />• Perfect for investors & prospects
+                          <br />• Auto-expires after {newTenant.demo_days} days
+                          <br />• Password: DemoPass123!
+                        </>
+                      ) : newTenant.tenant_type === 'agency' ? (
                         <>
                           <span className="font-bold text-purple-400">Agency Partner Benefits:</span>
                           <br />• White-label the entire platform
@@ -635,8 +704,8 @@ export default function SuperAdmin() {
                       ) : (
                         <>
                           <span className="font-bold text-blue-400">Standard Tenant:</span>
-                          <br />• Full PhD Collective access
-                          <br />• Unlimited questions
+                          <br />• Full emotion detection access
+                          <br />• Identity resolution
                           <br />• Standard branding
                           <br />• Email support
                         </>
