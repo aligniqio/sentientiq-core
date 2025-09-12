@@ -360,17 +360,12 @@ export default function SuperAdmin() {
   }, [isSuperAdmin, checkingAdmin, supabase]);
 
   return (
-    <div className="min-h-screen bg-black text-white">
-      {/* Neural Cathedral Background - matching billing page */}
-      <div className="neural-bg" />
-      
-      <div className="relative z-10">
-        <div className="mx-auto max-w-6xl px-6 pt-12">
-          {/* Header */}
-          <PageHeader 
-            title="Super Admin"
-            subtitle="Organization & membership management dashboard"
-          />
+    <>
+      {/* Header */}
+      <PageHeader 
+        title="Super Admin"
+        subtitle="Organization & membership management dashboard"
+      />
           
           {/* Add Organization Button */}
           <div className="flex justify-end mb-6">
@@ -895,8 +890,6 @@ export default function SuperAdmin() {
             </div>
           )}
         </AnimatePresence>
-        </div>
-      </div>
-    </div>
+    </>
   );
 }

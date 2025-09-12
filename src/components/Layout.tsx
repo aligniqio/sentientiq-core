@@ -3,7 +3,6 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useClerk, useUser } from '@clerk/clerk-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  Brain, 
   Menu, 
   X, 
   LogOut,
@@ -11,7 +10,9 @@ import {
   Zap,
   Crown,
   BarChart3,
-  Activity
+  Activity,
+  Settings,
+  Brain
 } from 'lucide-react';
 import { useSuperAdmin } from '../hooks/useSuperAdmin';
 
@@ -40,12 +41,14 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   }, []);
   
   const menuItems = [
-    { path: '/boardroom', icon: Brain, label: 'Boardroom', public: false },
     { path: '/scorecard', icon: BarChart3, label: 'Scorecard', public: false },
     { path: '/recommendations', icon: Zap, label: 'Recommendations', public: false },
     { path: '/emotional-dashboard', icon: Activity, label: 'Emotions', public: false },
     { path: '/billing', icon: Shield, label: 'Billing', public: false },
-    ...(isSuperAdmin ? [{ path: '/super-admin', icon: Crown, label: 'Super Admin', public: false }] : []),
+    ...(isSuperAdmin ? [
+      { path: '/super-admin', icon: Crown, label: 'Super Admin', public: false },
+      { path: '/system/implementation', icon: Settings, label: 'System', public: false }
+    ] : []),
   ];
 
   const handleSignOut = async () => {
@@ -60,12 +63,8 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
   return (
     <div className="min-h-screen bg-black text-white relative overflow-hidden">
-      {/* Animated Background */}
-      <div className="fixed inset-0 z-0">
-        <div className="absolute inset-0 bg-gradient-to-br from-purple-950/20 via-black to-blue-950/20" />
-        <div className="absolute top-0 left-1/4 w-96 h-96 bg-purple-600/10 rounded-full blur-3xl animate-pulse" />
-        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-blue-600/10 rounded-full blur-3xl animate-pulse delay-1000" />
-      </div>
+      {/* Neural Cathedral Background - Standardized from Scorecard */}
+      <div className="neural-bg" />
 
 
       {/* Mobile Menu Button */}
@@ -170,10 +169,12 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         )}
       </AnimatePresence>
 
-      {/* Main Content */}
+      {/* Main Content - Standardized from Scorecard */}
       <main className={`relative z-10 ${!isMobile ? 'ml-64' : ''}`}>
         <div className="min-h-screen">
-          {children}
+          <div className="mx-auto max-w-7xl px-6 pt-12 pb-20">
+            {children}
+          </div>
         </div>
       </main>
 

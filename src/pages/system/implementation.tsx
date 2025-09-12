@@ -17,25 +17,20 @@ export default function SystemImplementation() {
   const scriptTag = '<script src="https://cdn.sentientiq.ai/v1/detect.js" data-api-key="YOUR_KEY"></script>';
   
   return (
-    <div className="min-h-screen bg-black text-white">
-      {/* Neural Cathedral Background */}
-      <div className="neural-bg" />
+    <>
+      {/* Back Button */}
+      <button
+        onClick={() => navigate('/super-admin')}
+        className="mb-6 flex items-center gap-2 text-white/60 hover:text-white transition-colors"
+      >
+        <ArrowLeft className="w-4 h-4" />
+        Back to Super Admin
+      </button>
       
-      <div className="relative z-10">
-        <div className="mx-auto max-w-6xl px-6 pt-12">
-          {/* Back Button */}
-          <button
-            onClick={() => navigate('/super-admin')}
-            className="mb-6 flex items-center gap-2 text-white/60 hover:text-white transition-colors"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            Back to Super Admin
-          </button>
-          
-          <PageHeader 
-            title="Implementation Guide"
-            subtitle="One-line emotional intelligence for any website"
-          />
+      <PageHeader 
+        title="Implementation Guide"
+        subtitle="One-line emotional intelligence for any website"
+      />
           
           {/* Quick Start Section */}
           <motion.div 
@@ -224,8 +219,6 @@ export default function SystemImplementation() {
               </div>
             </div>
           </motion.div>
-        </div>
-      </div>
-    </div>
+    </>
   );
 }

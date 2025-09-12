@@ -50,7 +50,7 @@ export default function DebugSuperAdmin() {
   }, [user, supabase]);
   
   return (
-    <div className="min-h-screen bg-black text-white p-8">
+    <>
       <h1 className="text-2xl font-bold mb-6">Super Admin Debug Info</h1>
       
       <div className="space-y-4 font-mono text-sm">
@@ -90,6 +90,6 @@ export default function DebugSuperAdmin() {
           </div>
         )}
       </div>
-    </div>
+    </>
   );
 }

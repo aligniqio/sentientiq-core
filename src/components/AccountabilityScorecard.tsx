@@ -262,17 +262,12 @@ export default function AccountabilityScorecard() {
   }
 
   return (
-    <div className="min-h-screen bg-black text-white">
-      {/* Neural Cathedral Background */}
-      <div className="neural-bg" />
-      
-      <div className="relative z-10">
-        <div className="mx-auto max-w-7xl px-6 pt-12 pb-20">
-          {/* Header */}
-          <PageHeader 
-            title="Accountability Scorecard"
-            subtitle="Every recommendation. Every action. Every dollar saved or lost."
-          />
+    <>
+      {/* Header */}
+      <PageHeader 
+        title="Accountability Scorecard"
+        subtitle="Every recommendation. Every action. Every dollar saved or lost."
+      />
 
           {/* Score Overview */}
           <motion.div
@@ -589,8 +584,6 @@ export default function AccountabilityScorecard() {
               )}
             </AnimatePresence>
           </motion.div>
-        </div>
-      </div>
-    </div>
+    </>
   );
 }
