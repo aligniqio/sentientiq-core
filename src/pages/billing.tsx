@@ -147,17 +147,12 @@ export default function Billing() {
   const isFreeTier = currentTier === 'free';
 
   return (
-    <div className="min-h-screen bg-black text-white">
-      {/* Neural Cathedral Background */}
-      <div className="neural-bg" />
-      
-      <div className="relative z-10">
-        <div className="mx-auto max-w-6xl px-6 pt-12 pb-20">
-          {/* Header */}
-          <PageHeader 
-            title="Emotional Intelligence Billing"
-            subtitle="Manage your subscription and track emotion detection usage"
-          />
+    <>
+      {/* Header */}
+      <PageHeader 
+        title="Emotional Intelligence Billing"
+        subtitle="Manage your subscription and track emotion detection usage"
+      />
 
           <div className="grid gap-6 lg:grid-cols-3">
             {/* Current Plan Card */}
@@ -404,9 +399,7 @@ export default function Billing() {
               </div>
             </div>
           </motion.div>
-        </div>
-      </div>
-    </div>
+    </>
   );
 }
 

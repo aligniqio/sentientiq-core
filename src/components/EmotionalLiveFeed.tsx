@@ -1,11 +1,14 @@
 /**
  * Emotional Live Feed
  * Real-time emotional intelligence from actual websites
+ * NO MOCK DATA - Only real emotions from real users
  */
 
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useUser } from '@clerk/clerk-react';
+import { Activity, Users, TrendingUp, AlertCircle, Zap } from 'lucide-react';
+import PageHeader from './PageHeader';
 
 interface EmotionalEvent {
   id: string;
@@ -13,226 +16,294 @@ interface EmotionalEvent {
   emotion: string;
   confidence: number;
   timestamp: number;
-  metadata?: any;
   url?: string;
   device?: string;
+  user_id?: string;
+  intervention_triggered?: boolean;
+}
+
+interface EmotionalStats {
+  totalSessions: number;
+  totalEvents: number;
+  dominantEmotion?: string;
+  interventionRate: number;
+  activeUsers: number;
 }
 
 const EMOTION_COLORS: Record<string, string> = {
-  rage: '#DC2626',
-  frustration: '#F59E0B',
-  anxiety: '#8B5CF6',
-  confidence: '#3B82F6',
-  hesitation: '#F97316',
-  urgency: '#EF4444',
-  confusion: '#6B7280',
-  delight: '#EC4899',
-  abandonment: '#991B1B',
-  sticker_shock: '#FBBF24',
-  normal: '#10B981'
+  rage: 'from-red-500 to-red-600',
+  frustration: 'from-orange-500 to-amber-500',
+  anxiety: 'from-purple-500 to-indigo-500',
+  confidence: 'from-blue-500 to-cyan-500',
+  hesitation: 'from-yellow-500 to-orange-500',
+  confusion: 'from-gray-500 to-gray-600',
+  delight: 'from-pink-500 to-rose-500',
+  abandonment: 'from-red-700 to-red-900',
+  sticker_shock: 'from-yellow-400 to-amber-500',
+  normal: 'from-green-500 to-emerald-500'
 };
 
-const EMOTION_ICONS: Record<string, string> = {
-  rage: '🤬',
-  frustration: '😤',
-  anxiety: '😰',
-  confidence: '💪',
-  hesitation: '🤔',
-  urgency: '⚡',
-  confusion: '😵',
-  delight: '🤩',
-  abandonment: '🚪',
-  sticker_shock: '💸',
-  normal: '😊'
+const EMOTION_LABELS: Record<string, string> = {
+  rage: 'Rage Click',
+  frustration: 'Frustration',
+  anxiety: 'Anxiety',
+  confidence: 'Confident',
+  hesitation: 'Hesitating',
+  confusion: 'Confused',
+  delight: 'Delighted',
+  abandonment: 'Abandoning',
+  sticker_shock: 'Price Shock',
+  normal: 'Normal'
 };
 
 const EmotionalLiveFeed = () => {
   const { user } = useUser();
   const [events, setEvents] = useState<EmotionalEvent[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [stats, setStats] = useState<any>({});
+  const [stats, setStats] = useState<EmotionalStats>({
+    totalSessions: 0,
+    totalEvents: 0,
+    interventionRate: 0,
+    activeUsers: 0
+  });
+  const [isConnected, setIsConnected] = useState(false);
 
-  // Fetch recent events
-  const fetchEvents = async () => {
-    try {
-      const response = await fetch('https://api.sentientiq.app/api/emotional/patterns', {
-        headers: {
-          'x-tenant-id': user?.id || 'demo'
-        }
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        // Transform the patterns data into events for display
-        const recentEvents = Object.entries(data.emotions || {})
-          .flatMap(([emotion, count]: [string, any]) => 
-            Array(Math.min(count as number, 5)).fill(null).map((_, i) => ({
-              id: `${emotion}-${i}-${Date.now()}`,
-              session_id: 'aggregated',
-              emotion,
-              confidence: 75 + Math.random() * 25,
-              timestamp: Date.now() - i * 10000,
-              metadata: { aggregated: true }
-            }))
-          )
-          .sort((a, b) => b.timestamp - a.timestamp)
-          .slice(0, 20);
-        
-        setEvents(recentEvents);
-        setStats(data);
-      }
-    } catch (error) {
-      console.error('Failed to fetch emotional events:', error);
-    } finally {
+  // Connect to real-time emotional event stream
+  useEffect(() => {
+    if (!user) return;
+
+    // Connect to EventSource for real-time updates
+    const eventSource = new EventSource(
+      `${import.meta.env.VITE_API_URL || 'https://api.sentientiq.app'}/api/emotional/stream?tenant_id=${user.id}`
+    );
+
+    eventSource.onopen = () => {
+      setIsConnected(true);
       setIsLoading(false);
-    }
-  };
-
-  // Poll for updates
-  useEffect(() => {
-    fetchEvents();
-    const interval = setInterval(fetchEvents, 5000); // Poll every 5 seconds
-    return () => clearInterval(interval);
-  }, [user]);
-
-  // Listen for real-time events from detect.js (if on same domain)
-  useEffect(() => {
-    const handleEmotionalEvent = (e: CustomEvent) => {
-      const newEvent: EmotionalEvent = {
-        id: `${Date.now()}-${Math.random()}`,
-        ...e.detail,
-        timestamp: Date.now()
-      };
-      setEvents(prev => [newEvent, ...prev].slice(0, 50)); // Keep last 50
     };
 
-    window.addEventListener('sentientiq:emotion' as any, handleEmotionalEvent);
-    return () => window.removeEventListener('sentientiq:emotion' as any, handleEmotionalEvent);
+    eventSource.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        
+        if (data.type === 'event') {
+          // Add new emotional event
+          setEvents(prev => [data.payload, ...prev].slice(0, 50)); // Keep last 50
+        } else if (data.type === 'stats') {
+          // Update stats
+          setStats(data.payload);
+        }
+      } catch (error) {
+        console.error('Failed to parse event:', error);
+      }
+    };
+
+    eventSource.onerror = () => {
+      setIsConnected(false);
+      console.error('EventSource connection lost');
+    };
+
+    return () => {
+      eventSource.close();
+    };
+  }, [user]);
+
+  // Listen for detect.js events on the current page (if instrumented)
+  useEffect(() => {
+    const handleLocalEmotion = (e: CustomEvent) => {
+      const event: EmotionalEvent = {
+        id: `local-${Date.now()}`,
+        session_id: 'current-session',
+        emotion: e.detail.emotion,
+        confidence: e.detail.confidence,
+        timestamp: Date.now(),
+        url: window.location.href,
+        device: 'current'
+      };
+      
+      setEvents(prev => [event, ...prev].slice(0, 50));
+    };
+
+    window.addEventListener('sentientiq:emotion' as any, handleLocalEmotion);
+    return () => window.removeEventListener('sentientiq:emotion' as any, handleLocalEmotion);
   }, []);
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-96">
-        <div className="animate-pulse text-white/60">Loading emotional data...</div>
+      <div className="flex items-center justify-center min-h-[50vh]">
+        <div className="h-16 w-16 animate-spin rounded-full border-4 border-white/20 border-t-purple-500" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900/10 to-gray-900 p-8">
-      <div className="max-w-7xl mx-auto">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-white mb-2">Emotional Intelligence Live Feed</h1>
-          <p className="text-white/60">Real-time emotions from websites using your detect.js script</p>
-        </div>
-        
-        <div className="space-y-6">
-      {/* Stats Overview */}
-      <div className="grid grid-cols-4 gap-4">
-        <div className="bg-white/5 rounded-xl p-4">
-          <div className="text-white/40 text-sm">Total Sessions</div>
-          <div className="text-2xl font-bold text-white">{stats.totalSessions || 0}</div>
-        </div>
-        <div className="bg-white/5 rounded-xl p-4">
-          <div className="text-white/40 text-sm">Emotions Detected</div>
-          <div className="text-2xl font-bold text-white">{stats.totalEvents || 0}</div>
-        </div>
-        <div className="bg-white/5 rounded-xl p-4">
-          <div className="text-white/40 text-sm">Dominant Emotion</div>
-          <div className="text-2xl font-bold text-white">
-            {stats.dominantEmotion ? EMOTION_ICONS[stats.dominantEmotion] : '—'}
-          </div>
-        </div>
-        <div className="bg-white/5 rounded-xl p-4">
-          <div className="text-white/40 text-sm">Intervention Rate</div>
-          <div className="text-2xl font-bold text-white">
-            {stats.interventionRate || 0}%
-          </div>
-        </div>
+    <>
+      <PageHeader 
+        title="Emotional Intelligence Dashboard"
+        subtitle="Real-time emotions from your instrumented websites"
+      />
+
+      {/* Connection Status */}
+      <div className="mb-6 flex items-center gap-2">
+        <div className={`h-2 w-2 rounded-full ${isConnected ? 'bg-green-400' : 'bg-red-400'}`} />
+        <span className="text-sm text-white/60">
+          {isConnected ? 'Connected to live feed' : 'Reconnecting...'}
+        </span>
       </div>
 
-      {/* Live Feed */}
-      <div className="bg-white/5 rounded-xl p-6">
-        <h3 className="text-lg font-semibold mb-4 text-white">Live Emotional Feed</h3>
-        
-        <div className="space-y-2 max-h-96 overflow-y-auto">
+      {/* Stats Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="glass-card p-6"
+        >
+          <div className="flex items-center justify-between mb-2">
+            <Users className="w-5 h-5 text-purple-400" />
+            <span className="text-xs text-white/40">LIVE</span>
+          </div>
+          <div className="text-2xl font-bold text-white">{stats.activeUsers}</div>
+          <div className="text-sm text-white/60">Active Users</div>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="glass-card p-6"
+        >
+          <div className="flex items-center justify-between mb-2">
+            <Activity className="w-5 h-5 text-blue-400" />
+            <span className="text-xs text-white/40">TODAY</span>
+          </div>
+          <div className="text-2xl font-bold text-white">{stats.totalEvents}</div>
+          <div className="text-sm text-white/60">Emotions Detected</div>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="glass-card p-6"
+        >
+          <div className="flex items-center justify-between mb-2">
+            <TrendingUp className="w-5 h-5 text-green-400" />
+            <span className="text-xs text-white/40">RATE</span>
+          </div>
+          <div className="text-2xl font-bold text-white">{stats.interventionRate}%</div>
+          <div className="text-sm text-white/60">Intervention Success</div>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+          className="glass-card p-6"
+        >
+          <div className="flex items-center justify-between mb-2">
+            <AlertCircle className="w-5 h-5 text-amber-400" />
+            <span className="text-xs text-white/40">DOMINANT</span>
+          </div>
+          <div className="text-2xl font-bold text-white">
+            {stats.dominantEmotion ? EMOTION_LABELS[stats.dominantEmotion] : '—'}
+          </div>
+          <div className="text-sm text-white/60">Most Common</div>
+        </motion.div>
+      </div>
+
+      {/* Live Event Feed */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.4 }}
+        className="glass-card p-6"
+      >
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-xl font-bold text-white">Live Emotional Feed</h2>
+          <div className="flex items-center gap-2">
+            <Zap className="w-4 h-4 text-yellow-400" />
+            <span className="text-sm text-white/60">Real-time</span>
+          </div>
+        </div>
+
+        <div className="space-y-3 max-h-[600px] overflow-y-auto">
           <AnimatePresence mode="popLayout">
             {events.length === 0 ? (
-              <div className="text-center py-8 text-white/40">
-                <p>No emotional events detected yet.</p>
-                <p className="text-sm mt-2">
-                  Add the detect.js script to any website to start tracking emotions!
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="text-center py-12 text-white/40"
+              >
+                <AlertCircle className="w-12 h-12 mx-auto mb-4 text-white/20" />
+                <p className="text-lg mb-2">No emotional events detected yet</p>
+                <p className="text-sm mb-4">
+                  Add detect.js to your websites to start tracking real emotions
                 </p>
-                <code className="block mt-4 p-3 bg-black/50 rounded text-xs">
-                  &lt;script src="https://sentientiq.ai/detect.js" data-api-key="YOUR_KEY"&gt;&lt;/script&gt;
+                <code className="block p-4 bg-black/30 rounded-lg text-xs font-mono text-purple-400">
+                  {/* NEVER expose user IDs as API keys - always use YOUR_KEY placeholder */}
+                  &lt;script src="https://cdn.sentientiq.ai/v1/detect.js" data-api-key="YOUR_KEY"&gt;&lt;/script&gt;
                 </code>
-              </div>
+              </motion.div>
             ) : (
-              events.map(event => (
+              events.map((event, index) => (
                 <motion.div
                   key={event.id}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: 20 }}
-                  className="flex items-center gap-4 p-3 bg-white/5 rounded-lg hover:bg-white/10 transition-colors"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  transition={{ delay: index * 0.05 }}
+                  className="flex items-center gap-4 p-4 bg-white/5 rounded-xl hover:bg-white/10 transition-all border border-white/10"
                 >
-                  <div 
-                    className="text-2xl"
-                    style={{ 
-                      filter: `drop-shadow(0 0 8px ${EMOTION_COLORS[event.emotion] || '#fff'})`
-                    }}
-                  >
-                    {EMOTION_ICONS[event.emotion] || '❓'}
+                  {/* Emotion Badge */}
+                  <div className={`px-3 py-1 rounded-full bg-gradient-to-r ${EMOTION_COLORS[event.emotion] || EMOTION_COLORS.normal}`}>
+                    <span className="text-xs font-semibold text-white">
+                      {EMOTION_LABELS[event.emotion] || event.emotion}
+                    </span>
                   </div>
-                  
+
+                  {/* Event Details */}
                   <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <span 
-                        className="font-semibold capitalize"
-                        style={{ color: EMOTION_COLORS[event.emotion] || '#fff' }}
-                      >
-                        {event.emotion.replace('_', ' ')}
+                    <div className="flex items-center gap-3">
+                      <span className="text-white font-medium">
+                        Session {event.session_id.slice(-6)}
                       </span>
-                      <span className="text-white/40 text-sm">
+                      <span className="text-white/40">•</span>
+                      <span className="text-white/60 text-sm">
                         {event.confidence}% confidence
                       </span>
+                      {event.intervention_triggered && (
+                        <>
+                          <span className="text-white/40">•</span>
+                          <span className="text-green-400 text-sm">Intervention deployed</span>
+                        </>
+                      )}
                     </div>
-                    <div className="text-white/30 text-xs">
-                      {new Date(event.timestamp).toLocaleTimeString()}
-                      {event.url && ` • ${new URL(event.url).hostname}`}
-                      {event.device && ` • ${event.device}`}
-                    </div>
-                  </div>
-                  
-                  <div className="text-white/20">
-                    {event.metadata?.aggregated && (
-                      <span className="text-xs bg-white/10 px-2 py-1 rounded">
-                        Aggregated
-                      </span>
+                    {event.url && (
+                      <div className="text-xs text-white/40 mt-1">
+                        {new URL(event.url).pathname}
+                      </div>
                     )}
+                  </div>
+
+                  {/* Timestamp */}
+                  <div className="text-xs text-white/40">
+                    {new Date(event.timestamp).toLocaleTimeString()}
                   </div>
                 </motion.div>
               ))
             )}
           </AnimatePresence>
         </div>
-      </div>
 
-      {/* Call to Action */}
-      <div className="bg-gradient-to-r from-purple-600/20 to-pink-600/20 rounded-xl p-6 border border-white/10">
-        <h3 className="text-lg font-semibold mb-2 text-white">
-          Start Tracking Emotions on Your Site
-        </h3>
-        <p className="text-white/60 mb-4">
-          Add one line of code to understand your users' emotional journey.
-        </p>
-        <code className="block p-3 bg-black/50 rounded text-sm text-green-400">
-          &lt;script src="https://sentientiq.ai/detect.js" data-api-key="{user?.id || 'YOUR_KEY'}"&gt;&lt;/script&gt;
-        </code>
-      </div>
-    </div>
-      </div>
-    </div>
+        {events.length > 0 && (
+          <div className="mt-4 pt-4 border-t border-white/10 text-center">
+            <p className="text-xs text-white/40">
+              Showing last {events.length} events from your instrumented websites
+            </p>
+          </div>
+        )}
+      </motion.div>
+    </>
   );
 };
 

@@ -180,37 +180,11 @@ const DynamicRecommendations: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-black relative overflow-hidden">
-      {/* Neural Network Canvas */}
-      <canvas 
-        ref={canvasRef}
-        className="absolute inset-0 opacity-20"
-        style={{ mixBlendMode: 'screen' }}
+    <>
+      <PageHeader 
+        title="Dynamic Recommendations" 
+        subtitle="AI-Powered Actions Tailored to Your Site"
       />
-      
-      {/* Intense Backlighting */}
-      <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute top-[20%] left-[10%] w-[500px] h-[500px]">
-          <div className="absolute inset-0 bg-gradient-to-br from-purple-500/25 via-pink-400/20 to-transparent rounded-full blur-[80px] animate-pulse" />
-          <div className="absolute inset-0 bg-gradient-to-br from-purple-400/15 via-transparent to-transparent rounded-full blur-[120px]" />
-        </div>
-        
-        <div className="absolute top-[50%] right-[15%] w-[400px] h-[400px]">
-          <div className="absolute inset-0 bg-gradient-to-tl from-blue-400/25 via-cyan-400/20 to-transparent rounded-full blur-[70px] animate-pulse" style={{animationDelay: '1.5s'}} />
-          <div className="absolute inset-0 bg-gradient-to-tl from-blue-300/15 via-transparent to-transparent rounded-full blur-[110px]" />
-        </div>
-        
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px]">
-          <div className="absolute inset-0 bg-gradient-radial from-white/10 via-purple-300/5 to-transparent rounded-full blur-[50px]" />
-          <div className="absolute inset-0 bg-gradient-radial from-indigo-400/15 via-transparent to-transparent rounded-full blur-[90px] animate-pulse" style={{animationDuration: '4s'}} />
-        </div>
-      </div>
-      
-      <div className="relative z-10 max-w-7xl mx-auto px-6 py-8">
-        <PageHeader 
-          title="Dynamic Recommendations" 
-          subtitle="AI-Powered Actions Tailored to Your Site"
-        />
         
         {/* Stats Bar */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
@@ -368,8 +342,7 @@ const DynamicRecommendations: React.FC = () => {
             </button>
           </div>
         )}
-      </div>
-    </div>
+    </>
   );
 };
 
