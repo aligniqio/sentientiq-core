@@ -116,13 +116,21 @@ const EmotionalLiveFeed = () => {
           try {
             const data = JSON.parse(event.data);
             
-            if (data.type === 'event') {
-              // Add new emotional event with EVI contribution
-              setEvents(prev => [data.payload, ...prev].slice(0, 50));
-              
-              // Show EVI contribution if significant
-              if (data.evi && Math.abs(data.evi) > 0.5) {
-                console.log(`EVI™ Impact: ${data.evi > 0 ? '+' : ''}${data.evi.toFixed(2)}`);
+            if (data.type === 'event' && data.payload) {
+              // Validate and add new emotional event (skip if duplicate or invalid)
+              const newEvent = data.payload;
+              if (newEvent.emotion && newEvent.id) {
+                setEvents(prev => {
+                  // Filter out duplicates and invalid events
+                  const exists = prev.some(e => e.id === newEvent.id);
+                  if (exists) return prev;
+                  return [newEvent, ...prev].slice(0, 50);
+                });
+                
+                // Show EVI contribution if significant
+                if (data.evi && Math.abs(data.evi) > 0.5) {
+                  console.log(`EVI™ Impact: ${data.evi > 0 ? '+' : ''}${data.evi.toFixed(2)}`);
+                }
               }
             } else if (data.type === 'stats') {
               // Update stats including volatility index
@@ -150,8 +158,9 @@ const EmotionalLiveFeed = () => {
           }
         };
       } catch (error) {
-        console.log('WebSocket not available, falling back to polling');
-        startPolling();
+        console.log('WebSocket connection error:', error);
+        // Retry WebSocket after 3 seconds instead of polling
+        reconnectTimeout = setTimeout(connectWebSocket, 3000);
       }
     };
 
@@ -215,8 +224,8 @@ const EmotionalLiveFeed = () => {
       pollingInterval.current = setInterval(fetchEmotionalData, 2000);
     };
 
-    // Try WebSocket first, fall back to polling
-    connectWebSocket().catch(startPolling);
+    // WebSocket only - no polling fallback
+    connectWebSocket();
 
     return () => {
       isCleaningUp = true;
@@ -404,7 +413,7 @@ const EmotionalLiveFeed = () => {
                       </span>
                       <span className="text-white/40">•</span>
                       <span className="text-white/60 text-sm">
-                        {event.confidence}% confidence
+                        {event.confidence || 0}% confidence
                       </span>
                       {event.intervention_triggered && (
                         <>
