@@ -8,7 +8,12 @@ import cors from 'cors';
 import { emotionalStream } from './nats-emotional-stream';
 
 const app = express();
-app.use(cors());
+app.use(cors({
+  origin: ['https://sentientiq.app', 'https://sentientiq.ai', 'http://localhost:5173'],
+  credentials: true,
+  methods: ['GET', 'POST', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'If-None-Match', 'X-API-Key']
+}));
 app.use(express.json());
 
 // Health check
@@ -74,10 +79,47 @@ app.get('/api/emotional/poll', async (req, res) => {
 
 // WebSocket upgrade info endpoint
 app.get('/api/emotional/ws-info', (req, res) => {
+  res.setHeader('Access-Control-Allow-Origin', 'https://sentientiq.app');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
   res.json({
-    ws_url: process.env.WS_URL || `ws://localhost:8080`,
+    ws_url: process.env.WS_URL || `wss://api.sentientiq.app/ws`,
     protocol: 'sentientiq-v1',
     features: ['real-time', 'evi', 'jetstream-backed']
+  });
+});
+
+// Scorecard endpoint (stub for now)
+app.get('/api/scorecard/:userId', (req, res) => {
+  res.setHeader('Access-Control-Allow-Origin', 'https://sentientiq.app');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  
+  // Return complete demo data structure
+  res.json({
+    grade: 'B',
+    score: 85,
+    interventions: {
+      successful: 42,
+      failed: 8,
+      total: 50,
+      successRate: 84
+    },
+    revenueSaved: 125000,
+    revenueAtRisk: 50000,
+    recommendations: {
+      pending: [],
+      ignored: [],
+      acted: []
+    },
+    insights: [],
+    activityTrend: [
+      { date: '2024-01-01', interventions: 5, revenue: 15000 },
+      { date: '2024-01-02', interventions: 8, revenue: 25000 },
+      { date: '2024-01-03', interventions: 6, revenue: 18000 },
+      { date: '2024-01-04', interventions: 10, revenue: 35000 },
+      { date: '2024-01-05', interventions: 7, revenue: 22000 },
+      { date: '2024-01-06', interventions: 9, revenue: 30000 },
+      { date: '2024-01-07', interventions: 5, revenue: 15000 }
+    ]
   });
 });
 
