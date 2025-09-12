@@ -155,27 +155,31 @@
     }
   }
   
-  // HESITATION DETECTION - Hovering >2s
+  // HESITATION DETECTION - Hovering >1.5s on interactive elements
   function detectHesitation(target) {
     const hoverDuration = Date.now() - state.hoverStartTime;
     
-    if (hoverDuration > 2000 && state.hoverTarget) {
-      const isActionable = ['BUTTON', 'A', 'INPUT', 'SELECT'].includes(state.hoverTarget.tagName);
+    if (hoverDuration > 1500 && state.hoverTarget) {
+      // More inclusive: anything clickable or with text content
+      const isActionable = ['BUTTON', 'A', 'INPUT', 'SELECT', 'SPAN', 'DIV', 'P', 'H1', 'H2', 'H3'].includes(state.hoverTarget.tagName) ||
+                          state.hoverTarget.onclick || 
+                          state.hoverTarget.style.cursor === 'pointer';
       
-      if (isActionable) {
+      if (isActionable && state.currentEmotion !== 'hesitation') { // Prevent duplicate triggers
         state.currentEmotion = 'hesitation';
-        sendEvent('hesitation', 85, {
-          intensity: 75,
+        sendEvent('hesitation', Math.min(90, 60 + (hoverDuration / 100)), {
+          intensity: Math.min(85, 50 + (hoverDuration / 100)),
           duration: hoverDuration,
           element: state.hoverTarget.tagName,
           text: state.hoverTarget.textContent?.slice(0, 50),
           micro_behaviors: ['prolonged_hover', 'decision_paralysis']
         });
+        console.log('🧠 Hesitation detected:', hoverDuration, 'ms on', state.hoverTarget.tagName);
       }
     }
   }
   
-  // CONFUSION DETECTION - Erratic scrolling
+  // CONFUSION DETECTION - Erratic scrolling (more sensitive)
   function detectConfusion() {
     const now = Date.now();
     const scrollY = window.scrollY;
@@ -185,32 +189,42 @@
       time: now
     });
     
-    // Keep last 10 scroll positions
-    if (state.scrollPositions.length > 10) {
+    // Keep last 8 scroll positions (reduced for faster detection)
+    if (state.scrollPositions.length > 8) {
       state.scrollPositions.shift();
     }
     
-    // Check for up-down-up pattern (confusion)
-    if (state.scrollPositions.length >= 5) {
+    // Check for rapid direction changes (confusion/searching)
+    if (state.scrollPositions.length >= 4) {
       let directionChanges = 0;
       let lastDirection = 0;
+      let totalDistance = 0;
       
       for (let i = 1; i < state.scrollPositions.length; i++) {
+        const distance = Math.abs(state.scrollPositions[i].y - state.scrollPositions[i-1].y);
+        totalDistance += distance;
         const direction = state.scrollPositions[i].y > state.scrollPositions[i-1].y ? 1 : -1;
-        if (lastDirection !== 0 && direction !== lastDirection) {
+        if (lastDirection !== 0 && direction !== lastDirection && distance > 50) { // Minimum distance for direction change
           directionChanges++;
         }
         lastDirection = direction;
       }
       
-      if (directionChanges >= 3) {
+      // Detect if: 2+ direction changes OR rapid scrolling with high distance
+      const timeSpan = now - state.scrollPositions[0].time;
+      const scrollVelocity = totalDistance / timeSpan;
+      
+      if ((directionChanges >= 2 || scrollVelocity > 2) && state.currentEmotion !== 'confusion') {
         state.currentEmotion = 'confusion';
-        sendEvent('confusion', 78, {
-          intensity: 70,
+        const confidence = Math.min(88, 60 + (directionChanges * 10) + (scrollVelocity * 5));
+        sendEvent('confusion', confidence, {
+          intensity: Math.min(80, 50 + (directionChanges * 10)),
           scrollPattern: 'erratic',
           directionChanges,
+          velocity: scrollVelocity.toFixed(2),
           micro_behaviors: ['erratic_scrolling', 'searching_behavior']
         });
+        console.log('🧠 Confusion detected:', directionChanges, 'direction changes, velocity:', scrollVelocity);
         state.scrollPositions = []; // Reset after detection
       }
     }
@@ -309,9 +323,10 @@
   setInterval(function() {
     if (state.hoverTarget && state.hoverStartTime) {
       const hoverDuration = Date.now() - state.hoverStartTime;
-      if (hoverDuration > 2000) {
+      if (hoverDuration > 1500) {
         detectHesitation(state.hoverTarget);
         state.hoverStartTime = Date.now(); // Reset to avoid repeated triggers
+        state.currentEmotion = 'normal'; // Reset emotion state
       }
     }
   }, 500);
