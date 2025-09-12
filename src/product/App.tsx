@@ -5,15 +5,12 @@ import { HelmetProvider } from 'react-helmet-async'
 // The ONLY pages that matter
 import Layout from '../components/Layout'
 import Auth from '../pages/auth'
-import HowItWorks from '../pages/how-it-works'
 // import AlwaysOnFaculty from '../pages/always-on-faculty' // REMOVED
 // import Ask from '../pages/ask' // REMOVED - replaced by Boardroom
 import Settings from '../pages/settings'
 import Pricing from '../pages/pricing'
 import Billing from '../pages/billing'
 import SageInbox from '../pages/sage-inbox'
-import Boardroom from '../pages/boardroom'
-import Onboarding from '../pages/onboarding'
 import DynamicRecommendations from '../pages/dynamic-recommendations'
 import AccountabilityScorecard from '../components/AccountabilityScorecard'
 import EmotionalLiveFeed from '../components/EmotionalLiveFeed'
@@ -44,7 +41,7 @@ function App() {
           <Route path="/" element={
             <>
               <SignedIn>
-                <Boardroom /> {/* Changed from dead IntelligenceMonitor */}
+                <EmotionalLiveFeed /> {/* Main dashboard - real emotions from real users */}
               </SignedIn>
               <SignedOut>
                 <Navigate to="/auth" replace />
@@ -52,32 +49,7 @@ function App() {
             </>
           } />
           
-          {/* Everything requires auth - this is not a public domain */}
-          <Route path="/how" element={
-            <>
-              <SignedIn>
-                <HowItWorks />
-              </SignedIn>
-              <SignedOut>
-                <Navigate to="/auth" replace />
-              </SignedOut>
-            </>
-          } />
-          
-          <Route
-            path="/faculty"
-            element={
-              <>
-                <SignedIn>
-                  <HowItWorks />
-                </SignedIn>
-                <SignedOut>
-                  <Navigate to="/auth" replace />
-                </SignedOut>
-              </>
-            }
-          />
-          {/* /ask route removed - replaced by /boardroom */}
+          {/* /ask route removed - not needed */}
           
           {/* Sage - The Inbox Protector */}
           <Route
@@ -94,13 +66,13 @@ function App() {
             }
           />
           
-          {/* PhD Collective - The Expert Swarm */}
+          {/* PhD Collective - redirects to scorecard */}
           <Route
             path="/collective"
             element={
               <>
                 <SignedIn>
-                  <Boardroom />
+                  <AccountabilityScorecard />
                 </SignedIn>
                 <SignedOut>
                   <Navigate to="/auth" replace />
@@ -143,20 +115,7 @@ function App() {
           {/* Auth page - explicit route */}
           <Route path="/auth" element={<Auth />} />
           
-          {/* Instant value onboarding - NO AUTH REQUIRED */}
-          <Route path="/start" element={<Onboarding />} />
-          
-          {/* Boardroom - The Crystal Palace */}
-          <Route path="/boardroom" element={
-            <>
-              <SignedIn>
-                <Boardroom />
-              </SignedIn>
-              <SignedOut>
-                <Navigate to="/auth" replace />
-              </SignedOut>
-            </>
-          } />
+          {/* Removed legacy routes - /start and /boardroom */}
 
           <Route path="/recommendations" element={
             <>

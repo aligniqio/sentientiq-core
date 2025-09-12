@@ -93,13 +93,14 @@ export default function SuperAdmin() {
       const whiteLabel = orgsData.data?.filter((t: any) => t.is_white_label).length || 0;
       const totalMembers = membershipsData.data?.length || 0;
       
-      // Calculate real MRR based on subscription tiers
+      // Calculate real MRR based on subscription tiers (matching Stripe prices)
       const tierPrices: Record<string, number> = { 
         free: 0, 
-        starter: 99, 
-        professional: 499, 
-        enterprise: 2000, 
-        agency: 999 
+        starter: 97,     // price_1QaENFFzLa9P44dP6u24dGfY
+        growth: 297,     // price_1QaEQIFzLa9P44dPEQPJUkJG  
+        scale: 497,      // price_1QaERaFzLa9P44dP7lBHGCOl
+        agency: 999,     // White-label partners
+        enterprise: 2497 // Custom pricing
       };
       
       const mrr = orgsData.data?.reduce((sum: number, org: any) => {
@@ -171,8 +172,8 @@ export default function SuperAdmin() {
           admin_email: newTenant.email,
           is_white_label: newTenant.tenant_type === 'agency',
           is_demo: false,
-          subscription_tier: newTenant.tenant_type === 'agency' ? 'agency' : 'professional',
-          revenue_share_percent: newTenant.tenant_type === 'agency' ? newTenant.revenue_share : 0.30,
+          subscription_tier: newTenant.tenant_type === 'agency' ? 'agency' : newTenant.tenant_type,
+          revenue_share_percent: newTenant.tenant_type === 'agency' ? newTenant.revenue_share : 0,
           created_at: new Date().toISOString(),
           settings: {
             branding: {
@@ -640,9 +641,11 @@ export default function SuperAdmin() {
                       onChange={(e) => setNewTenant({...newTenant, tenant_type: e.target.value})}
                       className="w-full px-4 py-3 bg-white/5 border border-white/20 rounded-xl text-white focus:outline-none focus:border-purple-400 transition-colors"
                     >
-                      <option value="standard" className="bg-gray-900">Standard - Regular tenant ($499/mo)</option>
-                      <option value="agency" className="bg-gray-900">Agency - Can white-label & resell ($999/mo + commission)</option>
-                      <option value="demo" className="bg-gray-900">Demo - Time-limited read-only access</option>
+                      <option value="starter" className="bg-gray-900">Starter - Essential emotion detection ($97/mo)</option>
+                      <option value="growth" className="bg-gray-900">Growth - Full platform access ($297/mo)</option>
+                      <option value="scale" className="bg-gray-900">Scale - Enterprise features ($497/mo)</option>
+                      <option value="agency" className="bg-gray-900">Agency - White-label & resell ($999/mo + revenue share)</option>
+                      <option value="demo" className="bg-gray-900">Demo - Time-limited clickaround (FREE)</option>
                     </select>
                   </div>
 
@@ -687,27 +690,50 @@ export default function SuperAdmin() {
                       {newTenant.tenant_type === 'demo' ? (
                         <>
                           <span className="font-bold text-green-400">Demo Account:</span>
-                          <br />• Read-only access to all features
+                          <br />• Read-only clickaround access
                           <br />• Pre-populated with sample data
-                          <br />• Perfect for investors & prospects
+                          <br />• Perfect for investors & skeptics
                           <br />• Auto-expires after {newTenant.demo_days} days
-                          <br />• Password: DemoPass123!
+                          <br />• No Math.random() - just UI exploration
                         </>
                       ) : newTenant.tenant_type === 'agency' ? (
                         <>
-                          <span className="font-bold text-purple-400">Agency Partner Benefits:</span>
+                          <span className="font-bold text-purple-400">Agency Partner ($999/mo):</span>
                           <br />• White-label the entire platform
-                          <br />• {(newTenant.revenue_share * 100).toFixed(0)}% revenue share on all sales
+                          <br />• {(newTenant.revenue_share * 100).toFixed(0)}% revenue share on referrals
                           <br />• API access for custom integrations
                           <br />• Priority support & training
+                          <br />• Can create sub-organizations
+                        </>
+                      ) : newTenant.tenant_type === 'starter' ? (
+                        <>
+                          <span className="font-bold text-blue-400">Starter ($97/mo):</span>
+                          <br />• Core emotion detection (5 emotions)
+                          <br />• Up to 10k events/month
+                          <br />• Basic interventions
+                          <br />• Email support
+                        </>
+                      ) : newTenant.tenant_type === 'growth' ? (
+                        <>
+                          <span className="font-bold text-indigo-400">Growth ($297/mo):</span>
+                          <br />• Full emotion spectrum (50+ emotions)
+                          <br />• Identity resolution
+                          <br />• Accountability scorecard
+                          <br />• Up to 100k events/month
+                          <br />• Chat support
+                        </>
+                      ) : newTenant.tenant_type === 'scale' ? (
+                        <>
+                          <span className="font-bold text-pink-400">Scale ($497/mo):</span>
+                          <br />• Everything in Growth
+                          <br />• Unlimited events
+                          <br />• Custom interventions
+                          <br />• API access
+                          <br />• Dedicated success manager
                         </>
                       ) : (
                         <>
-                          <span className="font-bold text-blue-400">Standard Tenant:</span>
-                          <br />• Full emotion detection access
-                          <br />• Identity resolution
-                          <br />• Standard branding
-                          <br />• Email support
+                          <span className="font-bold text-gray-400">Select a tier above</span>
                         </>
                       )}
                     </p>
