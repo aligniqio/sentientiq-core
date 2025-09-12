@@ -8,9 +8,13 @@ export const stripePromise = loadStripe(
 // Subscription tiers
 export const TIERS = {
   FREE: 'free',
+  STARTER: 'starter',
+  GROWTH: 'growth',
+  SCALE: 'scale',
+  ENTERPRISE: 'enterprise',
+  // Legacy tiers (kept for compatibility)
   PRO: 'pro', 
-  TEAM: 'team',
-  ENTERPRISE: 'enterprise'
+  TEAM: 'team'
 } as const;
 
 export type Tier = typeof TIERS[keyof typeof TIERS];
@@ -32,6 +36,67 @@ export const LIMITS = {
       prioritySupport: false,
     }
   },
+  [TIERS.STARTER]: {
+    questionsPerMonth: 1000,
+    eviDelayMinutes: 0,
+    teamSeats: 3,
+    apiCallsPerMonth: 100,
+    features: {
+      basicWhy: true,
+      fullWhy: true,
+      consensusMeter: false,
+      apiAccess: false,
+      slackIntegration: false,
+      csvExport: true,
+      prioritySupport: false,
+    }
+  },
+  [TIERS.GROWTH]: {
+    questionsPerMonth: 10000,
+    eviDelayMinutes: 0,
+    teamSeats: 10,
+    apiCallsPerMonth: 1000,
+    features: {
+      basicWhy: true,
+      fullWhy: true,
+      consensusMeter: true,
+      apiAccess: true,
+      slackIntegration: true,
+      csvExport: true,
+      prioritySupport: false,
+    }
+  },
+  [TIERS.SCALE]: {
+    questionsPerMonth: -1, // unlimited
+    eviDelayMinutes: 0,
+    teamSeats: 25,
+    apiCallsPerMonth: 10000,
+    features: {
+      basicWhy: true,
+      fullWhy: true,
+      consensusMeter: true,
+      apiAccess: true,
+      slackIntegration: true,
+      csvExport: true,
+      prioritySupport: true,
+    }
+  },
+  [TIERS.ENTERPRISE]: {
+    questionsPerMonth: -1,
+    eviDelayMinutes: 0,
+    teamSeats: -1, // unlimited
+    apiCallsPerMonth: -1,
+    features: {
+      basicWhy: true,
+      fullWhy: true,
+      consensusMeter: true,
+      apiAccess: true,
+      slackIntegration: true,
+      csvExport: true,
+      prioritySupport: true,
+    }
+  },
+  // Legacy tiers for backward compatibility
   [TIERS.PRO]: {
     questionsPerMonth: -1, // unlimited
     eviDelayMinutes: 0,    // live
@@ -52,21 +117,6 @@ export const LIMITS = {
     eviDelayMinutes: 0,
     teamSeats: 10,
     apiCallsPerMonth: 1000,
-    features: {
-      basicWhy: true,
-      fullWhy: true,
-      consensusMeter: true,
-      apiAccess: true,
-      slackIntegration: true,
-      csvExport: true,
-      prioritySupport: true,
-    }
-  },
-  [TIERS.ENTERPRISE]: {
-    questionsPerMonth: -1,
-    eviDelayMinutes: 0,
-    teamSeats: -1, // unlimited
-    apiCallsPerMonth: -1,
     features: {
       basicWhy: true,
       fullWhy: true,
