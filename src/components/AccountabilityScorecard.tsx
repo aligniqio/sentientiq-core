@@ -437,9 +437,9 @@ export default function AccountabilityScorecard() {
             <div className="flex gap-2 mb-6">
               {[
                 { id: 'overview', label: 'Overview', count: null },
-                { id: 'pending', label: 'Pending', count: recommendations.pending.length },
-                { id: 'ignored', label: 'Ignored', count: recommendations.ignored.length },
-                { id: 'acted', label: 'Acted On', count: recommendations.acted.length }
+                { id: 'pending', label: 'Pending', count: recommendations?.pending?.length || 0 },
+                { id: 'ignored', label: 'Ignored', count: recommendations?.ignored?.length || 0 },
+                { id: 'acted', label: 'Acted On', count: recommendations?.acted?.length || 0 }
               ].map(tab => (
                 <button
                   key={tab.id}
@@ -508,7 +508,7 @@ export default function AccountabilityScorecard() {
                   exit={{ opacity: 0, x: -20 }}
                   className="space-y-4"
                 >
-                  {recommendations[selectedTab as keyof typeof recommendations].map((rec) => (
+                  {(recommendations[selectedTab as keyof typeof recommendations] || []).map((rec) => (
                     <div
                       key={rec.id}
                       className={`glass-card p-6 ${SEVERITY_COLORS[rec.severity]}`}
