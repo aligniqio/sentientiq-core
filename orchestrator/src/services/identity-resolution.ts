@@ -3,10 +3,13 @@
  * 
  * This connects emotions to actual people and their value.
  * We're not tracking anonymous sessions - we're tracking your $100k ARR customer having a meltdown.
+ * 
+ * Now integrated with existing Clerk authentication and Supabase user profiles.
  */
 
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import crypto from 'crypto';
+import type { AuthenticatedUser } from '../auth/clerk-middleware';
 
 // Lazy-initialize Supabase client
 let supabase: SupabaseClient | null = null;
@@ -20,13 +23,17 @@ function getSupabaseClient(): SupabaseClient | null {
 
 export interface UserIdentity {
   userId: string;
+  clerkId?: string; // Clerk user ID for authenticated users
   email?: string;
+  firstName?: string;
+  lastName?: string;
   company?: string;
   tier?: 'enterprise' | 'scale' | 'growth' | 'starter';
   value?: number; // LTV or ARR
   traits?: Record<string, any>;
-  source?: 'direct' | 'segment' | 'amplitude' | 'hubspot' | 'salesforce' | 'cookie';
+  source?: 'clerk' | 'direct' | 'segment' | 'amplitude' | 'hubspot' | 'salesforce' | 'cookie';
   enriched?: boolean;
+  isAuthenticated?: boolean;
 }
 
 export interface IdentitySession {
@@ -66,6 +73,82 @@ export interface EnrichmentData {
 class IdentityResolutionService {
   private sessionMap: Map<string, IdentitySession> = new Map();
   private userProfiles: Map<string, UserIdentity> = new Map();
+  
+  /**
+   * Identify authenticated Clerk user and link to session
+   */
+  async identifyClerkUser(params: {
+    sessionId: string;
+    user: AuthenticatedUser;
+  }): Promise<UserIdentity> {
+    const { sessionId, user } = params;
+    
+    // Create rich user profile from Clerk data
+    const userProfile: UserIdentity = {
+      userId: user.userId,
+      clerkId: user.clerkId,
+      email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      company: user.companyName,
+      tier: (user.tier === 'free' ? 'starter' : user.tier) || 'starter',
+      source: 'clerk',
+      isAuthenticated: true,
+      enriched: true,
+      traits: {
+        name: user.firstName && user.lastName ? `${user.firstName} ${user.lastName}` : undefined,
+        plan: user.tier,
+        is_super_admin: user.isSuper
+      }
+    };
+
+    // Estimate value based on tier
+    if (user.tier === 'enterprise') {
+      userProfile.value = 100000; // $100k ARR for enterprise
+    } else if (user.tier === 'scale') {
+      userProfile.value = 25000; // $25k ARR for scale
+    } else if (user.tier === 'growth') {
+      userProfile.value = 5000; // $5k ARR for growth
+    } else {
+      userProfile.value = 500; // $500 ARR for starter
+    }
+
+    // Store in memory
+    this.userProfiles.set(user.userId, userProfile);
+
+    // Update or create session
+    let session = this.sessionMap.get(sessionId);
+    if (!session) {
+      session = {
+        sessionId,
+        anonymousId: `anon_${sessionId}`,
+        pageViews: 0,
+        emotionalEvents: 0,
+        lastActivity: new Date()
+      };
+      this.sessionMap.set(sessionId, session);
+    }
+
+    // Link session to authenticated user
+    session.userId = user.userId;
+    session.identifiedAt = new Date();
+    session.traits = userProfile.traits;
+
+    // Persist to database
+    await this.persistIdentity(userProfile, session);
+
+    // Check if this is a high-value user
+    if (userProfile.tier === 'enterprise' || (userProfile.value && userProfile.value > 10000)) {
+      await this.flagHighValueUser(userProfile);
+    }
+
+    // Link any previous anonymous emotional events to this user
+    await this.linkAnonymousEvents(sessionId, user.userId);
+
+    console.log(`🔐 CLERK USER IDENTIFIED: ${userProfile.email} (${userProfile.tier}, $${userProfile.value}/yr)`);
+
+    return userProfile;
+  }
   
   /**
    * Identify a user and associate with their session
@@ -193,6 +276,31 @@ class IdentityResolutionService {
   }
   
   /**
+   * Link anonymous events to identified user
+   */
+  private async linkAnonymousEvents(sessionId: string, userId: string): Promise<void> {
+    const supabase = getSupabaseClient();
+    if (!supabase) return;
+
+    try {
+      // Update emotional events to link to authenticated user
+      const { error } = await supabase
+        .from('emotional_events')
+        .update({ user_id: userId })
+        .eq('session_id', sessionId)
+        .is('user_id', null);
+
+      if (error) {
+        console.error('Failed to link anonymous events:', error);
+      } else {
+        console.log(`Linked anonymous events from session ${sessionId} to user ${userId}`);
+      }
+    } catch (error) {
+      console.error('Error linking anonymous events:', error);
+    }
+  }
+
+  /**
    * Persist identity to database
    */
   private async persistIdentity(profile: UserIdentity, session: IdentitySession): Promise<void> {
@@ -205,13 +313,17 @@ class IdentityResolutionService {
         .from('user_identities')
         .upsert({
           user_id: profile.userId,
+          clerk_id: profile.clerkId,
           email: profile.email,
+          first_name: profile.firstName,
+          last_name: profile.lastName,
           company: profile.company,
           tier: profile.tier,
           value: profile.value,
           traits: profile.traits,
           source: profile.source,
           enriched: profile.enriched || false,
+          is_authenticated: profile.isAuthenticated || false,
           updated_at: new Date().toISOString()
         }, {
           onConflict: 'user_id'

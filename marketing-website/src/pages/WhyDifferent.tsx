@@ -86,7 +86,7 @@ export default function WhyDifferent() {
                 <p className="mt-8 text-xl text-white/80 max-w-4xl mx-auto leading-relaxed">
                   They guess WHO from IP addresses. Miss 73% of actual buyers.
                   <span className="block mt-2 text-2xl font-semibold">
-                    We know WHO is feeling WHAT. Right now. On YOUR site.
+                    We track YOUR users' emotions. Right now. On YOUR site.
                   </span>
                   <span className="block mt-4 text-lg text-purple-400">
                     Stop paying for yesterday's guesses. Start knowing today's emotions.

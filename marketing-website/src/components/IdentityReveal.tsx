@@ -53,7 +53,7 @@ export default function IdentityReveal() {
           <h2 className="mt-3 text-5xl font-bold">
             We don't track <span className="text-white/50">anonymous sessions</span>.
             <br />
-            We identify <span className="gradient-text">WHO is feeling WHAT</span>.
+            We track <span className="gradient-text">YOUR users' emotions</span>.
           </h2>
           <p className="mt-6 text-xl text-white/70 max-w-3xl mx-auto">
             Every emotion has a name, a company, and a dollar value attached.
@@ -61,7 +61,7 @@ export default function IdentityReveal() {
           </p>
         </div>
         
-        {/* Live Identity Resolution Demo */}
+        {/* Live Identity + Emotion Demo */}
         <div className="glass-card p-8 rounded-2xl">
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
@@ -69,7 +69,7 @@ export default function IdentityReveal() {
               <span className="text-sm text-white/60 uppercase tracking-wider">Live Detection</span>
             </div>
             <div className="text-sm text-white/40">
-              Identity Resolution Active
+              Connected to Your User Data
             </div>
           </div>
           
@@ -128,9 +128,9 @@ export default function IdentityReveal() {
         <div className="grid md:grid-cols-3 gap-6 mt-12">
           <div className="glass-card p-6 text-center">
             <div className="text-4xl mb-3">🎯</div>
-            <h3 className="font-semibold mb-2">Identity Resolution</h3>
+            <h3 className="font-semibold mb-2">User Identity Link</h3>
             <p className="text-sm text-white/60">
-              Connect emotions to CRM records, email, company, and lifetime value
+              Connect emotions to YOUR CRM records, auth system, and lifetime value
             </p>
           </div>
           <div className="glass-card p-6 text-center">
@@ -152,7 +152,7 @@ export default function IdentityReveal() {
         {/* The HOW - This is the differentiator */}
         <div className="glass-card p-8 mt-12 bg-gradient-to-br from-blue-500/10 to-purple-500/10">
           <h3 className="text-2xl font-semibold mb-6 text-center">
-            "How do you know WHO?" The answer that changes everything.
+            "How do you connect users to emotions?" The answer that changes everything.
           </h3>
           
           <div className="grid md:grid-cols-2 gap-8">
@@ -231,10 +231,10 @@ export default function IdentityReveal() {
           
           <div className="text-center mt-8">
             <p className="text-lg text-white/90 font-medium">
-              We don't guess who your users are. You tell us. Then we tell you what they're feeling.
+              We don't guess who your users are. Your app tells us. Then we track what they're feeling.
             </p>
             <p className="text-sm text-white/60 mt-2">
-              No IP guessing. No cookie matching. No privacy violations. Just truth.
+              No IP guessing. No cookie matching. No privacy violations. Just your authenticated users.
             </p>
           </div>
         </div>

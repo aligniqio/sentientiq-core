@@ -7,9 +7,13 @@
     "dev:worker": "tsx src/worker.ts",
     "build": "tsc -p tsconfig.json",
     "start": "node dist/server.js",
-    "worker": "node dist/worker.js"
+    "worker": "node dist/worker.js",
+    "test:deployment": "node scripts/test-deployment.js",
+    "alpha:deploy": "echo '🚀 Alpha deployment checklist:' && echo '1. Copy .env.example to .env' && echo '2. Set DEPLOYMENT_MODE=alpha' && echo '3. Configure Supabase and Slack' && echo '4. Run: npm run build && npm start' && echo '5. Test: npm run test:deployment'"
   },
   "dependencies": {
+    "@aws-sdk/client-athena": "^3.665.0",
+    "@aws-sdk/client-s3": "^3.665.0",
     "@clerk/clerk-sdk-node": "^5.1.6",
     "@supabase/supabase-js": "^2.57.2",
     "cors": "^2.8.5",
@@ -18,14 +22,22 @@
     "express-rate-limit": "^8.1.0",
     "express-validator": "^7.2.1",
     "helmet": "^8.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "jwks-rsa": "^3.2.0",
+    "msgpack-lite": "^0.1.26",
+    "node-fetch": "^3.3.2",
     "p-limit": "^4.0.0",
+    "parquet-wasm": "^0.6.1",
     "postmark": "^4.0.5",
     "redis": "^5.8.2",
+    "svix": "^1.76.1",
+    "twilio": "^5.3.4",
     "zod": "^3.23.8"
   },
   "devDependencies": {
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.3",
+    "@types/msgpack-lite": "^0.1.8",
     "@types/node": "^24.3.1",
     "@types/react": "^19.1.12",
     "@types/react-dom": "^19.1.9",

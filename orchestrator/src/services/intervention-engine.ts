@@ -31,6 +31,37 @@ export interface InterventionRule {
   priority: number;
   cooldownMinutes?: number; // Don't repeat intervention for X minutes
   maxPerDay?: number; // Max interventions per day per user
+  abTest?: ABTestConfig; // A/B testing configuration
+  effectiveness?: EffectivenessMetrics; // Track intervention success
+}
+
+export interface ABTestConfig {
+  enabled: boolean;
+  variants: InterventionVariant[];
+  allocation: 'random' | 'weighted' | 'ml_optimized';
+  successMetric: 'conversion' | 'retention' | 'revenue' | 'satisfaction';
+}
+
+export interface InterventionVariant {
+  id: string;
+  weight: number; // 0-100, sum should be 100
+  actions: InterventionAction[];
+  performance?: VariantPerformance;
+}
+
+export interface VariantPerformance {
+  impressions: number;
+  conversions: number;
+  revenue: number;
+  averageTimeToConversion: number;
+}
+
+export interface EffectivenessMetrics {
+  totalTriggers: number;
+  successfulOutcomes: number;
+  revenueImpact: number;
+  avgTimeToResolution: number;
+  userSatisfactionScore?: number;
 }
 
 export interface InterventionCondition {
@@ -70,6 +101,8 @@ class InterventionEngine extends EventEmitter {
   private rules: Map<string, InterventionRule> = new Map();
   private executionHistory: Map<string, InterventionExecution[]> = new Map();
   private userCooldowns: Map<string, Map<string, Date>> = new Map();
+  private variantPerformance: Map<string, Map<string, VariantPerformance>> = new Map();
+  private abTestAllocations: Map<string, string> = new Map(); // userId -> variantId
   
   constructor() {
     super();
@@ -77,10 +110,10 @@ class InterventionEngine extends EventEmitter {
   }
   
   /**
-   * Load default intervention rules
+   * Load default intervention rules with A/B testing and sophisticated templates
    */
   private loadDefaultRules(): void {
-    // High-value customer rage intervention
+    // High-value customer rage intervention with A/B testing
     this.addRule({
       id: 'high_value_rage',
       name: 'High-Value Customer Rage Intervention',
@@ -89,33 +122,93 @@ class InterventionEngine extends EventEmitter {
       conditions: [
         { type: 'user_value', operator: 'greater_than', value: 10000 }
       ],
-      actions: [
-        {
-          type: 'slack',
-          config: {
-            channel: '#customer-emergency',
-            message: '🚨 HIGH-VALUE CUSTOMER RAGE ALERT 🚨\nCustomer: {{email}}\nCompany: {{company}}\nValue: ${{value}}/yr\nPage: {{pageUrl}}\n\nIMMEDIATE ACTION REQUIRED'
+      actions: [], // Will be determined by A/B test variant
+      abTest: {
+        enabled: true,
+        allocation: 'weighted',
+        successMetric: 'retention',
+        variants: [
+          {
+            id: 'immediate_human',
+            weight: 40,
+            actions: [
+              {
+                type: 'slack',
+                config: {
+                  channel: '#customer-emergency',
+                  message: '🚨 HIGH-VALUE CUSTOMER RAGE ALERT 🚨\nCustomer: {{email}}\nCompany: {{company}}\nValue: ${{value}}/yr\nPage: {{pageUrl}}\n\nIMMEDIATE ACTION REQUIRED'
+                }
+              },
+              {
+                type: 'chat',
+                config: {
+                  autoOpen: true,
+                  message: "I'm connecting you with our team lead immediately.",
+                  assignToAgent: true,
+                  priority: 'urgent',
+                  agentTier: 'senior'
+                }
+              }
+            ]
+          },
+          {
+            id: 'proactive_discount',
+            weight: 30,
+            actions: [
+              {
+                type: 'ui_change',
+                config: {
+                  action: 'show_modal',
+                  title: "We value your business",
+                  message: "We noticed you might be frustrated. Here's 20% off your next month as our apology.",
+                  ctaText: "Apply Discount",
+                  ctaAction: 'apply_discount_20'
+                }
+              },
+              {
+                type: 'discount',
+                config: {
+                  type: 'percentage',
+                  amount: 20,
+                  duration: 'next_month',
+                  autoApply: true
+                }
+              }
+            ]
+          },
+          {
+            id: 'executive_escalation',
+            weight: 30,
+            actions: [
+              {
+                type: 'sms',
+                config: {
+                  to: 'executive_oncall',
+                  message: 'Enterprise customer {{company}} showing rage. Immediate intervention needed. Dashboard: {{dashboardUrl}}'
+                }
+              },
+              {
+                type: 'email',
+                config: {
+                  to: '{{accountManagerEmail}}',
+                  cc: 'customer-success@company.com',
+                  template: 'rage_intervention',
+                  priority: 'high',
+                  calendar_invite: true
+                }
+              }
+            ]
           }
-        },
-        {
-          type: 'chat',
-          config: {
-            autoOpen: true,
-            message: "We noticed you might be having trouble. Can we help?",
-            assignToAgent: true,
-            priority: 'urgent'
-          }
-        },
-        {
-          type: 'crm_update',
-          config: {
-            field: 'needs_immediate_attention',
-            value: true
-          }
-        }
-      ],
+        ]
+      },
       priority: 1,
-      cooldownMinutes: 30
+      cooldownMinutes: 30,
+      effectiveness: {
+        totalTriggers: 0,
+        successfulOutcomes: 0,
+        revenueImpact: 0,
+        avgTimeToResolution: 0
+      }
     });
     
     // Enterprise confusion intervention
@@ -175,7 +268,41 @@ class InterventionEngine extends EventEmitter {
       cooldownMinutes: 120
     });
     
-    // Decision paralysis intervention
+    // Pricing page sticker shock intervention
+    this.addRule({
+      id: 'sticker_shock',
+      name: 'Pricing Sticker Shock Recovery',
+      emotion: 'sticker_shock',
+      minConfidence: 75,
+      conditions: [
+        { type: 'page_url', operator: 'contains', value: '/pricing' }
+      ],
+      actions: [
+        {
+          type: 'ui_change',
+          config: {
+            action: 'show_roi_calculator',
+            position: 'sidebar',
+            prefilledData: {
+              industry: '{{industry}}',
+              teamSize: '{{teamSize}}'
+            }
+          }
+        },
+        {
+          type: 'chat',
+          config: {
+            proactiveMessage: "Our average customer sees 3.2x ROI in 90 days. Want to see your potential savings?",
+            showCalculator: true
+          },
+          delay: 2000
+        }
+      ],
+      priority: 3,
+      cooldownMinutes: 60
+    });
+    
+    // Decision paralysis intervention with A/B testing
     this.addRule({
       id: 'decision_paralysis',
       name: 'Decision Paralysis Resolution',
@@ -184,22 +311,64 @@ class InterventionEngine extends EventEmitter {
       conditions: [
         { type: 'page_url', operator: 'contains', value: '/pricing' }
       ],
-      actions: [
-        {
-          type: 'ui_change',
-          config: {
-            action: 'highlight_recommended_plan',
-            showComparison: false
-          }
-        },
-        {
-          type: 'chat',
-          config: {
-            proactiveMessage: "I can help you choose the right plan. What's most important to you?"
+      actions: [],
+      abTest: {
+        enabled: true,
+        allocation: 'ml_optimized',
+        successMetric: 'conversion',
+        variants: [
+          {
+            id: 'simplify_choices',
+            weight: 33,
+            actions: [
+              {
+                type: 'ui_change',
+                config: {
+                  action: 'hide_plans',
+                  keepPlans: ['recommended'],
+                  message: 'Based on your profile, we recommend:'
+                }
+              }
+            ]
           },
-          delay: 3000
-        }
-      ],
+          {
+            id: 'social_proof',
+            weight: 33,
+            actions: [
+              {
+                type: 'ui_change',
+                config: {
+                  action: 'show_similar_companies',
+                  message: 'Companies like yours choose:',
+                  showLogos: true,
+                  showTestimonials: true
+                }
+              }
+            ]
+          },
+          {
+            id: 'guided_selection',
+            weight: 34,
+            actions: [
+              {
+                type: 'ui_change',
+                config: {
+                  action: 'launch_wizard',
+                  steps: ['team_size', 'use_case', 'budget'],
+                  showRecommendation: true
+                }
+              },
+              {
+                type: 'chat',
+                config: {
+                  proactiveMessage: "Let me help you find the perfect plan in 30 seconds.",
+                  launchWizard: true
+                }
+              }
+            ]
+          }
+        ]
+      },
       priority: 4,
       cooldownMinutes: 30
     });
@@ -231,6 +400,94 @@ class InterventionEngine extends EventEmitter {
       ],
       priority: 5,
       cooldownMinutes: 240
+    });
+    
+    // Exit risk pattern intervention
+    this.addRule({
+      id: 'exit_risk',
+      name: 'Exit Risk Prevention',
+      emotion: 'exit_risk',
+      minConfidence: 85,
+      conditions: [],
+      actions: [
+        {
+          type: 'ui_change',
+          config: {
+            action: 'show_exit_modal',
+            title: 'Before you go...',
+            offer: 'personalized_demo',
+            urgency: 'limited_time'
+          }
+        },
+        {
+          type: 'webhook',
+          config: {
+            eventType: 'exit_risk_detected',
+            priority: 'high'
+          }
+        }
+      ],
+      priority: 2,
+      cooldownMinutes: 120
+    });
+    
+    // Purchase intent intervention
+    this.addRule({
+      id: 'purchase_intent',
+      name: 'Purchase Intent Optimization',
+      emotion: 'purchase_intent',
+      minConfidence: 80,
+      conditions: [
+        { type: 'page_url', operator: 'contains', value: '/pricing' }
+      ],
+      actions: [
+        {
+          type: 'ui_change',
+          config: {
+            action: 'show_limited_offer',
+            discount: 15,
+            expiresIn: '24_hours',
+            showCountdown: true
+          }
+        },
+        {
+          type: 'slack',
+          config: {
+            channel: '#sales-signals',
+            message: '🎯 High purchase intent: {{email}} from {{company}} on pricing page'
+          }
+        }
+      ],
+      priority: 2,
+      cooldownMinutes: 180
+    });
+    
+    // Skepticism handling
+    this.addRule({
+      id: 'skepticism_handler',
+      name: 'Skepticism to Trust Builder',
+      emotion: 'skepticism',
+      minConfidence: 70,
+      conditions: [],
+      actions: [
+        {
+          type: 'ui_change',
+          config: {
+            action: 'show_trust_signals',
+            elements: ['security_badges', 'customer_logos', 'testimonials', 'guarantees']
+          }
+        },
+        {
+          type: 'chat',
+          config: {
+            proactiveMessage: 'I can connect you with a customer in your industry who loves our product.',
+            offerReferenceCall: true
+          },
+          delay: 5000
+        }
+      ],
+      priority: 3,
+      cooldownMinutes: 90
     });
   }
   
@@ -369,6 +626,90 @@ class InterventionEngine extends EventEmitter {
   }
   
   /**
+   * Select A/B test variant
+   */
+  private selectVariant(rule: InterventionRule, userId: string): InterventionVariant | null {
+    if (!rule.abTest?.enabled || !rule.abTest.variants.length) {
+      return null;
+    }
+    
+    // Check if user already has an allocation
+    const existingAllocation = this.abTestAllocations.get(`${rule.id}_${userId}`);
+    if (existingAllocation) {
+      return rule.abTest.variants.find(v => v.id === existingAllocation) || null;
+    }
+    
+    // Select variant based on allocation strategy
+    let selectedVariant: InterventionVariant | null = null;
+    
+    switch (rule.abTest.allocation) {
+      case 'random':
+        const randomIndex = Math.floor(Math.random() * rule.abTest.variants.length);
+        selectedVariant = rule.abTest.variants[randomIndex];
+        break;
+        
+      case 'weighted':
+        const random = Math.random() * 100;
+        let cumulative = 0;
+        for (const variant of rule.abTest.variants) {
+          cumulative += variant.weight;
+          if (random <= cumulative) {
+            selectedVariant = variant;
+            break;
+          }
+        }
+        break;
+        
+      case 'ml_optimized':
+        // Use Thompson Sampling or similar for optimization
+        selectedVariant = this.selectOptimalVariant(rule);
+        break;
+    }
+    
+    if (selectedVariant) {
+      // Store allocation
+      this.abTestAllocations.set(`${rule.id}_${userId}`, selectedVariant.id);
+    }
+    
+    return selectedVariant;
+  }
+  
+  /**
+   * Select optimal variant using Thompson Sampling
+   */
+  private selectOptimalVariant(rule: InterventionRule): InterventionVariant {
+    const variants = rule.abTest!.variants;
+    let bestVariant = variants[0];
+    let bestScore = 0;
+    
+    for (const variant of variants) {
+      const perf = variant.performance || { impressions: 0, conversions: 0, revenue: 0, averageTimeToConversion: 0 };
+      
+      // Thompson Sampling: sample from Beta distribution
+      const alpha = perf.conversions + 1;
+      const beta = perf.impressions - perf.conversions + 1;
+      const sample = this.sampleBeta(alpha, beta);
+      
+      if (sample > bestScore) {
+        bestScore = sample;
+        bestVariant = variant;
+      }
+    }
+    
+    return bestVariant;
+  }
+  
+  /**
+   * Sample from Beta distribution (simplified)
+   */
+  private sampleBeta(alpha: number, beta: number): number {
+    // Simplified Beta sampling using uniform random
+    // In production, use proper Beta distribution sampling
+    return Math.pow(Math.random(), 1/alpha) / 
+           (Math.pow(Math.random(), 1/alpha) + Math.pow(Math.random(), 1/beta));
+  }
+  
+  /**
    * Execute intervention actions
    */
   private async executeIntervention(
@@ -387,8 +728,23 @@ class InterventionEngine extends EventEmitter {
       actions: []
     };
     
+    // Determine which actions to execute (A/B test or default)
+    let actionsToExecute = rule.actions;
+    let selectedVariantId: string | null = null;
+    
+    if (rule.abTest?.enabled) {
+      const variant = this.selectVariant(rule, event.userId || event.sessionId);
+      if (variant) {
+        actionsToExecute = variant.actions;
+        selectedVariantId = variant.id;
+        
+        // Track variant impression
+        this.trackVariantImpression(rule.id, variant.id);
+      }
+    }
+    
     // Execute each action
-    for (const action of rule.actions) {
+    for (const action of actionsToExecute) {
       const actionResult = await this.executeAction(action, event, identity);
       execution.actions.push(actionResult);
       
@@ -403,6 +759,14 @@ class InterventionEngine extends EventEmitter {
     
     // Calculate revenue impact (would need more data in production)
     execution.revenue_impact = this.estimateRevenueImpact(rule, identity);
+    
+    // Track variant performance if A/B test
+    if (selectedVariantId) {
+      this.trackVariantOutcome(rule.id, selectedVariantId, execution);
+    }
+    
+    // Update rule effectiveness metrics
+    this.updateRuleEffectiveness(rule, execution);
     
     return execution;
   }
@@ -469,13 +833,13 @@ class InterventionEngine extends EventEmitter {
   /**
    * Send Slack alert
    */
-  private async sendSlackAlert(config: any, event: any, identity: UserIdentity | null): Promise<void> {
+  private async sendSlackAlert(config: any, _event: any, identity: UserIdentity | null): Promise<void> {
     if (!process.env.SLACK_WEBHOOK_URL) {
       console.warn('Slack webhook not configured');
       return;
     }
     
-    const message = this.interpolateTemplate(config.message, event, identity);
+    const message = this.interpolateTemplate(config.message, _event, identity);
     
     // Send to Slack (simplified - would use proper Slack client in production)
     console.log(`📢 Slack Alert: ${message}`);
@@ -484,13 +848,13 @@ class InterventionEngine extends EventEmitter {
   /**
    * Send email
    */
-  private async sendEmail(config: any, event: any, identity: UserIdentity | null): Promise<void> {
+  private async sendEmail(config: any, _event: any, identity: UserIdentity | null): Promise<void> {
     if (!identity?.email) {
       console.warn('No email address for user');
       return;
     }
     
-    const subject = this.interpolateTemplate(config.subject, event, identity);
+    const subject = this.interpolateTemplate(config.subject, _event, identity);
     
     // Send email (would integrate with SendGrid/etc in production)
     console.log(`📧 Email: ${subject} to ${identity.email}`);
@@ -507,7 +871,7 @@ class InterventionEngine extends EventEmitter {
   /**
    * Trigger UI change
    */
-  private async triggerUIChange(config: any, event: any): Promise<void> {
+  private async triggerUIChange(config: any, _event: any): Promise<void> {
     // Send to frontend via WebSocket
     console.log(`🎨 UI Change: ${config.action}`);
   }
@@ -560,7 +924,7 @@ class InterventionEngine extends EventEmitter {
   /**
    * Apply discount
    */
-  private async applyDiscount(config: any, event: any, identity: UserIdentity | null): Promise<void> {
+  private async applyDiscount(config: any, _event: any, _identity: UserIdentity | null): Promise<void> {
     // Would integrate with billing system
     console.log(`💰 Discount applied: ${config.amount || config.percentage}`);
   }
@@ -697,10 +1061,141 @@ class InterventionEngine extends EventEmitter {
   }
   
   /**
+   * Track variant impression
+   */
+  private trackVariantImpression(ruleId: string, variantId: string): void {
+    if (!this.variantPerformance.has(ruleId)) {
+      this.variantPerformance.set(ruleId, new Map());
+    }
+    
+    const rulePerf = this.variantPerformance.get(ruleId)!;
+    if (!rulePerf.has(variantId)) {
+      rulePerf.set(variantId, {
+        impressions: 0,
+        conversions: 0,
+        revenue: 0,
+        averageTimeToConversion: 0
+      });
+    }
+    
+    const perf = rulePerf.get(variantId)!;
+    perf.impressions++;
+  }
+  
+  /**
+   * Track variant outcome
+   */
+  private trackVariantOutcome(ruleId: string, variantId: string, execution: InterventionExecution): void {
+    const rulePerf = this.variantPerformance.get(ruleId);
+    if (!rulePerf) return;
+    
+    const perf = rulePerf.get(variantId);
+    if (!perf) return;
+    
+    // Check if intervention was successful
+    const wasSuccessful = execution.actions.every(a => a.status === 'success');
+    if (wasSuccessful) {
+      perf.conversions++;
+      perf.revenue += execution.revenue_impact || 0;
+    }
+  }
+  
+  /**
+   * Update rule effectiveness metrics
+   */
+  private updateRuleEffectiveness(rule: InterventionRule, execution: InterventionExecution): void {
+    if (!rule.effectiveness) {
+      rule.effectiveness = {
+        totalTriggers: 0,
+        successfulOutcomes: 0,
+        revenueImpact: 0,
+        avgTimeToResolution: 0
+      };
+    }
+    
+    rule.effectiveness.totalTriggers++;
+    
+    const wasSuccessful = execution.actions.every(a => a.status === 'success');
+    if (wasSuccessful) {
+      rule.effectiveness.successfulOutcomes++;
+    }
+    
+    rule.effectiveness.revenueImpact += execution.revenue_impact || 0;
+  }
+  
+  /**
    * Generate unique execution ID
    */
   private generateExecutionId(): string {
-    return `int_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    return `int_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
+  }
+  
+  /**
+   * Get A/B test results
+   */
+  getABTestResults(ruleId: string): any {
+    const rule = this.rules.get(ruleId);
+    if (!rule || !rule.abTest) return null;
+    
+    const results: any = {
+      rule: rule.name,
+      variants: []
+    };
+    
+    const rulePerf = this.variantPerformance.get(ruleId);
+    if (!rulePerf) return results;
+    
+    for (const variant of rule.abTest.variants) {
+      const perf = rulePerf.get(variant.id) || {
+        impressions: 0,
+        conversions: 0,
+        revenue: 0,
+        averageTimeToConversion: 0
+      };
+      
+      results.variants.push({
+        id: variant.id,
+        weight: variant.weight,
+        impressions: perf.impressions,
+        conversions: perf.conversions,
+        conversionRate: perf.impressions > 0 ? perf.conversions / perf.impressions : 0,
+        revenue: perf.revenue,
+        revenuePerImpression: perf.impressions > 0 ? perf.revenue / perf.impressions : 0
+      });
+    }
+    
+    // Calculate statistical significance
+    if (results.variants.length === 2) {
+      const [a, b] = results.variants;
+      const significance = this.calculateSignificance(
+        a.conversions, a.impressions,
+        b.conversions, b.impressions
+      );
+      results.statisticalSignificance = significance;
+      results.winner = significance > 0.95 ? 
+        (a.conversionRate > b.conversionRate ? a.id : b.id) : 
+        'insufficient_data';
+    }
+    
+    return results;
+  }
+  
+  /**
+   * Calculate statistical significance (simplified)
+   */
+  private calculateSignificance(conversionsA: number, impressionsA: number, 
+                                conversionsB: number, impressionsB: number): number {
+    // Simplified z-test
+    if (impressionsA < 30 || impressionsB < 30) return 0;
+    
+    const rateA = conversionsA / impressionsA;
+    const rateB = conversionsB / impressionsB;
+    const pooledRate = (conversionsA + conversionsB) / (impressionsA + impressionsB);
+    const standardError = Math.sqrt(pooledRate * (1 - pooledRate) * (1/impressionsA + 1/impressionsB));
+    const zScore = Math.abs(rateA - rateB) / standardError;
+    
+    // Convert z-score to confidence level (simplified)
+    return Math.min(0.99, Math.max(0, 1 - Math.exp(-zScore * zScore / 2)));
   }
   
   /**
@@ -711,6 +1206,7 @@ class InterventionEngine extends EventEmitter {
     totalExecutions: number;
     successRate: number;
     estimatedRevenueSaved: number;
+    abTests: any[];
   } {
     let totalExecutions = 0;
     let successfulExecutions = 0;
@@ -726,11 +1222,23 @@ class InterventionEngine extends EventEmitter {
       }
     }
     
+    // Get A/B test results for rules with tests
+    const abTests: any[] = [];
+    for (const rule of this.rules.values()) {
+      if (rule.abTest?.enabled) {
+        const results = this.getABTestResults(rule.id);
+        if (results) {
+          abTests.push(results);
+        }
+      }
+    }
+    
     return {
       totalRules: this.rules.size,
       totalExecutions,
       successRate: totalExecutions > 0 ? successfulExecutions / totalExecutions : 0,
-      estimatedRevenueSaved: revenueSaved
+      estimatedRevenueSaved: revenueSaved,
+      abTests
     };
   }
 }

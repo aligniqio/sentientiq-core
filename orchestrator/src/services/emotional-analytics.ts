@@ -8,6 +8,8 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { Request, Response } from 'express';
 import { EmotionalLearningEngine } from './emotional-learning.js';
+import { eventLakeService, EventLakeRecord } from './event-lake.js';
+import { EVICalculator } from './evi-calculator.js';
 
 // Lazy-initialize Supabase client
 let supabase: SupabaseClient | null = null;
@@ -51,25 +53,55 @@ export class EmotionalAnalytics {
    */
   static async recordEmotionalEvent(event: EmotionalEvent): Promise<void> {
     const supabase = getSupabaseClient();
-    if (!supabase) {
-      console.warn('Supabase not configured - emotional event not persisted');
-      return;
-    }
-
+    
     try {
-      console.log('Attempting to insert emotional event:', event.emotion, 'for tenant:', event.tenant_id);
-      const { error } = await supabase
-        .from('emotional_events')
-        .insert({
-          ...event,
-          created_at: new Date().toISOString()
-        });
+      // Always record to Event Lake for EVI analytics (primary data store)
+      const eventLakeRecord: EventLakeRecord = {
+        timestamp: event.timestamp.toISOString(),
+        userId: event.user_id || 'anonymous',
+        companyId: event.tenant_id || 'DEMO_TENANT',
+        sessionId: event.session_id,
+        vertical: event.metadata?.vertical || 'other',
+        geography: event.metadata?.geography || 'other',
+        emotion: event.emotion,
+        confidence: event.confidence,
+        intensity: event.intensity,
+        dollarValue: event.metadata?.dollarValue || 0,
+        interventionTaken: false, // Will be updated by intervention engine
+        outcome: '', // Will be updated when outcome is determined
+        pageUrl: event.page_url,
+        elementTarget: event.element_target,
+        userAgent: event.metadata?.userAgent || 'unknown',
+        metadata: {
+          deviceType: event.metadata?.deviceType || 'unknown',
+          platform: event.metadata?.platform || 'web',
+          campaignId: event.metadata?.campaignId,
+          referrer: event.metadata?.referrer,
+          customFields: event.metadata
+        }
+      };
 
-      if (error) {
-        console.error('Supabase insert error:', error);
-        throw error;
+      // Record to Event Lake (S3 + Athena) - primary storage for EVI
+      await eventLakeService.addEvent(eventLakeRecord);
+      
+      // Also record to Supabase for backwards compatibility (if configured)
+      if (supabase) {
+        console.log('Recording to Supabase for backwards compatibility:', event.emotion);
+        const { error } = await supabase
+          .from('emotional_events')
+          .insert({
+            ...event,
+            created_at: new Date().toISOString()
+          });
+
+        if (error) {
+          console.error('Supabase insert error (non-critical):', error);
+        } else {
+          console.log('Successfully inserted to Supabase:', event.emotion);
+        }
       }
-      console.log('Successfully inserted emotional event:', event.emotion);
+
+      console.log(`📊 Event recorded to Event Lake: ${event.emotion} (confidence: ${event.confidence}%)`);
 
       // Trigger real-time analysis if high-value emotion detected
       if (event.confidence > 85) {
@@ -77,6 +109,7 @@ export class EmotionalAnalytics {
       }
     } catch (error) {
       console.error('Failed to record emotional event:', error);
+      throw error;
     }
   }
 
@@ -512,6 +545,136 @@ export const emotionalAnalyticsHandlers = {
       });
     } catch (error) {
       res.status(500).json({ error: 'Failed to identify blind spots' });
+    }
+  },
+
+  // EVI Analytics Endpoints
+
+  // Calculate EVI for a given time range and filters
+  calculateEVI: async (req: Request, res: Response) => {
+    try {
+      const { startDate, endDate, vertical, geography, companyId, minConfidence } = req.query;
+      
+      if (!startDate || !endDate) {
+        return res.status(400).json({ error: 'startDate and endDate are required' });
+      }
+
+      const timeRange = {
+        start: new Date(startDate as string),
+        end: new Date(endDate as string)
+      };
+
+      const filters = {
+        vertical: vertical as string,
+        geography: geography as string,
+        companyId: companyId as string,
+        minConfidence: minConfidence ? parseInt(minConfidence as string) : undefined
+      };
+
+      const eviMetric = await EVICalculator.calculateEVI(timeRange, filters);
+      
+      res.json({
+        evi: eviMetric,
+        timestamp: new Date().toISOString(),
+        message: `EVI calculated: ${eviMetric.evi.toFixed(2)} (${eviMetric.risk.level} risk)`
+      });
+
+    } catch (error) {
+      console.error('EVI calculation failed:', error);
+      res.status(500).json({ error: 'Failed to calculate EVI' });
+    }
+  },
+
+  // Generate comprehensive EVI dashboard
+  getEVIDashboard: async (req: Request, res: Response) => {
+    try {
+      const { startDate, endDate, companyId } = req.query;
+      
+      if (!startDate || !endDate) {
+        return res.status(400).json({ error: 'startDate and endDate are required' });
+      }
+
+      const timeRange = {
+        start: new Date(startDate as string),
+        end: new Date(endDate as string)
+      };
+
+      const filters = {
+        companyId: companyId as string
+      };
+
+      const dashboard = await EVICalculator.generateDashboard(timeRange, filters);
+      
+      res.json({
+        dashboard,
+        timestamp: new Date().toISOString(),
+        message: `EVI Dashboard generated for ${timeRange.start.toDateString()} to ${timeRange.end.toDateString()}`
+      });
+
+    } catch (error) {
+      console.error('EVI dashboard generation failed:', error);
+      res.status(500).json({ error: 'Failed to generate EVI dashboard' });
+    }
+  },
+
+  // Get Event Lake statistics
+  getEventLakeStats: async (req: Request, res: Response) => {
+    try {
+      const { startDate, endDate } = req.query;
+      
+      let timeRange: { start: Date; end: Date } | undefined;
+      if (startDate && endDate) {
+        timeRange = {
+          start: new Date(startDate as string),
+          end: new Date(endDate as string)
+        };
+      }
+
+      const stats = await eventLakeService.getDataLakeStats(timeRange);
+      
+      res.json({
+        stats,
+        timestamp: new Date().toISOString(),
+        message: 'Event Lake statistics retrieved successfully'
+      });
+
+    } catch (error) {
+      console.error('Event Lake stats failed:', error);
+      res.status(500).json({ error: 'Failed to get Event Lake statistics' });
+    }
+  },
+
+  // Initialize Event Lake table
+  initializeEventLake: async (req: Request, res: Response) => {
+    try {
+      await eventLakeService.createEventTable();
+      
+      res.json({
+        success: true,
+        timestamp: new Date().toISOString(),
+        message: 'Event Lake table initialized successfully'
+      });
+
+    } catch (error) {
+      console.error('Event Lake initialization failed:', error);
+      res.status(500).json({ error: 'Failed to initialize Event Lake' });
+    }
+  },
+
+  // Flush pending batches (for testing/admin)
+  flushEventLake: async (req: Request, res: Response) => {
+    try {
+      await eventLakeService.flushAllBatches();
+      
+      res.json({
+        success: true,
+        timestamp: new Date().toISOString(),
+        message: 'All pending batches flushed to Event Lake'
+      });
+
+    } catch (error) {
+      console.error('Event Lake flush failed:', error);
+      res.status(500).json({ error: 'Failed to flush Event Lake batches' });
     }
   }
 };

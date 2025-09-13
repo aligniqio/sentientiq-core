@@ -26,9 +26,9 @@ export default function Hero() {
           <span className="text-white/80">You have 3 seconds to save them.</span>
         </h1>
         <p className="mt-5 text-lg text-white/70 max-w-3xl mx-auto">
-          We don't count clicks. We identify <span className="text-white">WHO is feeling WHAT</span> through 
+          We don't count clicks. We track <span className="text-white">your users' emotions</span> through 
           behavioral physics. When john@fortune500.com shows rage at checkout, 
-          you'll know instantly. With their name, company, and lifetime value attached.
+          you'll know instantly. With their name, company, and lifetime value from your systems.
         </p>
         
         {/* CTA Buttons */}

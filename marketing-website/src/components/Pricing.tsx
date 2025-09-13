@@ -60,9 +60,9 @@ export default function Pricing() {
       name: 'Starter',
       price: '$497',
       period: '/month',
-      tagline: 'Know WHO is feeling WHAT',
+      tagline: 'Track emotions for YOUR identified users',
       features: [
-        'Identity resolution: Name + Company + Value',
+        'Connect to YOUR user data (auth, CRM)',
         'Detect 12 emotions with 95% confidence',
         'Basic interventions (email, Slack alerts)',
         'Weekly accountability scorecard',

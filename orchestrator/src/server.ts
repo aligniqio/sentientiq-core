@@ -37,6 +37,8 @@ import { emotionalAnalyticsHandlers } from './services/emotional-analytics.js';
 import { recommendationHandlers } from './services/recommendations-engine.js';
 import { startLearningLoop } from './services/emotional-learning.js';
 import identityInterventionApi from './api/identity-intervention-api.js';
+import { getDeploymentReadiness, getSubsystemStatus, isFeatureEnabled, FeatureFlag } from './config/deployment-mode.js';
+import { stubHealthCheck } from './services/pipeline-stubs.js';
 
 // ---------- Env ----------
 const PORT = Number(process.env.PORT || 8787);
@@ -438,15 +440,71 @@ const adminToggleHandler = (req: Request, res: Response) => {
 app.post('/v1/admin/toggle-provider', express.json(), adminToggleHandler);
 
 // Health check - multiple paths because why not
-const healthHandler = (_req: Request, res: Response) => {
-  res.json({ 
-    ok: true, 
-    timestamp: new Date().toISOString(),
-    uptime: process.uptime(),
-    memory: process.memoryUsage().heapUsed / 1024 / 1024,
-    version: process.env.npm_package_version || '0.1.0',
-    provider: process.env.PREFER_ANTHROPIC === 'true' ? 'anthropic' : 'openai'
-  });
+const healthHandler = async (_req: Request, res: Response) => {
+  try {
+    const healthCheck = await stubHealthCheck.checkHealth();
+    res.json(healthCheck);
+  } catch (error) {
+    console.error('Health check failed:', error);
+    res.status(500).json({
+      status: 'error',
+      timestamp: new Date().toISOString(),
+      error: 'Health check failed'
+    });
+  }
+};
+
+// Enhanced deployment status endpoint
+const deploymentHandler = (_req: Request, res: Response) => {
+  try {
+    const readiness = getDeploymentReadiness();
+    const subsystems = getSubsystemStatus();
+    
+    res.json({
+      deployment: readiness,
+      subsystems,
+      environment: {
+        port: PORT,
+        version: process.env.npm_package_version || '0.1.0',
+        provider: process.env.PREFER_ANTHROPIC === 'true' ? 'anthropic' : 'openai',
+        uptime: process.uptime(),
+        memory: Math.round(process.memoryUsage().heapUsed / 1024 / 1024)
+      }
+    });
+  } catch (error) {
+    console.error('Deployment status failed:', error);
+    res.status(500).json({ error: 'Deployment status failed' });
+  }
+};
+
+// Feature flags endpoint
+const featureFlagsHandler = (_req: Request, res: Response) => {
+  try {
+    const features: FeatureFlag[] = ['ceoAlerts', 'dealIntelligence', 'eviCalculations', 'advancedAnalytics', 's3Storage', 'twilioNotifications'];
+    const flags = features.reduce((acc, flag) => {
+      acc[flag] = isFeatureEnabled(flag);
+      return acc;
+    }, {} as Record<string, boolean>);
+    
+    res.json({
+      flags,
+      coreFeatures: {
+        emotionDetection: true, // Always on
+        interventionEngine: true, // Always on
+        websocketStreaming: true // Always on
+      },
+      progressiveFeatures: {
+        dataLake: isFeatureEnabled('s3Storage'),
+        ceoAlerts: isFeatureEnabled('ceoAlerts'),
+        dealIntelligence: isFeatureEnabled('dealIntelligence'),
+        eviCalculations: isFeatureEnabled('eviCalculations'),
+        twilioNotifications: isFeatureEnabled('twilioNotifications')
+      }
+    });
+  } catch (error) {
+    console.error('Feature flags failed:', error);
+    res.status(500).json({ error: 'Feature flags failed' });
+  }
 };
 
 // Sage analyze endpoint
@@ -475,6 +533,7 @@ app.post('/api/sage/analyze', sageLimiter, timeoutMiddleware(30), validateSageRe
   }
 });
 
+// Health and deployment endpoints
 app.get('/health', healthHandler);
 app.get('/healthz', healthHandler);  // k8s style
 app.get('/ping', healthHandler);     // classic
@@ -482,18 +541,42 @@ app.get('/api/health', healthHandler);
 app.get('/api/ping', healthHandler);
 app.get('/', healthHandler);         // root check
 
+// Deployment and feature management
+app.get('/deployment', deploymentHandler);
+app.get('/api/deployment', deploymentHandler);
+app.get('/features', featureFlagsHandler);
+app.get('/api/features', featureFlagsHandler);
+
 // ---------- EMOTIONAL INTELLIGENCE ROUTES ----------
 // The crystal palace of marketing truth
 
-// Emotional Analytics
-app.post('/api/emotional/event', express.json(), emotionalAnalyticsHandlers.recordEvent);
-app.get('/api/emotional/patterns', emotionalAnalyticsHandlers.getPatterns);
-app.get('/api/emotional/heatmap', emotionalAnalyticsHandlers.getHeatmap);
-app.post('/api/emotional/predict', express.json(), emotionalAnalyticsHandlers.predictAction);
-app.get('/api/emotional/funnel', emotionalAnalyticsHandlers.getFunnel);
-app.post('/api/emotional/outcome', express.json(), emotionalAnalyticsHandlers.recordOutcome);
-app.get('/api/emotional/moat', emotionalAnalyticsHandlers.getDataMoat);
-app.get('/api/emotional/blindspots', generalLimiter, emotionalAnalyticsHandlers.getBlindSpots);
+// Core Emotional Analytics (always enabled)
+if (true) { // Emotion detection always on
+  app.post('/api/emotional/event', express.json(), emotionalAnalyticsHandlers.recordEvent);
+  app.get('/api/emotional/patterns', emotionalAnalyticsHandlers.getPatterns);
+  app.get('/api/emotional/heatmap', emotionalAnalyticsHandlers.getHeatmap);
+  app.post('/api/emotional/predict', express.json(), emotionalAnalyticsHandlers.predictAction);
+  app.get('/api/emotional/funnel', emotionalAnalyticsHandlers.getFunnel);
+  app.post('/api/emotional/outcome', express.json(), emotionalAnalyticsHandlers.recordOutcome);
+  app.get('/api/emotional/moat', emotionalAnalyticsHandlers.getDataMoat);
+}
+
+// Advanced analytics (feature flagged)
+if (isFeatureEnabled('advancedAnalytics')) {
+  app.get('/api/emotional/blindspots', generalLimiter, emotionalAnalyticsHandlers.getBlindSpots);
+}
+
+// EVI Analytics - The Bloomberg Terminal of Human Emotion (feature flagged)
+if (isFeatureEnabled('eviCalculations')) {
+  app.get('/api/evi/calculate', generalLimiter, emotionalAnalyticsHandlers.calculateEVI);
+  app.get('/api/evi/dashboard', generalLimiter, emotionalAnalyticsHandlers.getEVIDashboard);
+}
+// Data Lake management (feature flagged)
+if (isFeatureEnabled('s3Storage')) {
+  app.get('/api/evi/stats', generalLimiter, emotionalAnalyticsHandlers.getEventLakeStats);
+  app.post('/api/evi/initialize', generalLimiter, express.json(), emotionalAnalyticsHandlers.initializeEventLake);
+  app.post('/api/evi/flush', generalLimiter, express.json(), emotionalAnalyticsHandlers.flushEventLake);
+}
 
 // Recommendations & Accountability
 app.get('/api/recommendations', generalLimiter, recommendationHandlers.getRecommendations);

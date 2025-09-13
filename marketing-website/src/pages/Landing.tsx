@@ -25,8 +25,8 @@ export default function Landing() {
       <SEO 
         siteUrl={siteUrl}
         path="/"
-        title="SentientIQ — Know WHO is feeling WHAT. Save them before they leave."
-        description="Your $100k customer is raging. We detect it in 300ms. You intervene in 3 seconds. Identity + Emotion + Action = Revenue saved. See exactly what ignoring emotions costs you."
+        title="SentientIQ — Track your users' emotions. Save them before they leave."
+        description="Your $100k customer is raging. We detect it in 300ms. You intervene in 3 seconds. Connect your user data + Track emotions + Take action = Revenue saved. See exactly what ignoring emotions costs you."
       />
       <div className="relative min-h-screen bg-black">
         {/* <EmotionalTracker /> -- Removed: Too distracting on mobile */}

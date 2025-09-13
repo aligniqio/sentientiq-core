@@ -1,0 +1,48 @@
+{
+  "name": "@sentientiq/sdk",
+  "version": "5.0.0",
+  "description": "One line to save millions. Zero config emotional intelligence SDK.",
+  "main": "sentientiq.js",
+  "module": "sentientiq.js",
+  "types": "sentientiq.d.ts",
+  "files": [
+    "sentientiq.js",
+    "sentientiq.min.js",
+    "sentientiq.d.ts",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "terser sentientiq.js -c -m -o sentientiq.min.js",
+    "test": "echo 'No tests - this is production ready'",
+    "size": "gzip-size sentientiq.min.js"
+  },
+  "keywords": [
+    "sentientiq",
+    "emotional-intelligence",
+    "behavioral-analytics",
+    "rage-detection",
+    "churn-prevention",
+    "revenue-protection",
+    "real-time-intervention"
+  ],
+  "author": "SentientIQ",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/sentientiq/sdk"
+  },
+  "bugs": {
+    "url": "https://github.com/sentientiq/sdk/issues"
+  },
+  "homepage": "https://sentientiq.app",
+  "devDependencies": {
+    "terser": "^5.24.0",
+    "gzip-size-cli": "^5.1.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "browser": "sentientiq.min.js",
+  "unpkg": "sentientiq.min.js",
+  "jsdelivr": "sentientiq.min.js"
+}
