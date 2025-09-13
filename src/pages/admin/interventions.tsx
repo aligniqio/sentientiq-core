@@ -6,11 +6,10 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useUser } from '@clerk/clerk-react';
+import { useAuth } from '@clerk/clerk-react';
 import { 
   AlertCircle, 
   Zap, 
-  Settings, 
   TestTube, 
   Save, 
   Play,
@@ -78,7 +77,7 @@ interface InterventionConfig {
 }
 
 const InterventionManagement: React.FC = () => {
-  const { user } = useUser();
+  const { getToken } = useAuth();
   const [templates, setTemplates] = useState<InterventionTemplate[]>([]);
   const [interventions, setInterventions] = useState<InterventionConfig[]>([]);
   const [selectedTemplate, setSelectedTemplate] = useState<InterventionTemplate | null>(null);
@@ -125,7 +124,7 @@ const InterventionManagement: React.FC = () => {
     try {
       const response = await fetch('/api/interventions/templates', {
         headers: {
-          'Authorization': `Bearer ${await user?.getToken()}`
+          'Authorization': `Bearer ${await getToken() || ''}`
         }
       });
       const data = await response.json();
@@ -141,7 +140,7 @@ const InterventionManagement: React.FC = () => {
     try {
       const response = await fetch('/api/interventions/interventions', {
         headers: {
-          'Authorization': `Bearer ${await user?.getToken()}`
+          'Authorization': `Bearer ${await getToken() || ''}`
         }
       });
       const data = await response.json();
@@ -161,7 +160,7 @@ const InterventionManagement: React.FC = () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${await user?.getToken()}`
+          'Authorization': `Bearer ${await getToken() || ''}`
         },
         body: JSON.stringify({
           templateId: selectedTemplate.id,
@@ -202,7 +201,7 @@ const InterventionManagement: React.FC = () => {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${await user?.getToken()}`
+          'Authorization': `Bearer ${await getToken() || ''}`
         },
         body: JSON.stringify({ customization })
       });
@@ -237,7 +236,7 @@ const InterventionManagement: React.FC = () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${await user?.getToken()}`
+          'Authorization': `Bearer ${await getToken() || ''}`
         },
         body: JSON.stringify({ testData })
       });
@@ -454,7 +453,7 @@ const InterventionManagement: React.FC = () => {
                             {channel} Message
                           </label>
                           <textarea
-                            value={customization.messages[channel] || ''}
+                            value={customization.messages[channel as keyof typeof customization.messages] || ''}
                             onChange={(e) => setCustomization({
                               ...customization,
                               messages: {

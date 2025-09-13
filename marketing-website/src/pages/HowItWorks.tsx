@@ -480,7 +480,7 @@ export default function HowItWorks() {
                   </p>
                   <div className="bg-black/30 rounded p-3 text-sm font-mono">
                     <div className="text-purple-400">// Intervention logic</div>
-                    <div>if (value > $1M &&</div>
+                    <div>if (value &gt; $1M &&</div>
                     <div>&nbsp;&nbsp;&nbsp;&nbsp;emotion === "rage")</div>
                     <div>→ alert.CEO.NOW()</div>
                   </div>
