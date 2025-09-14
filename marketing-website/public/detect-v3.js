@@ -17,7 +17,9 @@
   const apiKey = scriptTag?.getAttribute('data-api-key') ||
                  new URLSearchParams(scriptTag?.src?.split('?')[1] || '').get('key') ||
                  'sq_demo_marketing_v3';
-  const debugMode = scriptTag?.getAttribute('data-debug') === 'true';
+  const urlParams = new URLSearchParams(scriptTag?.src?.split('?')[1] || '');
+  const debugMode = scriptTag?.getAttribute('data-debug') === 'true' ||
+                    urlParams.get('debug') === 'true';
 
   if (!apiKey) {
     console.error('SentientIQ: No API key provided');
@@ -134,7 +136,14 @@
 
       // Prevent signal spam - same signal needs cooldown
       if (this.lastSignalTime[type] && (now - this.lastSignalTime[type]) < 2000) {
+        if (debugMode) {
+          console.log(`⏱️ Signal ${type} on cooldown`);
+        }
         return false;
+      }
+
+      if (debugMode) {
+        console.log(`🎯 Signal detected: ${type}`, data);
       }
 
       // Record signal
@@ -552,15 +561,23 @@
       // Rage click detection (multiple clicks in same area)
       if (this.clickHistory.length >= 3) {
         const recentClicks = this.clickHistory.slice(-3);
+
+        // Check if all clicks are near EACH OTHER, not near current mouse
+        const firstClick = recentClicks[0];
         const clicksNearby = recentClicks.every(click => {
           const dist = Math.sqrt(
-            Math.pow(click.x - current.x, 2) +
-            Math.pow(click.y - current.y, 2)
+            Math.pow(click.x - firstClick.x, 2) +
+            Math.pow(click.y - firstClick.y, 2)
           );
           return dist < 50;
         });
 
         const timeBetween = Date.now() - recentClicks[0].t;
+
+        if (debugMode && clicksNearby) {
+          console.log(`🔥 Rage click check: ${recentClicks.length} clicks in ${timeBetween}ms`);
+        }
+
         if (clicksNearby && timeBetween < 1000) {
           this.signalDetector.detect('rage_click', { clicks: 3, time: timeBetween });
         }
@@ -612,6 +629,10 @@
         t: Date.now(),
         target: e.target.tagName
       };
+
+      if (debugMode) {
+        console.log('🖱️ Click detected:', click);
+      }
 
       this.clickHistory.push(click);
       if (this.clickHistory.length > 10) {
@@ -737,6 +758,12 @@
     }
 
     init() {
+      if (debugMode) {
+        console.log('🚀 SentientIQ v3.0 initialized');
+        console.log('📊 Debug mode enabled');
+        console.log('🔑 API Key:', config.apiKey.substring(0, 20) + '...');
+      }
+
       // Start processing loop
       setInterval(() => this.process(), 2000);
 
