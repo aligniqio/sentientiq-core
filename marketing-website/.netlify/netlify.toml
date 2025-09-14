@@ -101,7 +101,7 @@ force = true
 
 [[redirects]]
 from = "/v2/detect.js"
-to = "/detect-v2.js"
+to = "/detect-v3.js"
 status = 200.0
 force = true
 
