@@ -259,7 +259,7 @@ export default function SageCrystalBall() {
                 </div>
                 <div>
                   <h3 className="font-bold text-white">Sage</h3>
-                  <p className="text-xs text-white/60">Crystal Palace of Marketing Truth</p>
+                  <p className="text-xs text-white/60">Support Specialist & Resident Cynic</p>
                 </div>
               </div>
               <button
@@ -276,10 +276,10 @@ export default function SageCrystalBall() {
                 <div className="text-center py-8">
                   <div className="inline-block p-4 bg-white/5 rounded-xl">
                     <p className="text-white/60 text-sm mb-2">
-                      Show me your marketing copy.
+                      How can I help?
                     </p>
                     <p className="text-white/40 text-xs">
-                      I'll tell you why it won't work.
+                      Ask about implementation, features, or paste suspicious messages
                     </p>
                   </div>
                 </div>
@@ -316,7 +316,7 @@ export default function SageCrystalBall() {
                   type="text"
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
-                  placeholder="Paste your marketing copy..."
+                  placeholder="Ask me anything..."
                   className="flex-1 px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder-white/40 focus:outline-none focus:border-purple-500/50 focus:bg-white/10 transition-all"
                   disabled={isThinking}
                 />
