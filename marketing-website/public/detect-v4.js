@@ -437,96 +437,84 @@
   }
 
   // ==========================================
-  // INTENT STATE MACHINE
+  // MINIMAL INTENT BRAIN - With Hysteresis
   // ==========================================
 
-  class IntentStateMachine {
-    constructor() {
-      this.intentScore = 0;
-      this.frustrationCount = 0;
-      this.lastFrustration = 0;
-      this.lastIntervention = 0;
-      this.interventionLock = false;
-      this.decayInterval = null;
-    }
+  const IntentBrain = (() => {
+    let score = 0;
+    let lockedUntil = 0;
+    let last = Date.now();
+    let decayInterval = null;
 
-    init() {
-      // Decay intent score over time
-      this.decayInterval = setInterval(() => {
-        if (this.intentScore > 0) {
-          this.intentScore = Math.max(0, this.intentScore - 2);
-        }
-        // Unlock interventions after cooldown
-        if (this.interventionLock && Date.now() - this.lastIntervention > 30000) {
-          this.interventionLock = false;
-        }
-      }, 1000);
-    }
+    const add = (v) => {
+      score = Math.max(0, Math.min(100, score + v));
+      last = Date.now();
+    };
 
-    updateIntent(emotion, confidence) {
+    const decay = () => {
       const now = Date.now();
+      const dt = (now - last) / 1000;
+      score = Math.max(0, score - dt * 2.5); // decay ~2.5 pts/sec
+      last = now;
+    };
 
-      switch(emotion) {
-        case 'interest':
-        case 'engaged':
-          this.intentScore = Math.min(100, this.intentScore + 5);
-          break;
-        case 'purchase_intent':
-          this.intentScore = Math.min(100, this.intentScore + 15);
-          break;
-        case 'confusion':
-          this.intentScore = Math.max(0, this.intentScore - 5);
-          break;
-        case 'frustration':
-          this.intentScore = Math.max(0, this.intentScore - 10);
-          this.frustrationCount++;
-          this.lastFrustration = now;
-          break;
-        case 'abandonment_risk':
-          this.intentScore = Math.max(0, this.intentScore - 20);
-          break;
+    const tick = () => {
+      decay();
+      if (Date.now() < lockedUntil) return null;
+
+      // Intervention thresholds with hysteresis
+      if (score >= 75) {
+        lockedUntil = Date.now() + 15000; // 15s lock
+        return { type: 'offer_help_or_incentive', score };
       }
-
-      return this.checkInterventions();
-    }
-
-    checkInterventions() {
-      if (this.interventionLock) return null;
-
-      const now = Date.now();
-
-      // Frustration intervention
-      if (this.frustrationCount >= 2 && (now - this.lastFrustration) < 10000) {
-        this.lockIntervention();
-        return { type: 'help', message: 'User appears frustrated' };
+      if (score >= 60) {
+        lockedUntil = Date.now() + 8000; // 8s lock
+        return { type: 'micro_assist_tooltip', score };
       }
-
-      // High intent intervention
-      if (this.intentScore >= 75) {
-        this.lockIntervention();
-        return { type: 'incentive', message: 'User shows high purchase intent' };
-      }
-
-      // Medium intent intervention
-      if (this.intentScore >= 60) {
-        this.lockIntervention();
-        return { type: 'assist', message: 'User shows moderate interest' };
-      }
-
       return null;
-    }
+    };
 
-    lockIntervention() {
-      this.interventionLock = true;
-      this.lastIntervention = Date.now();
-    }
+    const processEmotion = (emotion, context) => {
+      // Emotion boost values
+      const boost = {
+        interest: 8,
+        engaged: 6,
+        purchase_intent: 15,
+        scanning: 3,
+        reading: 2,
+        satisfaction: 4,
+        confusion: -6,
+        frustration: -10,
+        abandonment_risk: -15,
+        distracted: -3
+      }[emotion] ?? 0;
 
-    destroy() {
-      if (this.decayInterval) {
-        clearInterval(this.decayInterval);
+      // Context nudges
+      const contextBoost =
+        (context?.element === 'PRICE_ELEMENT') ? 6 :
+        (context?.element === 'CTA_BUTTON') ? 4 :
+        (context?.element === 'FORM_FIELD') ? 3 : 0;
+
+      add(boost + contextBoost);
+      return tick();
+    };
+
+    const init = () => {
+      // Run decay check every second
+      decayInterval = setInterval(() => decay(), 1000);
+    };
+
+    const destroy = () => {
+      if (decayInterval) {
+        clearInterval(decayInterval);
+        decayInterval = null;
       }
-    }
-  }
+    };
+
+    const getScore = () => score;
+
+    return { processEmotion, init, destroy, getScore };
+  })();
 
   // ==========================================
   // EMOTION ENGINE
@@ -535,7 +523,6 @@
   class EmotionEngine {
     constructor() {
       this.behaviorDetector = new BehaviorDetector();
-      this.intentMachine = new IntentStateMachine();
       this.emotionHistory = [];
       this.lastEmotionTime = Object.create(null);
       this.lastBehaviorTime = Object.create(null);
@@ -551,6 +538,8 @@
       this.pending = [];
       this.bound = [];
       this.lastNotificationTime = 0;
+      // Shadow mode by default in production
+      this.shadowMode = !debugMode || config.shadowMode;
       this.init();
     }
 
@@ -564,12 +553,13 @@
       // Check for reduced motion preference
       const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-      if (debugMode && !prefersReducedMotion) {
+      // Only show banner in debug mode, not shadow mode
+      if (debugMode && !this.shadowMode && !prefersReducedMotion) {
         this.showInitBanner();
       }
 
       this.initListeners();
-      this.intentMachine.init();
+      IntentBrain.init();
 
       // Process behaviors every second
       setInterval(() => this.processBehaviors(), 1000);
@@ -806,17 +796,17 @@
         this.pending.shift();
       }
 
-      // Check for interventions
-      const intervention = this.intentMachine.updateIntent(record.emotion, record.confidence);
+      // Process through intent brain
+      const intervention = IntentBrain.processEmotion(record.emotion, record.context);
       if (intervention && debugMode) {
-        console.log(`🎯 Intervention triggered: ${intervention.type} - ${intervention.message}`);
+        console.log(`🎯 Intervention: ${intervention.type} (score: ${intervention.score})`);
       }
 
-      // Show notification (rate limited)
+      // Show notification only if not in shadow mode
       const now = Date.now();
       const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-      if (!prefersReducedMotion && (debugMode || (now - this.lastNotificationTime > 60000))) {
+      if (!this.shadowMode && !prefersReducedMotion && (now - this.lastNotificationTime > 60000)) {
         this.showNotification(record.emotion, record.confidence);
         this.lastNotificationTime = now;
       }
@@ -986,7 +976,7 @@
     destroy() {
       this.bound.forEach(fn => fn());
       this.behaviorDetector.clearIdleTimer();
-      this.intentMachine.destroy();
+      IntentBrain.destroy();
     }
   }
 
@@ -998,11 +988,11 @@
 
   // Public API
   window.SentientIQ = {
-    version: '4.0.0',
+    version: '4.1.0',
 
     getEmotionHistory: () => window.SentientIQInstance.emotionHistory,
     getBehaviorHistory: () => window.SentientIQInstance.behaviorDetector.behaviorHistory,
-    getIntentScore: () => window.SentientIQInstance.intentMachine.intentScore,
+    getIntentScore: () => IntentBrain.getScore(),
 
     debug: {
       getBehaviors: () => BEHAVIORS,
@@ -1010,9 +1000,14 @@
       getModifiers: () => CONTEXT_MODIFIERS,
       getState: () => ({
         suspended: window.SentientIQInstance.behaviorDetector.suspended,
-        intentScore: window.SentientIQInstance.intentMachine.intentScore,
-        frustrationCount: window.SentientIQInstance.intentMachine.frustrationCount
+        intentScore: IntentBrain.getScore(),
+        shadowMode: window.SentientIQInstance.shadowMode
       })
+    },
+
+    // Enable/disable shadow mode at runtime
+    setShadowMode: (enabled) => {
+      window.SentientIQInstance.shadowMode = enabled;
     },
 
     destroy: () => {
