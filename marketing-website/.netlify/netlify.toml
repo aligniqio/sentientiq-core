@@ -88,8 +88,8 @@ force = true
 [redirects.headers]
 
 [[redirects]]
-from = "/detect.js"
-to = "/detect.js"
+from = "/detect-v2.js"
+to = "/detect-v2.js"
 status = 200.0
 force = true
 
@@ -98,6 +98,60 @@ force = true
 [redirects.conditions]
 
 [redirects.headers]
+
+[[redirects]]
+from = "/v2/detect.js"
+to = "/detect-v2.js"
+status = 200.0
+force = true
+
+[redirects.query]
+
+[redirects.conditions]
+
+[redirects.headers]
+
+[[redirects]]
+from = "/v3/detect.js"
+to = "/detect-v3.js"
+status = 200.0
+force = true
+
+[redirects.query]
+
+[redirects.conditions]
+
+[redirects.headers]
+
+[[redirects]]
+from = "/sentientiq.tpl"
+to = "/sentientiq.tpl"
+status = 200.0
+force = true
+
+[redirects.query]
+
+[redirects.conditions]
+
+[redirects.headers]
+Access-Control-Allow-Origin = "*"
+Content-Type = "application/octet-stream"
+Content-Disposition = "attachment; filename=\"sentientiq.tpl\""
+
+[[redirects]]
+from = "/gtm-template"
+to = "/sentientiq.tpl"
+status = 200.0
+force = true
+
+[redirects.query]
+
+[redirects.conditions]
+
+[redirects.headers]
+Access-Control-Allow-Origin = "*"
+Content-Type = "application/octet-stream"
+Content-Disposition = "attachment; filename=\"sentientiq.tpl\""
 
 [[redirects]]
 from = "/*"

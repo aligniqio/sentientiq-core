@@ -153,18 +153,17 @@ export default function SystemImplementation() {
               Google Tag Manager Template
             </h2>
             <p className="text-white/70 mb-4 max-w-2xl">
-              SentientIQ is now available in Google's Community Template Gallery.
+              Import our GTM template directly from our CDN.
               Deploy behavioral analytics to any website without touching code.
             </p>
             <div className="flex gap-4">
               <a
-                href="https://tagmanager.google.com/gallery/#/owners/sentientiq/templates/sentientiq-detect"
-                target="_blank"
-                rel="noopener noreferrer"
+                href="https://cdn.sentientiq.ai/sentientiq.tpl"
+                download="sentientiq.tpl"
                 className="inline-flex items-center gap-2 px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-all"
               >
                 <ExternalLink className="w-4 h-4" />
-                Open in GTM Gallery
+                Download GTM Template
               </a>
               <button
                 onClick={() => handleCopy(primaryApiKey)}
@@ -313,12 +312,12 @@ export default function SystemImplementation() {
               2
             </div>
             <div className="flex-1">
-              <h4 className="font-semibold text-white mb-2">Search Gallery</h4>
+              <h4 className="font-semibold text-white mb-2">Import Template</h4>
               <p className="text-white/60 mb-3">
-                Click "Search Gallery" and search for "SentientIQ Detect"
+                Click "New" → 3 dots menu → "Import" → Enter URL or upload the template file
               </p>
               <div className="bg-black/30 rounded-lg p-3 border border-white/10">
-                <code className="text-green-400 text-sm">Template Name: SentientIQ Detect - Behavioral Analytics</code>
+                <code className="text-green-400 text-sm">URL: https://cdn.sentientiq.ai/sentientiq.tpl</code>
               </div>
             </div>
           </div>
@@ -329,9 +328,9 @@ export default function SystemImplementation() {
               3
             </div>
             <div className="flex-1">
-              <h4 className="font-semibold text-white mb-2">Add to Workspace</h4>
+              <h4 className="font-semibold text-white mb-2">Save Template</h4>
               <p className="text-white/60 mb-3">
-                Click "Add to Workspace" and confirm the template import
+                Review permissions and click "Save" to add the template to your workspace
               </p>
             </div>
           </div>
