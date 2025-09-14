@@ -12,10 +12,35 @@
     Strict-Transport-Security = "max-age=31536000; includeSubDomains; preload"
     Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://www.googletagmanager.com https://www.google-analytics.com https://cdn.sentientiq.ai; img-src 'self' data: https: https://www.googletagmanager.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://tagmanager.google.com https://www.googletagmanager.com; font-src 'self' https://fonts.gstatic.com data:; connect-src 'self' https://api.stripe.com https://api.sentientiq.app https://www.google-analytics.com https://www.googletagmanager.com; frame-src https://js.stripe.com https://hooks.stripe.com https://www.googletagmanager.com; base-uri 'self'; form-action 'self';"
 
-# Serve detect.js directly (not as SPA route)
+# Redirect all old detection scripts to v4
+[[redirects]]
+  from = "/detect-v2.js"
+  to = "/detect-v4.js"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/detect-v3.js"
+  to = "/detect-v4.js"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/v3/detect.js"
+  to = "/detect-v4.js"
+  status = 200
+  force = true
+
 [[redirects]]
   from = "/detect.js"
-  to = "/detect.js"
+  to = "/detect-v4.js"
+  status = 200
+  force = true
+
+# Serve detect-v4.js directly
+[[redirects]]
+  from = "/detect-v4.js"
+  to = "/detect-v4.js"
   status = 200
   force = true
 
