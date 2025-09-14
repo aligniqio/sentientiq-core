@@ -1,10 +1,9 @@
 /**
- * SentientIQ Emotion Detection v4.0 - Production
- * Behavioral Taxonomy Engine with Emotional Forensics
+ * SentientIQ Emotion Detection v4.0
+ * Behavioral Taxonomy Engine
  *
  * Complete behavioral mapping with temporal context
  * Each behavior maps to ONE primary emotion with confidence modifiers
- * Production-hardened with visibility awareness, proper cooldowns, and state machine
  */
 
 (function() {
@@ -35,8 +34,7 @@
   const config = {
     apiEndpoint: 'https://api.sentientiq.app/api/emotional/event',
     apiKey: apiKey,
-    sessionId: crypto.randomUUID?.() || `sq_${Date.now()}_${Math.random().toString(36).slice(2,9)}`,
-    tenantId: scriptTag?.getAttribute('data-tenant-id') || urlParams.get('tenant') || apiKey.split('_')[0] || 'unknown',
+    sessionId: `sq_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
     debug: debugMode
   };
 
@@ -140,12 +138,9 @@
       this.mouseOffCanvasStart = null;
       this.hoverStart = null;
       this.hoverElement = null;
-      this.suspended = false;
     }
 
     detectClickBehavior(clicks) {
-      if (this.suspended) return null;
-
       const now = Date.now();
       const recentClicks = clicks.filter(c => now - c.t < 1000);
 
@@ -183,7 +178,7 @@
     }
 
     detectMoveBehavior(moves) {
-      if (this.suspended || moves.length < 3) return null;
+      if (moves.length < 3) return null;
 
       const recent = moves.slice(-5);
       const avgVelocity = recent.reduce((sum, m) => sum + m.v, 0) / recent.length;
@@ -203,24 +198,18 @@
         return { type: BEHAVIORS.SHAKE, confidence: 85 };
       }
 
-      // Enhanced exit intent with trend
-      const last = recent.at(-1);
-      const secondLast = recent.at(-2);
-      if (last && secondLast) {
-        const dy = last.y - secondLast.y;
-        const upwardStreak = recent.slice(-4).every((m, i, a) => i === 0 || a[i].y < a[i-1].y);
-
-        if (last.y < 8 && upwardStreak && avgVelocity > 12 && !document.hidden) {
-          if (debugMode) {
-            console.log('🚪 Exit intent detected');
-          }
-          return { type: BEHAVIORS.EXIT_INTENT, confidence: 85 };
+      // Check for exit intent
+      const lastMove = recent[recent.length - 1];
+      if (lastMove.y < 20 && avgVelocity > 10) {
+        if (debugMode) {
+          console.log('🚪 Exit intent detected');
         }
+        return { type: BEHAVIORS.EXIT_INTENT, confidence: 85 };
       }
 
       // Hover detection (stationary over element)
       if (avgVelocity < 0.5) {
-        const lastMove = recent[recent.length - 1];
+        // Check if hovering over something meaningful
         const element = document.elementFromPoint(lastMove.x, lastMove.y);
         if (element && element !== document.body && element !== document.documentElement) {
           if (!this.hoverStart) {
@@ -252,7 +241,7 @@
     }
 
     detectScrollBehavior(scrolls) {
-      if (this.suspended || scrolls.length < 2) return null;
+      if (scrolls.length < 2) return null;
 
       const recent = scrolls.slice(-10);
       const avgVelocity = recent.reduce((sum, s) => sum + Math.abs(s.v), 0) / recent.length;
@@ -289,8 +278,6 @@
     }
 
     detectIdleBehavior() {
-      if (this.suspended) return null;
-
       const idleTime = Date.now() - this.lastActivity;
 
       if (idleTime > 30000) {
@@ -305,8 +292,6 @@
     }
 
     detectMouseOffCanvas() {
-      if (this.suspended) return null;
-
       if (this.mouseOffCanvas && this.mouseOffCanvasStart) {
         const duration = Date.now() - this.mouseOffCanvasStart;
 
@@ -322,37 +307,36 @@
       return null;
     }
 
-    getContext(source) {
-      // source: {kind:'click'|'move'|'scroll', x, y, target}
-      let el = null;
-      if (source?.kind === 'click') {
-        el = source.target;
-      } else if (source?.x != null && source?.y != null) {
-        el = document.elementFromPoint(source.x, source.y);
-      }
+    getContext(event) {
+      const element = event?.target;
+      const context = {
+        element: null,
+        duration: null,
+        sequence: null
+      };
 
-      const ctx = { element: null, sequence: null };
-
-      if (el) {
-        const root = el.closest('[data-sq-role], button, nav, form, .price, [role="navigation"]');
-        if (root?.matches?.('[data-sq-role="price"], .price')) {
-          ctx.element = 'PRICE_ELEMENT';
-        } else if (root?.matches?.('button,[role="button"]')) {
-          ctx.element = 'CTA_BUTTON';
-        } else if (root?.matches?.('nav,[role="navigation"]')) {
-          ctx.element = 'NAVIGATION';
-        } else if (root?.closest?.('input,textarea,select,form')) {
-          ctx.element = 'FORM_FIELD';
+      if (element) {
+        // Check element type
+        if (element.textContent?.includes('$') || element.closest('.price')) {
+          context.element = 'PRICE_ELEMENT';
+        } else if (element.tagName === 'BUTTON' || element.closest('button')) {
+          context.element = 'CTA_BUTTON';
+        } else if (element.closest('nav') || element.closest('[role="navigation"]')) {
+          context.element = 'NAVIGATION';
+        } else if (element.tagName === 'INPUT' || element.tagName === 'TEXTAREA') {
+          context.element = 'FORM_FIELD';
         }
       }
 
-      // Sticky sequence context
-      const last = this.behaviorHistory.at(-1);
-      if (last?.emotion === 'frustration' && Date.now() - last.timestamp < 5000) {
-        ctx.sequence = 'AFTER_FRUSTRATION';
+      // Check recent emotion history for sequence
+      if (this.behaviorHistory.length > 0) {
+        const lastBehavior = this.behaviorHistory[this.behaviorHistory.length - 1];
+        if (lastBehavior.emotion === 'frustration' && (Date.now() - lastBehavior.timestamp) < 5000) {
+          context.sequence = 'AFTER_FRUSTRATION';
+        }
       }
 
-      return ctx;
+      return context;
     }
 
     recordBehavior(behavior, context) {
@@ -402,115 +386,16 @@
 
     resetActivity() {
       this.lastActivity = Date.now();
-      this.clearIdleTimer();
-
-      if (!this.suspended) {
-        this.idleTimer = setTimeout(() => {
-          const idle = this.detectIdleBehavior();
-          if (idle) {
-            this.recordBehavior(idle, {});
-          }
-        }, 3000);
-      }
-    }
-
-    clearIdleTimer() {
       if (this.idleTimer) {
         clearTimeout(this.idleTimer);
-        this.idleTimer = null;
       }
-    }
-  }
 
-  // ==========================================
-  // INTENT STATE MACHINE
-  // ==========================================
-
-  class IntentStateMachine {
-    constructor() {
-      this.intentScore = 0;
-      this.frustrationCount = 0;
-      this.lastFrustration = 0;
-      this.lastIntervention = 0;
-      this.interventionLock = false;
-      this.decayInterval = null;
-    }
-
-    init() {
-      // Decay intent score over time
-      this.decayInterval = setInterval(() => {
-        if (this.intentScore > 0) {
-          this.intentScore = Math.max(0, this.intentScore - 2);
+      this.idleTimer = setTimeout(() => {
+        const idle = this.detectIdleBehavior();
+        if (idle) {
+          this.recordBehavior(idle, {});
         }
-        // Unlock interventions after cooldown
-        if (this.interventionLock && Date.now() - this.lastIntervention > 30000) {
-          this.interventionLock = false;
-        }
-      }, 1000);
-    }
-
-    updateIntent(emotion, confidence) {
-      const now = Date.now();
-
-      switch(emotion) {
-        case 'interest':
-        case 'engaged':
-          this.intentScore = Math.min(100, this.intentScore + 5);
-          break;
-        case 'purchase_intent':
-          this.intentScore = Math.min(100, this.intentScore + 15);
-          break;
-        case 'confusion':
-          this.intentScore = Math.max(0, this.intentScore - 5);
-          break;
-        case 'frustration':
-          this.intentScore = Math.max(0, this.intentScore - 10);
-          this.frustrationCount++;
-          this.lastFrustration = now;
-          break;
-        case 'abandonment_risk':
-          this.intentScore = Math.max(0, this.intentScore - 20);
-          break;
-      }
-
-      return this.checkInterventions();
-    }
-
-    checkInterventions() {
-      if (this.interventionLock) return null;
-
-      const now = Date.now();
-
-      // Frustration intervention
-      if (this.frustrationCount >= 2 && (now - this.lastFrustration) < 10000) {
-        this.lockIntervention();
-        return { type: 'help', message: 'User appears frustrated' };
-      }
-
-      // High intent intervention
-      if (this.intentScore >= 75) {
-        this.lockIntervention();
-        return { type: 'incentive', message: 'User shows high purchase intent' };
-      }
-
-      // Medium intent intervention
-      if (this.intentScore >= 60) {
-        this.lockIntervention();
-        return { type: 'assist', message: 'User shows moderate interest' };
-      }
-
-      return null;
-    }
-
-    lockIntervention() {
-      this.interventionLock = true;
-      this.lastIntervention = Date.now();
-    }
-
-    destroy() {
-      if (this.decayInterval) {
-        clearInterval(this.decayInterval);
-      }
+      }, 3000);
     }
   }
 
@@ -521,60 +406,28 @@
   class EmotionEngine {
     constructor() {
       this.behaviorDetector = new BehaviorDetector();
-      this.intentMachine = new IntentStateMachine();
       this.emotionHistory = [];
-      this.lastEmotionTime = Object.create(null);
-      this.lastBehaviorTime = Object.create(null);
-      this.behaviorCooldowns = {
-        hover: 2000,
-        shake: 5000,
-        rage_click: 8000,
-        exit_intent: 7000,
-        slow_scroll: 2000,
-        fast_scroll: 2000,
-        skim_scroll: 3000
-      };
-      this.pending = [];
-      this.bound = [];
-      this.lastNotificationTime = 0;
+      this.lastEmotionTime = {};
       this.init();
     }
 
     init() {
       if (debugMode) {
-        console.log('🚀 SentientIQ v4.0 Production initialized');
+        console.log('🚀 SentientIQ v4.0 initialized');
         console.log('📊 Behavioral Taxonomy Engine active');
-        console.log('🔑 Tenant:', config.tenantId);
+        console.log('🔑 API Key:', config.apiKey.substring(0, 20) + '...');
       }
 
-      // Check for reduced motion preference
-      const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-      if (debugMode && !prefersReducedMotion) {
-        this.showInitBanner();
-      }
-
+      this.showInitBanner();
       this.initListeners();
-      this.intentMachine.init();
 
       // Process behaviors every second
       setInterval(() => this.processBehaviors(), 1000);
     }
 
     initListeners() {
-      // Visibility change handling
-      this.on(document, 'visibilitychange', () => {
-        const hidden = document.visibilityState === 'hidden';
-        this.behaviorDetector.suspended = hidden;
-        if (hidden) {
-          this.behaviorDetector.clearIdleTimer();
-        } else {
-          this.behaviorDetector.resetActivity();
-        }
-      });
-
       // Click tracking
-      this.on(document, 'click', (e) => {
+      document.addEventListener('click', (e) => {
         const click = {
           x: e.clientX,
           y: e.clientY,
@@ -592,23 +445,24 @@
         if (debugMode) {
           console.log('🖱️ Click:', { x: click.x, y: click.y });
         }
-      }, { passive: true });
+      });
 
-      // Pointer movement tracking (works with mouse and touch)
+      // Mouse movement tracking
       let lastMoveTime = 0;
-      this.on(document, 'pointermove', (e) => {
+      document.addEventListener('mousemove', (e) => {
         const now = Date.now();
-        const dt = Math.max(now - lastMoveTime, 16); // Minimum 1 frame
-        if (dt < 50) return; // Throttle
-
-        const prev = this.behaviorDetector.moveHistory.at(-1);
-        const dist = prev ? Math.hypot(e.clientX - prev.x, e.clientY - prev.y) : 0;
+        if (now - lastMoveTime < 50) return; // Throttle
 
         const move = {
           x: e.clientX,
           y: e.clientY,
           t: now,
-          v: dist / (dt / 100)
+          v: this.behaviorDetector.moveHistory.length > 0
+            ? Math.sqrt(
+                Math.pow(e.clientX - this.behaviorDetector.moveHistory[this.behaviorDetector.moveHistory.length-1].x, 2) +
+                Math.pow(e.clientY - this.behaviorDetector.moveHistory[this.behaviorDetector.moveHistory.length-1].y, 2)
+              ) / ((now - lastMoveTime) / 100)
+            : 0
         };
 
         this.behaviorDetector.moveHistory.push(move);
@@ -620,41 +474,38 @@
         this.behaviorDetector.mouseOffCanvas = false;
         this.behaviorDetector.mouseOffCanvasStart = null;
         lastMoveTime = now;
-      }, { passive: true });
+      });
 
-      // Pointer leave tracking
-      this.on(window, 'pointerleave', () => {
-        if (!this.behaviorDetector.suspended) {
-          this.behaviorDetector.mouseOffCanvas = true;
-          this.behaviorDetector.mouseOffCanvasStart = Date.now();
+      // Mouse leave tracking
+      document.addEventListener('mouseleave', () => {
+        this.behaviorDetector.mouseOffCanvas = true;
+        this.behaviorDetector.mouseOffCanvasStart = Date.now();
 
-          if (debugMode) {
-            console.log('🚪 Pointer left viewport');
-          }
+        if (debugMode) {
+          console.log('🚪 Mouse left viewport');
         }
-      }, { passive: true });
+      });
 
-      this.on(window, 'pointerenter', () => {
+      document.addEventListener('mouseenter', () => {
         if (this.behaviorDetector.mouseOffCanvas && this.behaviorDetector.mouseOffCanvasStart) {
           const duration = Date.now() - this.behaviorDetector.mouseOffCanvasStart;
           if (debugMode) {
-            console.log(`🔙 Pointer returned after ${duration}ms`);
+            console.log(`🔙 Mouse returned after ${duration}ms`);
           }
         }
         this.behaviorDetector.mouseOffCanvas = false;
         this.behaviorDetector.mouseOffCanvasStart = null;
-      }, { passive: true });
+      });
 
       // Scroll tracking
       let lastScrollTime = 0;
       let lastScrollY = window.scrollY;
-      this.on(window, 'scroll', () => {
+      document.addEventListener('scroll', () => {
         const now = Date.now();
-        const dt = Math.max(now - lastScrollTime, 16);
-        if (dt < 100) return; // Throttle
+        if (now - lastScrollTime < 100) return; // Throttle
 
         const scrollY = window.scrollY;
-        const velocity = (scrollY - lastScrollY) / (dt / 100);
+        const velocity = (scrollY - lastScrollY) / ((now - lastScrollTime) / 100);
 
         const scroll = {
           y: scrollY,
@@ -670,107 +521,61 @@
         this.behaviorDetector.resetActivity();
         lastScrollY = scrollY;
         lastScrollTime = now;
-      }, { passive: true });
-
-      // Page unload handling
-      this.on(window, 'pagehide', () => {
-        if (this.pending.length > 0 && navigator.sendBeacon) {
-          const blob = new Blob(
-            [JSON.stringify(this.pending)],
-            { type: 'application/json' }
-          );
-          navigator.sendBeacon(config.apiEndpoint, blob);
-        }
       });
     }
 
-    on(el, evt, fn, opts) {
-      el.addEventListener(evt, fn, opts);
-      this.bound.push(() => el.removeEventListener(evt, fn, opts));
-    }
-
     processBehaviors() {
-      if (this.behaviorDetector.suspended) return;
-
       const behaviors = [];
-
-      // Get current position for context
-      const lastMove = this.behaviorDetector.moveHistory.at(-1);
-      const currentSource = lastMove ? {
-        kind: 'move',
-        x: lastMove.x,
-        y: lastMove.y
-      } : null;
 
       // Check click behaviors
       const clickBehavior = this.behaviorDetector.detectClickBehavior(this.behaviorDetector.clickHistory);
-      if (clickBehavior) {
-        const lastClick = this.behaviorDetector.clickHistory.at(-1);
-        behaviors.push({
-          behavior: clickBehavior,
-          source: lastClick ? { kind: 'click', x: lastClick.x, y: lastClick.y, target: lastClick.target } : null
-        });
-      }
+      if (clickBehavior) behaviors.push(clickBehavior);
 
       // Check move behaviors
       const moveBehavior = this.behaviorDetector.detectMoveBehavior(this.behaviorDetector.moveHistory);
-      if (moveBehavior) {
-        behaviors.push({ behavior: moveBehavior, source: currentSource });
-      }
+      if (moveBehavior) behaviors.push(moveBehavior);
 
       // Check scroll behaviors
       const scrollBehavior = this.behaviorDetector.detectScrollBehavior(this.behaviorDetector.scrollHistory);
-      if (scrollBehavior) {
-        behaviors.push({ behavior: scrollBehavior, source: currentSource });
-      }
+      if (scrollBehavior) behaviors.push(scrollBehavior);
 
       // Check idle behavior
       const idleBehavior = this.behaviorDetector.detectIdleBehavior();
-      if (idleBehavior) {
-        behaviors.push({ behavior: idleBehavior, source: null });
-      }
+      if (idleBehavior) behaviors.push(idleBehavior);
 
       // Check mouse off canvas
       const mouseOffBehavior = this.behaviorDetector.detectMouseOffCanvas();
-      if (mouseOffBehavior) {
-        behaviors.push({ behavior: mouseOffBehavior, source: null });
-      }
+      if (mouseOffBehavior) behaviors.push(mouseOffBehavior);
 
       // Process each detected behavior
-      for (const { behavior, source } of behaviors) {
-        const context = this.behaviorDetector.getContext(source);
-        const record = this.behaviorDetector.recordBehavior(behavior, context);
+      for (const behavior of behaviors) {
+        const context = this.behaviorDetector.getContext({
+          target: this.behaviorDetector.clickHistory[this.behaviorDetector.clickHistory.length - 1]?.target
+        });
 
+        const record = this.behaviorDetector.recordBehavior(behavior, context);
         if (record && this.shouldEmitEmotion(record)) {
           this.emitEmotion(record);
         }
       }
     }
 
-    shouldEmitEmotion(rec) {
-      if (this.behaviorDetector.suspended) return false;
-      if (rec.confidence <= 50) return false;
+    shouldEmitEmotion(record) {
+      // Prevent emotion spam - same emotion needs cooldown
+      const lastTime = this.lastEmotionTime[record.emotion];
+      if (lastTime && (Date.now() - lastTime) < 5000) {
+        return false;
+      }
 
-      const now = Date.now();
-
-      // Check behavior cooldown
-      const bt = this.lastBehaviorTime[rec.behavior] || 0;
-      const bc = this.behaviorCooldowns[rec.behavior] ?? 1500;
-      if (now - bt < bc) return false;
-
-      // Check emotion cooldown
-      const et = this.lastEmotionTime[rec.emotion] || 0;
-      if (now - et < 5000) return false;
-
-      this.lastBehaviorTime[rec.behavior] = now;
-      return true;
+      // Confidence threshold
+      return record.confidence > 50;
     }
 
     emitEmotion(record) {
       const event = {
         session_id: config.sessionId,
-        user_id: null, // Privacy: don't send user ID unless consented
-        tenant_id: config.tenantId,
+        user_id: config.apiKey,
+        tenant_id: config.apiKey,
         emotion: record.emotion,
         confidence: record.confidence,
         behavior: record.behavior,
@@ -778,34 +583,13 @@
         timestamp: new Date().toISOString(),
         metadata: {
           behavior: record.behavior,
-          context: {
-            element: record.context.element,
-            sequence: record.context.sequence
-          },
+          context: record.context,
           confidence: record.confidence
         }
       };
 
-      // Queue for potential batch send
-      this.pending.push(event);
-      if (this.pending.length > 20) {
-        this.pending.shift();
-      }
-
-      // Check for interventions
-      const intervention = this.intentMachine.updateIntent(record.emotion, record.confidence);
-      if (intervention && debugMode) {
-        console.log(`🎯 Intervention triggered: ${intervention.type} - ${intervention.message}`);
-      }
-
-      // Show notification (rate limited)
-      const now = Date.now();
-      const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-      if (!prefersReducedMotion && (debugMode || (now - this.lastNotificationTime > 60000))) {
-        this.showNotification(record.emotion, record.confidence);
-        this.lastNotificationTime = now;
-      }
+      // Show notification
+      this.showNotification(record.emotion, record.confidence);
 
       // Track in history
       this.emotionHistory.push({
@@ -824,28 +608,18 @@
 
       // Send to API
       if (config.apiKey && config.apiKey !== 'sq_demo_v4') {
-        try {
+        fetch(config.apiEndpoint, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-API-Key': config.apiKey
+          },
+          body: JSON.stringify(event)
+        }).catch(err => {
           if (debugMode) {
-            console.log('📤 Sending to API:', event);
+            console.error('Failed to send emotion:', err);
           }
-          fetch(config.apiEndpoint, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'X-API-Key': config.apiKey
-            },
-            body: JSON.stringify(event),
-            keepalive: true
-          }).then(res => {
-            if (debugMode) {
-              console.log('✅ API response:', res.status);
-            }
-          }).catch(err => {
-            if (debugMode) {
-              console.error('❌ API error:', err);
-            }
-          });
-        } catch {}
+        });
       }
 
       if (debugMode) {
@@ -890,10 +664,10 @@
           <span style="font-size: 28px;">🧠</span>
           <div>
             <div style="font-weight: 600; margin-bottom: 8px; font-size: 16px;">
-              SentientIQ v4.0 Production
+              SentientIQ v4.0 Active
             </div>
             <div style="opacity: 0.8; line-height: 1.4;">
-              Emotional forensics engine active.
+              Behavioral taxonomy engine monitoring user experience.
               ${debugMode ? '<br><span style="color: #667eea;">🔍 Debug mode enabled</span>' : ''}
             </div>
           </div>
@@ -968,12 +742,6 @@
         setTimeout(() => notification.remove(), 300);
       }, 4000);
     }
-
-    destroy() {
-      this.bound.forEach(fn => fn());
-      this.behaviorDetector.clearIdleTimer();
-      this.intentMachine.destroy();
-    }
   }
 
   // ==========================================
@@ -988,21 +756,11 @@
 
     getEmotionHistory: () => window.SentientIQInstance.emotionHistory,
     getBehaviorHistory: () => window.SentientIQInstance.behaviorDetector.behaviorHistory,
-    getIntentScore: () => window.SentientIQInstance.intentMachine.intentScore,
 
     debug: {
       getBehaviors: () => BEHAVIORS,
       getMapping: () => BEHAVIOR_EMOTION_MAP,
-      getModifiers: () => CONTEXT_MODIFIERS,
-      getState: () => ({
-        suspended: window.SentientIQInstance.behaviorDetector.suspended,
-        intentScore: window.SentientIQInstance.intentMachine.intentScore,
-        frustrationCount: window.SentientIQInstance.intentMachine.frustrationCount
-      })
-    },
-
-    destroy: () => {
-      window.SentientIQInstance?.destroy();
+      getModifiers: () => CONTEXT_MODIFIERS
     }
   };
 
@@ -1010,14 +768,14 @@
   if (debugMode) {
     console.log(`
 ╔═══════════════════════════════════════════════════════╗
-║   🧠 SENTIENTIQ v4.0 - PRODUCTION ENGINE             ║
+║   🧠 SENTIENTIQ v4.0 - BEHAVIORAL TAXONOMY ENGINE    ║
 ║                                                       ║
-║   Emotional forensics via cursor telemetry           ║
-║   Visibility-aware • Privacy-safe • Intervention-ready║
+║   Every behavior mapped to primary emotion           ║
+║   Context modifies confidence, not emotion           ║
+║   Temporal patterns detected automatically           ║
 ║                                                       ║
-║   Behaviors: ${Object.keys(BEHAVIORS).length} defined                              ║
-║   Emotions: ${new Set(Object.values(BEHAVIOR_EMOTION_MAP).map(m => m.emotion)).size} unique                                 ║
-║   State machine: Active                              ║
+║   Behaviors: ${Object.keys(BEHAVIORS).length} defined
+║   Emotions: ${new Set(Object.values(BEHAVIOR_EMOTION_MAP).map(m => m.emotion)).size} unique
 ╚═══════════════════════════════════════════════════════╝
     `);
   }

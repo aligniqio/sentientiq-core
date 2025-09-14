@@ -13,11 +13,17 @@
   // CONFIGURATION
   // ==========================================
 
-  const scriptTag = document.currentScript;
+  // Find our script tag (works even when injected dynamically)
+  const scripts = document.querySelectorAll('script[src*="detect"]');
+  const scriptTag = Array.from(scripts).find(s => s.src.includes('/v3/detect.js')) || document.currentScript;
+
+  const scriptUrl = scriptTag?.src || '';
+  const urlParams = new URLSearchParams(scriptUrl.split('?')[1] || '');
+
   const apiKey = scriptTag?.getAttribute('data-api-key') ||
-                 new URLSearchParams(scriptTag?.src?.split('?')[1] || '').get('key') ||
+                 urlParams.get('key') ||
                  'sq_demo_marketing_v3';
-  const urlParams = new URLSearchParams(scriptTag?.src?.split('?')[1] || '');
+
   const debugMode = scriptTag?.getAttribute('data-debug') === 'true' ||
                     urlParams.get('debug') === 'true';
 
@@ -41,7 +47,7 @@
   const EMOTION_PATTERNS = {
     // Each emotion requires multiple signals to be valid
     frustration: {
-      required: 2,
+      required: 1,  // Rage click alone is strong enough
       signals: [
         { type: 'rage_click', weight: 1.0 },
         { type: 'rapid_scroll_direction_change', weight: 0.8 },
@@ -159,7 +165,7 @@
       // Clean old signals from active set
       this.signals = new Set(
         this.signalHistory
-          .filter(s => now - s.timestamp < 5000) // 5 second window
+          .filter(s => now - s.timestamp < 10000) // 10 second window for pattern matching
           .map(s => s.type)
       );
 
@@ -257,6 +263,10 @@
       const activeSignals = this.signalDetector.getActiveSignals();
       const matches = [];
 
+      if (debugMode && activeSignals.length > 0) {
+        console.log('🔎 Pattern matching with signals:', activeSignals);
+      }
+
       for (const [emotion, pattern] of Object.entries(EMOTION_PATTERNS)) {
         // Check for anti-signals (disqualifiers)
         const hasAntiSignal = pattern.antiSignals.some(
@@ -264,6 +274,9 @@
         );
 
         if (hasAntiSignal) {
+          if (debugMode) {
+            console.log(`❌ ${emotion} blocked by anti-signal`);
+          }
           continue; // Skip this emotion
         }
 
@@ -271,6 +284,10 @@
         const matchedSignals = pattern.signals
           .map(s => s.type)
           .filter(signal => activeSignals.includes(signal));
+
+        if (debugMode && matchedSignals.length > 0) {
+          console.log(`🎲 ${emotion}: ${matchedSignals.length}/${pattern.required} signals matched`, matchedSignals);
+        }
 
         // Need minimum number of signals
         if (matchedSignals.length >= pattern.required) {
@@ -282,12 +299,17 @@
 
           // Only include if confidence is meaningful
           if (confidence > 50) {
+            if (debugMode) {
+              console.log(`✅ ${emotion} matched with ${confidence}% confidence!`);
+            }
             matches.push({
               emotion,
               confidence,
               signals: matchedSignals,
               timestamp: Date.now()
             });
+          } else if (debugMode) {
+            console.log(`⚠️ ${emotion} confidence too low: ${confidence}%`);
           }
         }
       }
@@ -757,12 +779,147 @@
       this.init();
     }
 
+    showInitBanner() {
+      const banner = document.createElement('div');
+      banner.id = 'sentientiq-init-banner';
+      banner.style.cssText = `
+        position: fixed;
+        bottom: 20px;
+        left: 20px;
+        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+        color: white;
+        padding: 20px 24px;
+        border-radius: 12px;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        font-size: 14px;
+        z-index: 999999;
+        animation: slideUp 0.4s ease-out;
+        max-width: 360px;
+        border: 1px solid rgba(102, 126, 234, 0.3);
+      `;
+
+      // Add animation styles
+      if (!document.getElementById('sentientiq-animations')) {
+        const style = document.createElement('style');
+        style.id = 'sentientiq-animations';
+        style.textContent = `
+          @keyframes slideUp {
+            from { transform: translateY(100px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+          }
+          @keyframes slideOut {
+            from { transform: translateY(0); opacity: 1; }
+            to { transform: translateY(100px); opacity: 0; }
+          }
+        `;
+        document.head.appendChild(style);
+      }
+
+      banner.innerHTML = `
+        <div style="display: flex; align-items: flex-start; gap: 12px;">
+          <span style="font-size: 28px;">🧠</span>
+          <div>
+            <div style="font-weight: 600; margin-bottom: 8px; font-size: 16px;">
+              SentientIQ Active
+            </div>
+            <div style="opacity: 0.8; line-height: 1.4;">
+              Emotion detection v3.0 is monitoring user experience.
+              ${debugMode ? '<br><span style="color: #667eea;">🔍 Debug mode enabled - check console</span>' : ''}
+            </div>
+          </div>
+        </div>
+      `;
+
+      document.body.appendChild(banner);
+
+      // Auto-remove after 5 seconds
+      setTimeout(() => {
+        banner.style.animation = 'slideOut 0.4s ease-in';
+        banner.style.animationFillMode = 'forwards';
+        setTimeout(() => banner.remove(), 400);
+      }, 5000);
+
+      // Log behaviors being tracked
+      if (debugMode) {
+        console.log('%c📊 Tracking behaviors:', 'color: #667eea; font-weight: bold');
+        console.log('  • Rage clicks (3+ rapid clicks)');
+        console.log('  • Scroll patterns (hesitation, rapid changes)');
+        console.log('  • Mouse movements (shake, hover patterns)');
+        console.log('  • Content engagement (slow reading, highlighting)');
+        console.log('  • Navigation intent (back button, tab switching)');
+      }
+    }
+
+    showNotification(emotion, confidence) {
+      // Remove any existing notification
+      const existing = document.getElementById('sentientiq-notification');
+      if (existing) existing.remove();
+
+      // Create notification element
+      const notification = document.createElement('div');
+      notification.id = 'sentientiq-notification';
+      notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 16px 24px;
+        border-radius: 12px;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        font-size: 14px;
+        z-index: 999999;
+        animation: slideIn 0.3s ease-out;
+        max-width: 320px;
+      `;
+
+      // Emotion emoji map
+      const emojiMap = {
+        frustration: '😤',
+        confusion: '🤔',
+        interest: '👀',
+        delight: '😊',
+        purchase_intent: '💳',
+        abandonment_risk: '🚪',
+        section_transition: '📍'
+      };
+
+      notification.innerHTML = `
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <span style="font-size: 24px;">${emojiMap[emotion] || '🎯'}</span>
+          <div>
+            <div style="font-weight: 600; margin-bottom: 4px;">
+              ${emotion.replace(/_/g, ' ').charAt(0).toUpperCase() + emotion.slice(1).replace(/_/g, ' ')}
+            </div>
+            <div style="opacity: 0.9; font-size: 12px;">
+              ${confidence}% confidence • SentientIQ
+            </div>
+          </div>
+        </div>
+      `;
+
+      document.body.appendChild(notification);
+
+      // Auto-remove after 4 seconds
+      setTimeout(() => {
+        notification.style.transition = 'transform 0.3s ease-in, opacity 0.3s ease-in';
+        notification.style.transform = 'translateX(400px)';
+        notification.style.opacity = '0';
+        setTimeout(() => notification.remove(), 300);
+      }, 4000);
+    }
+
     init() {
       if (debugMode) {
         console.log('🚀 SentientIQ v3.0 initialized');
         console.log('📊 Debug mode enabled');
         console.log('🔑 API Key:', config.apiKey.substring(0, 20) + '...');
       }
+
+      // Show initialization banner
+      this.showInitBanner();
 
       // Start processing loop
       setInterval(() => this.process(), 2000);
@@ -829,15 +986,13 @@
     handleSectionChange(from, to) {
       if (!from) return;
 
-      // Emit transition emotion
-      this.emitEmotion('section_transition', {
-        from,
-        to,
-        confidence: 60
-      });
+      // Log section change but don't emit as emotion
+      if (debugMode) {
+        console.log(`📍 Section change: ${from} → ${to}`);
+      }
 
-      // Clear signals for fresh start in new section
-      this.signalDetector.clear();
+      // Don't clear signals - let them persist across sections
+      // This allows emotions to build up naturally
     }
 
     emitEmotion(emotion, metadata) {
@@ -852,6 +1007,9 @@
         timestamp: new Date().toISOString(),
         metadata: metadata
       };
+
+      // Show notification banner
+      this.showNotification(emotion, metadata.confidence);
 
       // Track in history
       this.emotionHistory.push({
