@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { ExternalLink, CheckCircle, Copy, Zap, Shield, BarChart3, Clock, Key, RefreshCw, HelpCircle } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { ExternalLink, CheckCircle, Copy, Zap, Shield, BarChart3, Clock, Key, RefreshCw, HelpCircle, X } from 'lucide-react';
 import PageHeader from '../../components/PageHeader';
 import { useUser } from '@clerk/clerk-react';
+import { useSageHint } from '../../hooks/useTenant';
 
 export default function SystemImplementation() {
   const { user } = useUser();
@@ -10,6 +11,18 @@ export default function SystemImplementation() {
   const [apiKeys, setApiKeys] = useState<Array<{id: string, name: string, key: string, created: string}>>([]);
   const [newKeyName, setNewKeyName] = useState('');
   const [generatingKey, setGeneratingKey] = useState(false);
+
+  // Sage hint management
+  const { shouldShow, trackShown, trackDismissed, dismissPermanently } = useSageHint('/system/implementation');
+  const [hintShown, setHintShown] = useState(false);
+
+  // Track when hint is shown
+  useEffect(() => {
+    if (shouldShow && !hintShown) {
+      trackShown();
+      setHintShown(true);
+    }
+  }, [shouldShow, hintShown, trackShown]);
 
   // Load existing API keys
   useEffect(() => {
@@ -66,37 +79,67 @@ export default function SystemImplementation() {
         subtitle="Install SentientIQ via Google Tag Manager in minutes"
       />
 
-      {/* Sage Helper Hint */}
-      <motion.div
-        initial={{ opacity: 0, x: 20 }}
-        animate={{ opacity: 1, x: 0 }}
-        className="fixed top-24 right-6 max-w-xs glass-card p-4 bg-purple-900/20 border-purple-500/30 z-40 cursor-pointer hover:bg-purple-900/30 transition-all"
-        onClick={() => {
-          // Find and click the Sage crystal ball
-          const sageBall = document.querySelector('[data-sage-crystal-ball]');
-          if (sageBall) {
-            (sageBall as HTMLElement).click();
-          }
-        }}
-      >
-        <div className="flex items-start gap-3">
-          <HelpCircle className="w-5 h-5 text-purple-400 mt-0.5" />
-          <div>
-            <p className="text-sm text-white/80 mb-2">
-              Need help? <strong>Sage</strong> is watching this page and can help with:
-            </p>
-            <ul className="text-xs text-white/60 space-y-1">
-              <li>• "What is Google Tag Manager?"</li>
-              <li>• "Where do I find the template gallery?"</li>
-              <li>• "Which trigger should I use?"</li>
-              <li>• "How do I test if it's working?"</li>
-            </ul>
-            <p className="text-xs text-purple-400 mt-3">
-              Click the purple orb → bottom right
-            </p>
-          </div>
-        </div>
-      </motion.div>
+      {/* Sage Helper Hint - Only shows for new users */}
+      <AnimatePresence>
+        {shouldShow && (
+          <motion.div
+            initial={{ opacity: 0, x: 100 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 100 }}
+            className="fixed top-24 right-6 max-w-xs glass-card p-4 bg-purple-900/20 border-purple-500/30 z-40 transition-all"
+          >
+            {/* Dismiss button */}
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                trackDismissed();
+              }}
+              className="absolute top-2 right-2 p-1 hover:bg-white/10 rounded-full transition-colors"
+              aria-label="Dismiss hint"
+            >
+              <X className="w-4 h-4 text-white/40 hover:text-white/60" />
+            </button>
+
+            <div
+              className="cursor-pointer"
+              onClick={() => {
+                // Find and click the Sage crystal ball
+                const sageBall = document.querySelector('[data-sage-crystal-ball]');
+                if (sageBall) {
+                  (sageBall as HTMLElement).click();
+                  trackDismissed(); // Hide after opening Sage
+                }
+              }}
+            >
+              <div className="flex items-start gap-3">
+                <HelpCircle className="w-5 h-5 text-purple-400 mt-0.5" />
+                <div>
+                  <p className="text-sm text-white/80 mb-2">
+                    Need help? <strong>Sage</strong> is watching this page and can help with:
+                  </p>
+                  <ul className="text-xs text-white/60 space-y-1">
+                    <li>• "What is Google Tag Manager?"</li>
+                    <li>• "Where do I find the template gallery?"</li>
+                    <li>• "Which trigger should I use?"</li>
+                    <li>• "How do I test if it's working?"</li>
+                  </ul>
+                  <p className="text-xs text-purple-400 mt-3">
+                    Click here or the purple orb → bottom right
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Don't show again option */}
+            <button
+              onClick={() => dismissPermanently()}
+              className="mt-3 text-xs text-white/40 hover:text-white/60 transition-colors"
+            >
+              Don't show hints anymore
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Hero Section */}
       <motion.div

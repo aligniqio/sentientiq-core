@@ -25,6 +25,8 @@ export interface Organization {
   };
   monthly_event_limit: number;
   monthly_events_used: number;
+  api_keys_limit: number;
+  team_members_limit: number;
 }
 
 export interface OrganizationMember {
@@ -34,6 +36,8 @@ export interface OrganizationMember {
   role: 'owner' | 'admin' | 'member' | 'viewer';
   email: string;
   name: string;
+  joined_at: string;
+  last_seen_at?: string;
   preferences: {
     show_onboarding: boolean;
     sage_hints_dismissed: boolean;
