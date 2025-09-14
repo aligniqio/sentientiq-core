@@ -519,7 +519,18 @@
   // EMOTION EMISSION
   // ==========================================
   
+  // Track recently emitted emotions to prevent duplicates
+  const recentEmotions = new Map();
+
   function emitEmotion(emotionType, metadata = {}) {
+    // Prevent duplicate emotions within 3 seconds
+    const emotionKey = `${emotionType}-${metadata.section || state.currentSection}`;
+    const lastEmitted = recentEmotions.get(emotionKey);
+    if (lastEmitted && Date.now() - lastEmitted < 3000) {
+      return; // Skip duplicate emotion
+    }
+    recentEmotions.set(emotionKey, Date.now());
+
     const event = {
       session_id: config.sessionId,
       user_id: config.apiKey,
@@ -689,7 +700,7 @@
         confidence: 60
       });
     }
-  }, 100);
+  }, 2000); // Check every 2 seconds instead of 100ms
 
   // ==========================================
   // PUBLIC API
