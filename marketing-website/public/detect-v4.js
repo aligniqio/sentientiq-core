@@ -826,8 +826,17 @@
       // Update last emotion time
       this.lastEmotionTime[record.emotion] = Date.now();
 
-      // Send to API
+      // Send to API with rate limit awareness
       if (config.apiKey && config.apiKey !== 'sq_demo_v4') {
+        // Check if we're rate limited
+        const now = Date.now();
+        if (this.rateLimitedUntil && now < this.rateLimitedUntil) {
+          if (debugMode) {
+            console.log('⏳ Rate limited, queuing event');
+          }
+          return; // Skip sending while rate limited
+        }
+
         try {
           if (debugMode) {
             console.log('📤 Sending to API:', event);
@@ -841,7 +850,13 @@
             body: JSON.stringify(event),
             keepalive: true
           }).then(res => {
-            if (debugMode) {
+            if (res.status === 429) {
+              // Rate limited - back off for 30 seconds
+              this.rateLimitedUntil = Date.now() + 30000;
+              if (debugMode) {
+                console.warn('⚠️ Rate limited! Backing off for 30s');
+              }
+            } else if (debugMode) {
               console.log('✅ API response:', res.status);
             }
           }).catch(err => {
