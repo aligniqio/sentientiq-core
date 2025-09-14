@@ -124,6 +124,18 @@ force = true
 [redirects.headers]
 
 [[redirects]]
+from = "/detect-v4.js"
+to = "/detect-v3.js"
+status = 200.0
+force = true
+
+[redirects.query]
+
+[redirects.conditions]
+
+[redirects.headers]
+
+[[redirects]]
 from = "/sentientiq.tpl"
 to = "/sentientiq.tpl"
 status = 200.0
