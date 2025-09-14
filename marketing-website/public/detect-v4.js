@@ -334,14 +334,28 @@
       const ctx = { element: null, sequence: null };
 
       if (el) {
-        const root = el.closest('[data-sq-role], button, nav, form, .price, [role="navigation"]');
-        if (root?.matches?.('[data-sq-role="price"], .price')) {
+        // Check element and its text content for context clues
+        const elementText = el.textContent?.toLowerCase() || '';
+        const href = el.getAttribute?.('href')?.toLowerCase() || '';
+
+        // Check for pricing context
+        if (elementText.includes('pric') || elementText.includes('$') ||
+            href.includes('pric') || href.includes('#pric') ||
+            el.closest('[data-sq-role="price"], .price, .pricing, [class*="price"], [id*="price"]')) {
           ctx.element = 'PRICE_ELEMENT';
-        } else if (root?.matches?.('button,[role="button"]')) {
+        }
+        // Check for CTA buttons
+        else if (el.matches?.('button,[role="button"]') ||
+                 el.closest('button,[role="button"]') ||
+                 elementText.match(/get started|sign up|try|buy|purchase|subscribe/i)) {
           ctx.element = 'CTA_BUTTON';
-        } else if (root?.matches?.('nav,[role="navigation"]')) {
+        }
+        // Check for navigation
+        else if (el.closest('nav,[role="navigation"]')) {
           ctx.element = 'NAVIGATION';
-        } else if (root?.closest?.('input,textarea,select,form')) {
+        }
+        // Check for form fields
+        else if (el.closest('input,textarea,select,form')) {
           ctx.element = 'FORM_FIELD';
         }
       }
