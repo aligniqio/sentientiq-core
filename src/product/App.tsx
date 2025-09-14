@@ -10,6 +10,7 @@ import Auth from '../pages/auth'
 import Settings from '../pages/settings'
 import Pricing from '../pages/pricing'
 import Billing from '../pages/billing'
+import UsageDashboard from '../pages/usage-dashboard'
 import SageInbox from '../pages/sage-inbox'
 import DynamicRecommendations from '../pages/dynamic-recommendations'
 import AccountabilityScorecard from '../components/AccountabilityScorecard'
@@ -122,7 +123,24 @@ function App() {
               </>
             }
           />
-          
+
+          {/* Usage Dashboard */}
+          <Route
+            path="/usage-dashboard"
+            element={
+              <>
+                <SignedIn>
+                  <Layout>
+                    <UsageDashboard />
+                  </Layout>
+                </SignedIn>
+                <SignedOut>
+                  <Navigate to="/auth" replace />
+                </SignedOut>
+              </>
+            }
+          />
+
           {/* Auth page - explicit route */}
           <Route path="/auth" element={<Auth />} />
           

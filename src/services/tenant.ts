@@ -11,8 +11,13 @@ export interface Organization {
   id: string;
   clerk_org_id: string;
   name: string;
+  slug?: string;
   subscription_tier: 'free' | 'starter' | 'professional' | 'enterprise';
   subscription_status: string;
+  subscription_ends_at?: string;
+  trial_ends_at?: string;
+  stripe_customer_id?: string;
+  stripe_subscription_id?: string;
   features: {
     emotional_detection: boolean;
     behavioral_analytics: boolean;
@@ -27,6 +32,8 @@ export interface Organization {
   monthly_events_used: number;
   api_keys_limit: number;
   team_members_limit: number;
+  settings?: any;
+  metadata?: any;
 }
 
 export interface OrganizationMember {
