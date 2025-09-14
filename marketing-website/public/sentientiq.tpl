@@ -59,7 +59,7 @@ const injectScript = require('injectScript');
   }
 
   // Explicitly define and check the allowed URL
-  const scriptUrl = 'https://cdn.sentientiq.ai/v2/detect.js?key=' + apiKey;
+  const scriptUrl = 'https://sentientiq.ai/v3/detect.js?key=' + apiKey;
 
   // Check permission explicitly
   if (!queryPermission('inject_script', scriptUrl)) {
@@ -107,7 +107,7 @@ ___WEB_PERMISSIONS___
             "listItem": [
               {
                 "type": 1,
-                "string": "https://cdn.sentientiq.ai/v2/detect.js?key\u003d*"
+                "string": "https://sentientiq.ai/v3/detect.js?key\u003d*"
               }
             ]
           }
