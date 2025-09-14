@@ -49,9 +49,45 @@ export default function SageCrystalBall() {
   const [isThinking, setIsThinking] = useState(false);
   const [pulseIntensity, setPulseIntensity] = useState(1);
   const [isWatching, setIsWatching] = useState(false);
+  const [pageContext, setPageContext] = useState<any>({});
   const inputRef = useRef<HTMLInputElement>(null);
   const sage = SageService.getInstance();
   const { user } = useUser();
+
+  // Detect page context for Sage
+  useEffect(() => {
+    const currentPath = window.location.pathname;
+    const pageTitle = document.title;
+
+    // Build context based on current page
+    const context: any = {
+      page: currentPath,
+      title: pageTitle,
+      timestamp: new Date().toISOString()
+    };
+
+    // Special context for implementation page
+    if (currentPath.includes('/system/implementation')) {
+      context.isImplementationPage = true;
+      context.implementationSteps = [
+        'Open Google Tag Manager',
+        'Search for SentientIQ Detect in Gallery',
+        'Add template to workspace',
+        'Create new tag from template',
+        'Configure with API key',
+        'Publish changes'
+      ];
+      context.commonIssues = [
+        'Finding the template gallery',
+        'Understanding what GTM is',
+        'Where to paste the API key',
+        'Which trigger to use (All Pages)',
+        'How to test if it\'s working'
+      ];
+    }
+
+    setPageContext(context);
+  }, []);
 
   // Sage's mood affects the orb's glow
   useEffect(() => {
@@ -75,18 +111,39 @@ export default function SageCrystalBall() {
     setSageResponse('');
 
     try {
+      // Build message with context for implementation page
+      let enhancedMessage = message;
+      let contextNote = '';
+
+      if (pageContext.isImplementationPage) {
+        // Check for common GTM questions
+        const lowerMessage = message.toLowerCase();
+
+        if (lowerMessage.includes('gtm') || lowerMessage.includes('tag manager') || lowerMessage.includes('what is')) {
+          contextNote = '\n\n[Context: User is on the GTM Implementation page and may need help understanding Google Tag Manager]';
+        } else if (lowerMessage.includes('api key') || lowerMessage.includes('key')) {
+          contextNote = '\n\n[Context: User is asking about API keys on the implementation page]';
+        } else if (lowerMessage.includes('work') || lowerMessage.includes('test') || lowerMessage.includes('verify')) {
+          contextNote = '\n\n[Context: User wants to verify their GTM implementation is working]';
+        } else if (lowerMessage.includes('trigger') || lowerMessage.includes('pages')) {
+          contextNote = '\n\n[Context: User is asking about GTM triggers on the implementation page]';
+        }
+
+        enhancedMessage = `${message}${contextNote}\n\nPage Context: ${JSON.stringify(pageContext)}`;
+      }
+
       // Check if Sage has already seen this content
       const seenCheck = await sageContext.hasSeenContent(message, user?.id);
-      
+
       if (seenCheck.seen && seenCheck.sassyResponse) {
         // Sage recognizes this content
         setSageResponse(seenCheck.sassyResponse);
-        
+
         // Still provide analysis but with context
         setTimeout(async () => {
-          const memories = await sage.findSimilarMemories(message, 0.7, 3);
+          const memories = await sage.findSimilarMemories(enhancedMessage, 0.7, 3);
           const response = await sage.generateResponse(
-            message,
+            enhancedMessage,
             `already_seen_${seenCheck.debateId}`,
             memories
           );
@@ -94,10 +151,10 @@ export default function SageCrystalBall() {
         }, 1500);
       } else {
         // New content - normal analysis
-        const memories = await sage.findSimilarMemories(message, 0.7, 3);
+        const memories = await sage.findSimilarMemories(enhancedMessage, 0.7, 3);
         const response = await sage.generateResponse(
-          message,
-          'crystal_ball_consultation',
+          enhancedMessage,
+          pageContext.isImplementationPage ? 'implementation_help' : 'crystal_ball_consultation',
           memories
         );
         setSageResponse(response);
