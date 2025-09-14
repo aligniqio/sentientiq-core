@@ -124,9 +124,9 @@ export class SageService {
   ): Promise<string> {
     try {
       // Call the backend Sage API
-      const apiUrl = import.meta.env.DEV 
+      const apiUrl = import.meta.env.DEV
         ? '/api/sage/analyze'  // Use Vite proxy in dev
-        : 'https://api.sentientiq.app/api/sage/analyze'; // Production API
+        : 'https://sentientiq.app/api/sage/analyze'; // Production API
       const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
@@ -149,29 +149,36 @@ export class SageService {
       }
 
       const data = await response.json();
-      
-      // Store this interaction as a memory
+      console.log('Sage API response:', data);
+
+      // Store this interaction as a memory (if table exists)
       if (data.analysis) {
-        const responseText = data.sage_says || data.response || data.verdict || '';
-        await this.storeMemory({
-          content: `Responded to: "${input.slice(0, 100)}..."`,
-          context: { 
+        try {
+          const responseText = data.sage_says || data.response || data.verdict || '';
+          await this.storeMemory({
+            content: `Responded to: "${input.slice(0, 100)}..."`,
+            context: {
+              authenticity_score: data.analysis.bullshit_score || data.analysis.authenticityScore || 0,
+              flags: data.analysis.manipulation_tactics || data.analysis.manipulationFlags || [],
+              response_preview: responseText.slice(0, 100)
+            },
+            memory_type: (data.analysis.bullshit_score || data.analysis.authenticityScore || 0) > 0.6 ? 'roast' : 'observation',
             authenticity_score: data.analysis.bullshit_score || data.analysis.authenticityScore || 0,
-            flags: data.analysis.manipulation_tactics || data.analysis.manipulationFlags || [],
-            response_preview: responseText.slice(0, 100)
-          },
-          memory_type: (data.analysis.bullshit_score || data.analysis.authenticityScore || 0) > 0.6 ? 'roast' : 'observation',
-          authenticity_score: data.analysis.bullshit_score || data.analysis.authenticityScore || 0,
-          manipulation_flags: data.analysis.manipulation_tactics || data.analysis.manipulationFlags || [],
-          sage_commentary: responseText,
-        });
+            manipulation_flags: data.analysis.manipulation_tactics || data.analysis.manipulationFlags || [],
+            sage_commentary: responseText,
+          });
+        } catch (memoryError) {
+          // Silently fail if sage_memories table doesn't exist
+          console.log('Sage memory storage skipped:', memoryError);
+        }
       }
 
       return data.sage_says || data.response || data.verdict || "Even Sage is processing this one...";
     } catch (error) {
-      console.error('Sage API error:', error);
+      console.error('Sage API error - falling back to local:', error);
       // Fallback to local analysis
       const analysis = this.analyzeAuthenticity(input);
+      console.log('Local fallback analysis:', analysis);
       return analysis.verdict;
     }
   }

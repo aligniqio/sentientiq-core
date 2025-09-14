@@ -2,9 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useClerk, useUser } from '@clerk/clerk-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  Menu, 
-  X, 
+import {
+  Menu,
+  X,
   LogOut,
   Shield,
   Zap,
@@ -12,7 +12,9 @@ import {
   BarChart3,
   Activity,
   Settings,
-  Brain
+  Brain,
+  ChevronDown,
+  Code
 } from 'lucide-react';
 import { useSuperAdmin } from '../hooks/useSuperAdmin';
 
@@ -23,13 +25,21 @@ interface LayoutProps {
 const Layout: React.FC<LayoutProps> = ({ children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [systemExpanded, setSystemExpanded] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
   const { signOut } = useClerk();
   const { user } = useUser();
-  
+
   // Use the same super admin check as the super-admin page
   const { isSuperAdmin } = useSuperAdmin();
+
+  // Auto-expand System menu if on a system page
+  useEffect(() => {
+    if (location.pathname.startsWith('/system/')) {
+      setSystemExpanded(true);
+    }
+  }, [location.pathname]);
 
   useEffect(() => {
     const checkMobile = () => {
@@ -46,10 +56,18 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     { path: '/emotional-dashboard', icon: Activity, label: 'Emotions', public: false },
     { path: '/billing', icon: Shield, label: 'Billing', public: false },
     ...(isSuperAdmin ? [
-      { path: '/super-admin', icon: Crown, label: 'Super Admin', public: false },
-      { path: '/system/implementation', icon: Settings, label: 'System', public: false }
+      { path: '/super-admin', icon: Crown, label: 'Super Admin', public: false }
     ] : []),
   ];
+
+  // System menu with children (only for super admin)
+  const systemMenu = isSuperAdmin ? {
+    icon: Settings,
+    label: 'System',
+    children: [
+      { path: '/system/implementation', icon: Code, label: 'Implementation' }
+    ]
+  } : null;
 
   const handleSignOut = async () => {
     await signOut();
@@ -139,7 +157,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
               {menuItems.map((item) => {
                 const isActive = location.pathname === item.path;
                 const isAccessible = item.public || user;
-                
+
                 if (!isAccessible) return null;
 
                 return (
@@ -149,8 +167,8 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                     onClick={() => setSidebarOpen(false)}
                     className={`
                       flex items-center gap-3 px-3 py-2 rounded-lg transition-all duration-200
-                      ${isActive 
-                        ? 'bg-white/10 text-white border border-white/20' 
+                      ${isActive
+                        ? 'bg-white/10 text-white border border-white/20'
                         : 'text-gray-400 hover:text-white hover:bg-white/5'
                       }
                     `}
@@ -166,6 +184,65 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                   </Link>
                 );
               })}
+
+              {/* System Accordion Menu */}
+              {systemMenu && (
+                <div className="space-y-2">
+                  <button
+                    onClick={() => setSystemExpanded(!systemExpanded)}
+                    className={`
+                      w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-all duration-200
+                      ${location.pathname.startsWith('/system/')
+                        ? 'bg-white/10 text-white border border-white/20'
+                        : 'text-gray-400 hover:text-white hover:bg-white/5'
+                      }
+                    `}
+                  >
+                    <systemMenu.icon className="w-5 h-5" />
+                    <span className="text-sm font-medium">{systemMenu.label}</span>
+                    <ChevronDown
+                      className={`w-4 h-4 ml-auto transition-transform ${
+                        systemExpanded ? 'rotate-180' : ''
+                      }`}
+                    />
+                  </button>
+
+                  <AnimatePresence>
+                    {systemExpanded && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.2 }}
+                        className="overflow-hidden"
+                      >
+                        <div className="pl-4 space-y-1">
+                          {systemMenu.children.map((child) => {
+                            const isChildActive = location.pathname === child.path;
+                            return (
+                              <Link
+                                key={child.path}
+                                to={child.path}
+                                onClick={() => setSidebarOpen(false)}
+                                className={`
+                                  flex items-center gap-3 px-3 py-2 rounded-lg transition-all duration-200
+                                  ${isChildActive
+                                    ? 'bg-white/10 text-white border border-white/20'
+                                    : 'text-gray-400 hover:text-white hover:bg-white/5'
+                                  }
+                                `}
+                              >
+                                <child.icon className="w-4 h-4" />
+                                <span className="text-sm">{child.label}</span>
+                              </Link>
+                            );
+                          })}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              )}
             </nav>
 
             {/* Bottom Actions */}

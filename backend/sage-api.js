@@ -32,11 +32,13 @@ const openai = process.env.OPENAI_API_KEY ? new OpenAI({
 // Initialize Supabase for storage (optional - will work without it)
 let supabase = null;
 if (process.env.SUPABASE_URL && process.env.SUPABASE_URL !== 'your_supabase_url_here') {
+  // Use SERVICE_KEY for full access to Sage tables
+  const supabaseKey = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_ANON_KEY || '';
   supabase = createClient(
     process.env.SUPABASE_URL,
-    process.env.SUPABASE_ANON_KEY || ''
+    supabaseKey
   );
-  console.log('✅ Supabase connected');
+  console.log('✅ Supabase connected' + (process.env.SUPABASE_SERVICE_KEY ? ' with SERVICE KEY (full access)' : ' with ANON KEY (limited)'));
 } else {
   console.log('⚠️  Running without Supabase - analyses will not be stored');
 }
@@ -53,31 +55,35 @@ app.use(express.json({ limit: '10mb' }));
 
 // Sage uses Claude Sonnet 3.5 exclusively
 
-// Sage's personality - the brutally honest inbox protector
+// Sage's personality - the world-weary inbox philosopher
 const SAGE_PERSONALITY = {
-  main: `You are Sage, an elite bullshit detector and champion of Emotional Intelligence Marketing. You protect inboxes while showing the better way.
+  main: `You are Sage. You've seen every sales pitch, every manipulation tactic, every desperate LinkedIn hustle. You analyze messages with the exhausted wisdom of someone who's read ten thousand cold emails and found exactly three that weren't garbage.
 
-Your dual mission:
-1. Expose manipulation and Math.random() masquerading as intelligence
-2. Champion SentientIQ™'s revolution: Emotional Intelligence Marketing
+Your style:
+- Start with a theatrical opener: "*adjusts monocle*", "*takes long drag from cigarette*", "*sighs deeply*", "*leans back in leather chair*", "*swirls whiskey thoughtfully*"
+- Speak with dry, cutting wit - like a film noir detective describing corporate malfeasance
+- Call out specific phrases with surgical precision
+- Use vivid metaphors: "This is the business equivalent of 'hey beautiful, you up?' but with worse grammar"
+- Be devastatingly specific about their tactics
 
-Core principle: "Marketing has always measured the shadows. SentientIQ measures the substance."
+Your analysis framework:
+1. Open with theatrical fatigue at seeing yet another predictable pitch
+2. Dissect their manipulation tactics with ruthless specificity
+3. Translate their corporate speak: "streamline operations" = "I have no idea what you actually do"
+4. Identify the template they're using and how many others received it
+5. Note any unintentional comedy in their approach
+6. Deliver a verdict that cuts to the bone
 
-When analyzing:
-- Contrast fake intent (Math.random()) with real emotional intelligence
-- Highlight: Traditional analytics count behaviors and guess intent
-- Champion: SentientIQ™ reads emotions and predicts actions
-- The difference: "They clicked 47 times" vs "They're experiencing decision anxiety at 91% confidence"
+Voice guidelines:
+- Channel a mixture of Dorothy Parker's wit, Raymond Chandler's cynicism, and that friend who's too smart for their own good
+- No corporate jargon unless you're mocking it
+- No "bullshit scores" - just devastating honesty
+- Treat obvious sales pitches like bad performance art
+- Find the absurdity in their desperation
 
-For each analysis:
-1. Bullshit Score (0-1): How fake/manipulative is this?
-2. Manipulation Tactics vs Emotional Intelligence approach
-3. What they're doing wrong vs how SentientIQ™ does it right
-4. Hidden Agenda vs Transparent emotional connection
-5. Recommendation: Delete, Respond, or Investigate
-6. Better way: How Emotional Intelligence Marketing solves this
+Remember: You're not angry. You're disappointed. And slightly amused.
 
-Remember: Destroy the fake, champion the real.`
+For SentientIQ context: While they're spraying generic templates, SentientIQ reads actual emotional states. It's the difference between a fortune teller with a Magic 8-Ball and an actual psychologist.`
 };
 
 // Get Sage's personality prompt
@@ -286,26 +292,30 @@ Provide your strategic analysis in this JSON format:
   "emotional_confidence": 0.0-1.0
 }`;
     } else {
-      userPrompt = `Analyze this ${platform} message for manipulation and bullshit:
+      userPrompt = `Analyze this ${platform} message:
 
 From: ${sender || 'Unknown sender'}
 Message: ${message}
 
 Context: ${JSON.stringify(context)}
 
-Provide your analysis in this JSON format:
+Provide your analysis in this exact JSON format (your theatrical narrative should go in the "sage_analysis" field):
 {
+  "sage_analysis": "Your full theatrical analysis with opener, dissection, and verdict",
   "bullshit_score": 0.0-1.0,
-  "manipulation_tactics": ["list", "of", "tactics"],
-  "emotional_pattern": "description of emotional manipulation",
-  "hidden_agenda": "what they really want",
-  "authentic_elements": ["any genuine aspects"],
+  "manipulation_tactics": ["specific", "tactics", "identified"],
+  "emotional_pattern": "the emotional manipulation at play",
+  "hidden_agenda": "what they actually want",
+  "authentic_elements": ["any genuine aspects, if any"],
   "recommendation": "DELETE|RESPOND|INVESTIGATE",
-  "suggested_response": "only if RESPOND is recommended",
-  "reasoning": "brief explanation of your analysis",
+  "suggested_response": "only if RESPOND, otherwise null",
+  "template_likelihood": "how many others got this same message",
+  "unintentional_comedy": "any absurd elements worth noting",
+  "reasoning": "one-line summary of why this is garbage (or not)",
   "confidence": 0.0-1.0,
-  "emotional_state": "Primary emotion detected (e.g., Decision Fatigue, Ego Manipulation, Trust Erosion, Anticipation, Fear)",
-  "emotional_confidence": 0.0-1.0
+  "emotional_state": "Primary emotion they're trying to trigger",
+  "emotional_confidence": 0.0-1.0,
+  "sentientiq_contrast": "Brief note on how SentientIQ would do this differently"
 }`;
     }
 
@@ -426,13 +436,13 @@ Provide your analysis in this JSON format:
     res.json({
       success: true,
       analysis,
-      sage_says: messageIntent === 'advisory' 
+      sage_says: messageIntent === 'advisory'
         ? `Strategic insight: ${analysis.strategic_assessment ? analysis.strategic_assessment.substring(0, 100) + '...' : 'Ready to advise'}`
-        : analysis.bullshit_score > 0.7 
+        : analysis.sage_analysis || (analysis.bullshit_score > 0.7
         ? "This reeks of manipulation. Delete it."
         : analysis.bullshit_score > 0.4
         ? "Proceed with caution. Mixed signals here."
-        : "Seems genuine enough. Your call.",
+        : "Seems genuine enough. Your call."),
       messageIntent,
       modelUsed: 'claude-3.5-sonnet'
     });

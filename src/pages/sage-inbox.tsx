@@ -6,6 +6,7 @@ import PageHeader from '../components/PageHeader';
 // API calls are now proxied through Netlify edge
 
 interface SageAnalysis {
+  sage_analysis?: string; // New theatrical analysis field
   bullshit_score: number;
   manipulation_tactics: string[];
   emotional_pattern: string;
@@ -17,12 +18,52 @@ interface SageAnalysis {
   confidence: number;
   pattern_detected?: boolean;
   pattern_note?: string;
+  template_likelihood?: string;
+  unintentional_comedy?: string;
+  sentientiq_contrast?: string;
   similar_messages?: Array<{
     sender: string;
     bullshit_score: number;
     similarity: number;
   }>;
 }
+
+// Typewriter effect component
+const TypewriterText: React.FC<{ text: string; speed?: number }> = ({ text, speed = 30 }) => {
+  const [displayedText, setDisplayedText] = useState('');
+  const [currentIndex, setCurrentIndex] = useState(0);
+
+  React.useEffect(() => {
+    if (currentIndex < text.length) {
+      const timeout = setTimeout(() => {
+        setDisplayedText(prev => prev + text[currentIndex]);
+        setCurrentIndex(prev => prev + 1);
+      }, speed);
+      return () => clearTimeout(timeout);
+    }
+  }, [currentIndex, text, speed]);
+
+  React.useEffect(() => {
+    setDisplayedText('');
+    setCurrentIndex(0);
+  }, [text]);
+
+  // Split text into paragraphs for better formatting
+  const paragraphs = displayedText.split('\n\n');
+
+  return (
+    <div className="space-y-4">
+      {paragraphs.map((paragraph, idx) => (
+        <p key={idx} className="text-white leading-relaxed">
+          {paragraph}
+        </p>
+      ))}
+      {currentIndex < text.length && (
+        <span className="inline-block w-2 h-5 bg-purple-400 animate-pulse" />
+      )}
+    </div>
+  );
+};
 
 const SageInbox: React.FC = () => {
   const [message, setMessage] = useState('');
@@ -99,7 +140,7 @@ const SageInbox: React.FC = () => {
         subtitle="Brutally honest analysis of your messages"
       />
 
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Input Section */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -210,6 +251,48 @@ const SageInbox: React.FC = () => {
               exit={{ opacity: 0, y: -20 }}
               className="space-y-6"
             >
+              {/* Sage's Theatrical Analysis - New Primary Display */}
+              {analysis.sage_analysis && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="bg-gradient-to-br from-purple-900/30 via-indigo-900/20 to-blue-900/30 backdrop-blur-xl rounded-2xl border border-purple-500/20 p-8 shadow-2xl"
+                >
+                  <div className="flex items-start gap-4 mb-6">
+                    <div className="relative">
+                      <Brain className="h-10 w-10 text-purple-400" />
+                      <div className="absolute inset-0 blur-md bg-purple-400/50" />
+                    </div>
+                    <div>
+                      <h3 className="text-2xl font-bold text-white mb-1">Sage's Analysis</h3>
+                      <p className="text-purple-300/60 text-sm italic">The unvarnished truth, theatrically delivered</p>
+                    </div>
+                  </div>
+
+                  <div className="pl-14 font-mono text-lg">
+                    <TypewriterText text={analysis.sage_analysis} speed={25} />
+                  </div>
+
+                  {/* Additional insights if available */}
+                  {(analysis.template_likelihood || analysis.unintentional_comedy) && (
+                    <div className="mt-6 pt-6 border-t border-purple-500/20 grid md:grid-cols-2 gap-4">
+                      {analysis.template_likelihood && (
+                        <div className="bg-white/5 rounded-lg p-4">
+                          <p className="text-purple-300 text-sm font-semibold mb-1">Template Recipients</p>
+                          <p className="text-white/70">{analysis.template_likelihood}</p>
+                        </div>
+                      )}
+                      {analysis.unintentional_comedy && (
+                        <div className="bg-white/5 rounded-lg p-4">
+                          <p className="text-purple-300 text-sm font-semibold mb-1">Comedy Gold</p>
+                          <p className="text-white/70">{analysis.unintentional_comedy}</p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </motion.div>
+              )}
+
               {/* Bullshit Score */}
               <div className={`bg-gradient-to-r ${getBullshitColor(analysis.bullshit_score)} p-1 rounded-2xl`}>
                 <div className="bg-gray-900 rounded-2xl p-6">

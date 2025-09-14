@@ -4,6 +4,43 @@ import { SageService } from '@/services/sage';
 import { sageContext } from '@/services/sage-context';
 import { useUser } from '@clerk/clerk-react';
 
+// Typewriter effect component
+const TypewriterText = ({ text, speed = 30 }: { text: string; speed?: number }) => {
+  const [displayedText, setDisplayedText] = useState('');
+  const [currentIndex, setCurrentIndex] = useState(0);
+
+  useEffect(() => {
+    if (currentIndex < text.length) {
+      const timeout = setTimeout(() => {
+        setDisplayedText(prev => prev + text[currentIndex]);
+        setCurrentIndex(prev => prev + 1);
+      }, speed);
+      return () => clearTimeout(timeout);
+    }
+  }, [currentIndex, text, speed]);
+
+  useEffect(() => {
+    setDisplayedText('');
+    setCurrentIndex(0);
+  }, [text]);
+
+  // Split text into paragraphs for better formatting
+  const paragraphs = displayedText.split('\n\n').filter(p => p.trim());
+
+  return (
+    <div className="space-y-3">
+      {paragraphs.map((paragraph, idx) => (
+        <p key={idx} className="text-white text-sm leading-relaxed">
+          {paragraph}
+        </p>
+      ))}
+      {currentIndex < text.length && (
+        <span className="inline-block w-1 h-4 bg-purple-400 animate-pulse ml-1" />
+      )}
+    </div>
+  );
+};
+
 export default function SageCrystalBall() {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isHovering, setIsHovering] = useState(false);
@@ -149,7 +186,7 @@ export default function SageCrystalBall() {
           isExpanded ? 'scale-100 opacity-100' : 'scale-0 opacity-0'
         }`}
       >
-        <div className="w-96 h-[600px] rounded-2xl overflow-hidden shadow-2xl">
+        <div className="w-[550px] h-[650px] rounded-2xl overflow-hidden shadow-2xl">
           {/* Glassmorphic container */}
           <div className="absolute inset-0 bg-gradient-to-br from-purple-900/20 via-blue-900/20 to-black/20 backdrop-blur-xl border border-white/10" />
           
@@ -202,13 +239,11 @@ export default function SageCrystalBall() {
               )}
 
               {sageResponse && (
-                <div className="bg-gradient-to-r from-purple-500/10 to-blue-500/10 rounded-xl p-4 border border-white/10">
+                <div className="bg-gradient-to-r from-purple-500/10 to-blue-500/10 rounded-xl p-5 border border-white/10">
                   <div className="flex items-start gap-3">
                     <Eye className="w-5 h-5 text-purple-400 mt-1 flex-shrink-0" />
-                    <div>
-                      <p className="text-white text-sm leading-relaxed whitespace-pre-wrap">
-                        {sageResponse}
-                      </p>
+                    <div className="flex-1">
+                      <TypewriterText text={sageResponse} speed={25} />
                     </div>
                   </div>
                 </div>

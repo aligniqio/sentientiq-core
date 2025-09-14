@@ -423,7 +423,7 @@ const EmotionalLiveFeed = () => {
                 </p>
                 <code className="block p-4 bg-black/30 rounded-lg text-xs font-mono text-purple-400">
                   {/* NEVER expose user IDs as API keys - always use YOUR_KEY placeholder */}
-                  &lt;script src="https://cdn.sentientiq.ai/v1/detect.js" data-api-key="YOUR_KEY"&gt;&lt;/script&gt;
+                  &lt;script src="https://cdn.sentientiq.ai/v2/detect.js" data-api-key="YOUR_KEY"&gt;&lt;/script&gt;
                 </code>
               </motion.div>
             ) : (

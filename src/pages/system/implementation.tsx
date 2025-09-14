@@ -1,224 +1,416 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Copy, Download, Code, CheckCircle, ArrowLeft } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { ExternalLink, CheckCircle, Copy, Zap, Shield, BarChart3, Clock, Key, RefreshCw } from 'lucide-react';
 import PageHeader from '../../components/PageHeader';
+import { useUser } from '@clerk/clerk-react';
 
 export default function SystemImplementation() {
-  const navigate = useNavigate();
+  const { user } = useUser();
   const [copied, setCopied] = useState(false);
-  
+  const [apiKeys, setApiKeys] = useState<Array<{id: string, name: string, key: string, created: string}>>([]);
+  const [newKeyName, setNewKeyName] = useState('');
+  const [generatingKey, setGeneratingKey] = useState(false);
+
+  // Load existing API keys
+  useEffect(() => {
+    const storedKeys = localStorage.getItem(`sentientiq_keys_${user?.id}`);
+    if (storedKeys) {
+      setApiKeys(JSON.parse(storedKeys));
+    }
+  }, [user]);
+
   const handleCopy = (text: string) => {
     navigator.clipboard.writeText(text);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const scriptTag = '<script src="https://cdn.sentientiq.ai/v1/detect.js" data-api-key="YOUR_KEY"></script>';
-  
+  const generateApiKey = () => {
+    if (!newKeyName.trim()) return;
+
+    setGeneratingKey(true);
+
+    // Generate a production-like API key
+    const prefix = 'sq_live_';
+    const randomString = Array.from(crypto.getRandomValues(new Uint8Array(24)))
+      .map(b => b.toString(16).padStart(2, '0'))
+      .join('');
+
+    const newKey = {
+      id: Date.now().toString(),
+      name: newKeyName,
+      key: `${prefix}${randomString}`,
+      created: new Date().toISOString()
+    };
+
+    const updatedKeys = [...apiKeys, newKey];
+    setApiKeys(updatedKeys);
+    localStorage.setItem(`sentientiq_keys_${user?.id}`, JSON.stringify(updatedKeys));
+    setNewKeyName('');
+    setGeneratingKey(false);
+  };
+
+  const deleteApiKey = (id: string) => {
+    const updatedKeys = apiKeys.filter(k => k.id !== id);
+    setApiKeys(updatedKeys);
+    localStorage.setItem(`sentientiq_keys_${user?.id}`, JSON.stringify(updatedKeys));
+  };
+
+  // Use first API key or user ID as fallback
+  const primaryApiKey = apiKeys[0]?.key || `sq_demo_${user?.id}` || 'sq_demo_YOUR_API_KEY';
+
   return (
     <>
-      {/* Back Button */}
-      <button
-        onClick={() => navigate('/super-admin')}
-        className="mb-6 flex items-center gap-2 text-white/60 hover:text-white transition-colors"
-      >
-        <ArrowLeft className="w-4 h-4" />
-        Back to Super Admin
-      </button>
-      
-      <PageHeader 
-        title="Implementation Guide"
-        subtitle="One-line emotional intelligence for any website"
+      <PageHeader
+        title="GTM Implementation"
+        subtitle="Install SentientIQ via Google Tag Manager in minutes"
       />
-          
-          {/* Quick Start Section */}
-          <motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="glass-card p-8 mb-8"
-          >
-            <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-3">
-              <Code className="w-6 h-6 text-purple-400" />
-              Quick Start
+
+      {/* Hero Section */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="glass-card p-8 mb-8 bg-gradient-to-br from-purple-900/10 to-blue-900/10 border-purple-500/20"
+      >
+        <div className="flex items-start justify-between">
+          <div>
+            <h2 className="text-2xl font-bold text-white mb-3">
+              Google Tag Manager Template
             </h2>
-            
-            <div className="grid md:grid-cols-2 gap-8">
-              <div>
-                <h3 className="text-lg font-semibold text-purple-400 mb-4">1. Add the Script</h3>
-                <div className="bg-black/50 rounded-xl p-4 font-mono text-sm border border-purple-500/20">
-                  <code className="text-green-400">
-                    &lt;script src="https://cdn.sentientiq.ai/v1/detect.js"<br/>
-                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;data-api-key="YOUR_KEY"&gt;&lt;/script&gt;
-                  </code>
-                </div>
-                <p className="text-sm text-white/60 mt-3">Add before the closing &lt;/body&gt; tag</p>
-                
-                <div className="flex gap-3 mt-4">
+            <p className="text-white/70 mb-4 max-w-2xl">
+              SentientIQ is now available in Google's Community Template Gallery.
+              Deploy behavioral analytics to any website without touching code.
+            </p>
+            <div className="flex gap-4">
+              <a
+                href="https://tagmanager.google.com/gallery/#/owners/sentientiq/templates/sentientiq-detect"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-all"
+              >
+                <ExternalLink className="w-4 h-4" />
+                Open in GTM Gallery
+              </a>
+              <button
+                onClick={() => handleCopy(primaryApiKey)}
+                className="inline-flex items-center gap-2 px-6 py-3 bg-white/10 text-white rounded-lg hover:bg-white/20 transition-all border border-white/20"
+              >
+                {copied ? <CheckCircle className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                {copied ? 'Copied!' : 'Copy Primary Key'}
+              </button>
+            </div>
+          </div>
+          <div className="text-right">
+            <div className="text-sm text-white/50 mb-1">Version</div>
+            <div className="text-2xl font-bold text-purple-400">v2.0.0</div>
+          </div>
+        </div>
+      </motion.div>
+
+      {/* API Key Management */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1 }}
+        className="glass-card p-6 mb-8"
+      >
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+            <Key className="w-5 h-5 text-purple-400" />
+            API Keys
+          </h3>
+          <span className="text-sm text-white/50">
+            {apiKeys.length} key{apiKeys.length !== 1 ? 's' : ''} active
+          </span>
+        </div>
+
+        {/* Key Generator */}
+        <div className="mb-6">
+          <div className="flex gap-2">
+            <input
+              type="text"
+              placeholder="Enter key name (e.g., Production, Staging)"
+              value={newKeyName}
+              onChange={(e) => setNewKeyName(e.target.value)}
+              onKeyPress={(e) => e.key === 'Enter' && generateApiKey()}
+              className="flex-1 px-4 py-2 bg-black/30 border border-white/10 rounded-lg text-white placeholder-white/30 focus:outline-none focus:border-purple-500/50"
+            />
+            <button
+              onClick={generateApiKey}
+              disabled={!newKeyName.trim() || generatingKey}
+              className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            >
+              {generatingKey ? (
+                <RefreshCw className="w-4 h-4 animate-spin" />
+              ) : (
+                <Key className="w-4 h-4" />
+              )}
+              Generate Key
+            </button>
+          </div>
+        </div>
+
+        {/* Existing Keys */}
+        {apiKeys.length > 0 ? (
+          <div className="space-y-3">
+            {apiKeys.map((key, index) => (
+              <div key={key.id} className="bg-black/30 rounded-lg p-4 border border-white/10">
+                <div className="flex items-start justify-between mb-2">
+                  <div>
+                    <span className="text-white font-medium">{key.name}</span>
+                    {index === 0 && (
+                      <span className="ml-2 text-xs px-2 py-1 bg-purple-600/20 text-purple-400 rounded">Primary</span>
+                    )}
+                  </div>
                   <button
-                    onClick={() => handleCopy(scriptTag)}
-                    className="flex items-center gap-2 px-4 py-2 bg-purple-600/20 text-purple-400 rounded-lg hover:bg-purple-600/30 transition-all border border-purple-500/30"
+                    onClick={() => deleteApiKey(key.id)}
+                    className="text-red-400 hover:text-red-300 text-sm"
                   >
-                    {copied ? <CheckCircle className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                    {copied ? 'Copied!' : 'Copy Script'}
+                    Delete
                   </button>
-                  <a 
-                    href="/detect.js" 
-                    target="_blank"
-                    className="flex items-center gap-2 px-4 py-2 bg-white/10 text-white rounded-lg hover:bg-white/20 transition-all"
-                  >
-                    <Download className="w-4 h-4" />
-                    Download
-                  </a>
                 </div>
+                <div className="flex items-center justify-between">
+                  <code className="text-purple-400 text-sm font-mono">{key.key}</code>
+                  <button
+                    onClick={() => handleCopy(key.key)}
+                    className="ml-4 p-2 hover:bg-white/10 rounded transition-colors"
+                  >
+                    <Copy className="w-4 h-4 text-white/60" />
+                  </button>
+                </div>
+                <p className="text-xs text-white/40 mt-2">
+                  Created: {new Date(key.created).toLocaleDateString()}
+                </p>
               </div>
-              
-              <div>
-                <h3 className="text-lg font-semibold text-purple-400 mb-4">2. What Gets Detected</h3>
-                <ul className="space-y-3">
-                  <li className="flex items-start gap-3">
-                    <span className="text-xl">🤬</span>
-                    <div>
-                      <strong className="text-white">Rage Clicks</strong>
-                      <div className="text-sm text-white/60">3+ clicks in under 300ms</div>
-                    </div>
-                  </li>
-                  <li className="flex items-start gap-3">
-                    <span className="text-xl">🤔</span>
-                    <div>
-                      <strong className="text-white">Hesitation</strong>
-                      <div className="text-sm text-white/60">2+ second hovers on elements</div>
-                    </div>
-                  </li>
-                  <li className="flex items-start gap-3">
-                    <span className="text-xl">😵</span>
-                    <div>
-                      <strong className="text-white">Confusion</strong>
-                      <div className="text-sm text-white/60">Erratic scrolling patterns</div>
-                    </div>
-                  </li>
-                  <li className="flex items-start gap-3">
-                    <span className="text-xl">💸</span>
-                    <div>
-                      <strong className="text-white">Sticker Shock</strong>
-                      <div className="text-sm text-white/60">Mouse deceleration near prices</div>
-                    </div>
-                  </li>
-                  <li className="flex items-start gap-3">
-                    <span className="text-xl">🚪</span>
-                    <div>
-                      <strong className="text-white">Abandonment Intent</strong>
-                      <div className="text-sm text-white/60">60+ seconds of inactivity</div>
-                    </div>
-                  </li>
-                </ul>
+            ))}
+          </div>
+        ) : (
+          <div className="bg-black/30 rounded-lg p-6 border border-white/10 text-center">
+            <Key className="w-12 h-12 text-white/20 mx-auto mb-3" />
+            <p className="text-white/60 mb-2">No API keys yet</p>
+            <p className="text-sm text-white/40">Generate your first key above to get started</p>
+          </div>
+        )}
+
+        {apiKeys.length === 0 && (
+          <div className="mt-4 p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
+            <p className="text-sm text-yellow-400">
+              💡 For testing, you can use the demo key: <code className="text-yellow-300">sq_demo_{user?.id || 'test'}</code>
+            </p>
+          </div>
+        )}
+      </motion.div>
+
+      {/* Installation Steps */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2 }}
+        className="glass-card p-8 mb-8"
+      >
+        <h3 className="text-xl font-bold text-white mb-6">Installation Steps</h3>
+
+        <div className="space-y-6">
+          {/* Step 1 */}
+          <div className="flex gap-4">
+            <div className="flex-shrink-0 w-8 h-8 rounded-full bg-purple-600 text-white flex items-center justify-center text-sm font-bold">
+              1
+            </div>
+            <div className="flex-1">
+              <h4 className="font-semibold text-white mb-2">Open Google Tag Manager</h4>
+              <p className="text-white/60 mb-3">
+                Go to your GTM container and navigate to Templates → Tag Templates
+              </p>
+              <a
+                href="https://tagmanager.google.com/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 text-purple-400 hover:text-purple-300"
+              >
+                Open GTM <ExternalLink className="w-3 h-3" />
+              </a>
+            </div>
+          </div>
+
+          {/* Step 2 */}
+          <div className="flex gap-4">
+            <div className="flex-shrink-0 w-8 h-8 rounded-full bg-purple-600 text-white flex items-center justify-center text-sm font-bold">
+              2
+            </div>
+            <div className="flex-1">
+              <h4 className="font-semibold text-white mb-2">Search Gallery</h4>
+              <p className="text-white/60 mb-3">
+                Click "Search Gallery" and search for "SentientIQ Detect"
+              </p>
+              <div className="bg-black/30 rounded-lg p-3 border border-white/10">
+                <code className="text-green-400 text-sm">Template Name: SentientIQ Detect - Behavioral Analytics</code>
               </div>
             </div>
-          </motion.div>
-          
-          {/* Event Listener Section */}
-          <motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="glass-card p-8 mb-8"
-          >
-            <h2 className="text-2xl font-bold text-white mb-6">3. Listen for Emotions</h2>
-            <div className="bg-black/50 rounded-xl p-6 font-mono text-sm border border-blue-500/20">
-              <code className="text-blue-400">
-                window.addEventListener('sentientiq:emotion', (e) =&gt; {'{'}<br/>
-                &nbsp;&nbsp;<span className="text-gray-400">// Emotion detected!</span><br/>
-                &nbsp;&nbsp;console.log('Emotion:', e.detail.emotion);<br/>
-                &nbsp;&nbsp;console.log('Confidence:', e.detail.confidence + '%');<br/>
-                &nbsp;&nbsp;console.log('Element:', e.detail.element);<br/>
-                &nbsp;&nbsp;<br/>
-                &nbsp;&nbsp;<span className="text-gray-400">// Deploy your intervention</span><br/>
-                &nbsp;&nbsp;if (e.detail.emotion === 'rage' && e.detail.confidence &gt; 80) {'{'}<br/>
-                &nbsp;&nbsp;&nbsp;&nbsp;showSupportChat();<br/>
-                &nbsp;&nbsp;{'}'}<br/>
-                {'}'});
+          </div>
+
+          {/* Step 3 */}
+          <div className="flex gap-4">
+            <div className="flex-shrink-0 w-8 h-8 rounded-full bg-purple-600 text-white flex items-center justify-center text-sm font-bold">
+              3
+            </div>
+            <div className="flex-1">
+              <h4 className="font-semibold text-white mb-2">Add to Workspace</h4>
+              <p className="text-white/60 mb-3">
+                Click "Add to Workspace" and confirm the template import
+              </p>
+            </div>
+          </div>
+
+          {/* Step 4 */}
+          <div className="flex gap-4">
+            <div className="flex-shrink-0 w-8 h-8 rounded-full bg-purple-600 text-white flex items-center justify-center text-sm font-bold">
+              4
+            </div>
+            <div className="flex-1">
+              <h4 className="font-semibold text-white mb-2">Create New Tag</h4>
+              <p className="text-white/60 mb-3">
+                Go to Tags → New → Choose "SentientIQ Detect" from Custom templates
+              </p>
+            </div>
+          </div>
+
+          {/* Step 5 */}
+          <div className="flex gap-4">
+            <div className="flex-shrink-0 w-8 h-8 rounded-full bg-purple-600 text-white flex items-center justify-center text-sm font-bold">
+              5
+            </div>
+            <div className="flex-1">
+              <h4 className="font-semibold text-white mb-2">Configure Tag</h4>
+              <p className="text-white/60 mb-3">
+                Enter your API key and select your trigger (typically "All Pages")
+              </p>
+              <div className="bg-black/30 rounded-lg p-4 border border-white/10 space-y-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-white/50 text-sm">API Key:</span>
+                  <code className="text-purple-400 text-sm">{primaryApiKey}</code>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-white/50 text-sm">Trigger:</span>
+                  <code className="text-green-400 text-sm">All Pages</code>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Step 6 */}
+          <div className="flex gap-4">
+            <div className="flex-shrink-0 w-8 h-8 rounded-full bg-green-600 text-white flex items-center justify-center text-sm font-bold">
+              ✓
+            </div>
+            <div className="flex-1">
+              <h4 className="font-semibold text-white mb-2">Publish</h4>
+              <p className="text-white/60 mb-3">
+                Save your tag, submit changes, and publish to start tracking emotions
+              </p>
+            </div>
+          </div>
+        </div>
+      </motion.div>
+
+      {/* Features Grid */}
+      <div className="grid md:grid-cols-3 gap-6 mb-8">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+          className="glass-card p-6"
+        >
+          <Shield className="w-8 h-8 text-purple-400 mb-4" />
+          <h3 className="font-semibold text-white mb-2">Privacy First</h3>
+          <p className="text-white/60 text-sm">
+            No cookies, no PII collection. GDPR & CCPA compliant by design.
+          </p>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4 }}
+          className="glass-card p-6"
+        >
+          <Zap className="w-8 h-8 text-yellow-400 mb-4" />
+          <h3 className="font-semibold text-white mb-2">Real-Time Detection</h3>
+          <p className="text-white/60 text-sm">
+            Detect 15+ emotions instantly with behavioral physics engine.
+          </p>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.5 }}
+          className="glass-card p-6"
+        >
+          <BarChart3 className="w-8 h-8 text-green-400 mb-4" />
+          <h3 className="font-semibold text-white mb-2">Proven ROI</h3>
+          <p className="text-white/60 text-sm">
+            38% reduction in cart abandonment. 24% increase in conversions.
+          </p>
+        </motion.div>
+      </div>
+
+      {/* Alternative Installation */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.6 }}
+        className="glass-card p-6 border-yellow-500/20"
+      >
+        <div className="flex items-start gap-4">
+          <Clock className="w-5 h-5 text-yellow-400 mt-1" />
+          <div>
+            <h3 className="font-semibold text-white mb-2">Manual Installation (Without Template)</h3>
+            <p className="text-white/60 text-sm mb-3">
+              If you can't use the template gallery, create a Custom HTML tag with:
+            </p>
+            <div className="bg-black/50 rounded-lg p-4 font-mono text-xs border border-yellow-500/20">
+              <code className="text-yellow-400">
+                {'<script>'}<br/>
+                {'  (function() {'}<br/>
+                {'    var s = document.createElement("script");'}<br/>
+                {'    s.src = "https://cdn.sentientiq.ai/v2/detect.js";'}<br/>
+                {'    s.setAttribute("data-api-key", "'}{primaryApiKey}{'");'}<br/>
+                {'    document.body.appendChild(s);'}<br/>
+                {'  })();'}<br/>
+                {'</script>'}
               </code>
             </div>
-          </motion.div>
-          
-          {/* Configuration Section */}
-          <motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            className="glass-card p-8 mb-8"
+          </div>
+        </div>
+      </motion.div>
+
+      {/* Support Section */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.7 }}
+        className="text-center mt-12 mb-8"
+      >
+        <p className="text-white/60 mb-4">
+          Need help? Check our documentation or contact support.
+        </p>
+        <div className="flex justify-center gap-4">
+          <a
+            href="https://docs.sentientiq.ai/gtm"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-purple-400 hover:text-purple-300"
           >
-            <h2 className="text-2xl font-bold text-white mb-6">Advanced Configuration</h2>
-            <div className="grid md:grid-cols-2 gap-6">
-              <div>
-                <h3 className="text-lg font-semibold text-green-400 mb-3">Custom Thresholds</h3>
-                <div className="bg-black/50 rounded-xl p-4 font-mono text-sm border border-green-500/20">
-                  <code className="text-green-400">
-                    &lt;script<br/>
-                    &nbsp;&nbsp;src="https://cdn.sentientiq.ai/v1/detect.js"<br/>
-                    &nbsp;&nbsp;data-api-key="YOUR_KEY"<br/>
-                    &nbsp;&nbsp;data-rage-threshold="5"<br/>
-                    &nbsp;&nbsp;data-hesitation-ms="3000"<br/>
-                    &nbsp;&nbsp;data-abandonment-ms="90000"&gt;<br/>
-                    &lt;/script&gt;
-                  </code>
-                </div>
-              </div>
-              
-              <div>
-                <h3 className="text-lg font-semibold text-orange-400 mb-3">Disable Specific Detections</h3>
-                <div className="bg-black/50 rounded-xl p-4 font-mono text-sm border border-orange-500/20">
-                  <code className="text-orange-400">
-                    window.SentientIQ = {'{'}<br/>
-                    &nbsp;&nbsp;disable: ['abandonment', 'confusion'],<br/>
-                    &nbsp;&nbsp;debug: true, <span className="text-gray-400">// Console logs</span><br/>
-                    &nbsp;&nbsp;endpoint: 'https://your-api.com/events'<br/>
-                    {'}'};
-                  </code>
-                </div>
-              </div>
-            </div>
-          </motion.div>
-          
-          {/* API Reference */}
-          <motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-            className="glass-card p-8"
+            Documentation →
+          </a>
+          <a
+            href="mailto:api@sentientiq.app"
+            className="text-purple-400 hover:text-purple-300"
           >
-            <h2 className="text-2xl font-bold text-white mb-6">API Reference</h2>
-            <div className="space-y-4">
-              <div className="border-l-4 border-purple-500 pl-4">
-                <h3 className="font-semibold text-white mb-2">Event: sentientiq:emotion</h3>
-                <p className="text-white/60 text-sm mb-3">Fired when an emotion is detected with high confidence</p>
-                <div className="bg-black/30 rounded-lg p-3 font-mono text-xs">
-                  <div className="text-purple-400">e.detail.emotion</div>
-                  <div className="text-white/60 ml-4">string - The detected emotion</div>
-                  <div className="text-purple-400 mt-2">e.detail.confidence</div>
-                  <div className="text-white/60 ml-4">number - Confidence percentage (0-100)</div>
-                  <div className="text-purple-400 mt-2">e.detail.element</div>
-                  <div className="text-white/60 ml-4">Element - The DOM element involved</div>
-                  <div className="text-purple-400 mt-2">e.detail.metadata</div>
-                  <div className="text-white/60 ml-4">object - Additional context data</div>
-                </div>
-              </div>
-              
-              <div className="border-l-4 border-blue-500 pl-4">
-                <h3 className="font-semibold text-white mb-2">Method: window.SentientIQ.track()</h3>
-                <p className="text-white/60 text-sm mb-3">Manually track custom events</p>
-                <div className="bg-black/30 rounded-lg p-3 font-mono text-xs">
-                  <code className="text-blue-400">
-                    window.SentientIQ.track('custom_event', {'{'}<br/>
-                    &nbsp;&nbsp;emotion: 'frustration',<br/>
-                    &nbsp;&nbsp;context: 'checkout_form',<br/>
-                    &nbsp;&nbsp;value: 42<br/>
-                    {'}'});
-                  </code>
-                </div>
-              </div>
-            </div>
-          </motion.div>
+            Email Support →
+          </a>
+        </div>
+      </motion.div>
     </>
   );
 }

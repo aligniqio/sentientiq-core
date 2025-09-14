@@ -1,8 +1,10 @@
 /**
  * SentientIQ Emotion Detection v2.0
- * Contextual, zone-based emotion detection with behavioral physics
- * 
- * Clean break from incremental patches. Production-ready.
+ * Section-Aware Emotional Intelligence
+ *
+ * Each section has its own emotional vocabulary.
+ * Transitions between sections tell their own story.
+ * The complete emotional journey, not fragments.
  */
 
 (function() {
@@ -22,7 +24,7 @@
   }
 
   const config = {
-    apiEndpoint: 'https://api.sentientiq.app/api/emotional/ingest',
+    apiEndpoint: 'https://api.sentientiq.app/api/emotional/event',
     apiKey: apiKey,
     sessionId: `sq_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
     startTime: Date.now(),
@@ -30,37 +32,142 @@
   };
 
   // ==========================================
-  // CONTEXTUAL ZONES & RELEVANT EMOTIONS
+  // SECTION-SPECIFIC EMOTIONAL CONTEXTS
   // ==========================================
   
-  const ZONES = {
-    navigation: {
-      selector: 'nav, header, [role="navigation"]',
-      emotions: ['exploration', 'abandonment_intent', 'navigation_confidence']
-    },
+  const SECTION_EMOTIONS = {
+    // Above the fold / Hero section
     hero: {
-      selector: '.hero, #hero, [data-section="hero"]',
-      emotions: ['curiosity', 'skepticism', 'intrigue']
+      emotions: {
+        'curiosity': { triggers: ['first_visit', 'cta_hover'], confidence: 70 },
+        'skepticism': { triggers: ['quick_scroll', 'no_interaction'], confidence: 65 },
+        'intrigue': { triggers: ['slow_read', 'mouse_trace'], confidence: 75 },
+        'immediate_bounce_risk': { triggers: ['rapid_escape', 'tab_prepare'], confidence: 85 }
+      },
+      transitionEmotions: {
+        toDemo: 'exploration_intent',
+        toPricing: 'price_curiosity',
+        toTestimonials: 'validation_seeking'
+      }
     },
+    
+    // Demo / How it works section
     demo: {
-      selector: '#emotional-engine, .demo, [data-section="demo"]',
-      emotions: ['engagement', 'delight', 'confusion', 'understanding']
+      emotions: {
+        'engagement': { triggers: ['interaction', 'hover_elements'], confidence: 80 },
+        'understanding': { triggers: ['slow_scroll', 'complete_view'], confidence: 75 },
+        'confusion': { triggers: ['back_scroll', 'hesitation'], confidence: 70 },
+        'delight': { triggers: ['multiple_interactions', 'positive_velocity'], confidence: 85 },
+        'technical_overwhelm': { triggers: ['quick_escape', 'scroll_past'], confidence: 65 }
+      },
+      transitionEmotions: {
+        toPricing: 'value_evaluation',
+        toHero: 're_reading',
+        toTestimonials: 'proof_seeking'
+      }
     },
+    
+    // Features section
     features: {
-      selector: '.features, #features, [data-section="features"]',
-      emotions: ['interest', 'evaluation', 'comparison']
+      emotions: {
+        'feature_scanning': { triggers: ['quick_scroll', 'no_hover'], confidence: 60 },
+        'feature_evaluation': { triggers: ['hover_items', 'slow_read'], confidence: 75 },
+        'comparison_mode': { triggers: ['back_forth_scroll', 'tab_switch'], confidence: 80 },
+        'feature_fatigue': { triggers: ['accelerating_scroll', 'no_interaction'], confidence: 70 }
+      },
+      transitionEmotions: {
+        toPricing: 'ready_to_evaluate_cost',
+        toDemo: 'need_proof',
+        toHero: 'context_seeking'
+      }
     },
-    social_proof: {
-      selector: '.testimonials, .trust, [data-section="proof"]',
-      emotions: ['trust_building', 'validation', 'skepticism']
+    
+    // Testimonials / Social proof
+    testimonials: {
+      emotions: {
+        'trust_building': { triggers: ['reading_pattern', 'slow_scroll'], confidence: 75 },
+        'skepticism': { triggers: ['quick_skip', 'no_hover'], confidence: 65 },
+        'validation': { triggers: ['multiple_reads', 'hover_quotes'], confidence: 80 },
+        'social_proof_fatigue': { triggers: ['accelerating_scroll'], confidence: 60 }
+      },
+      transitionEmotions: {
+        toPricing: 'trust_established',
+        toDemo: 'verification_seeking',
+        toContact: 'human_connection_desire'
+      }
     },
+    
+    // Pricing section
     pricing: {
-      selector: '#pricing, .pricing, [data-section="pricing"]',
-      emotions: ['hesitation', 'purchase_intent', 'sticker_shock', 'confidence']
+      emotions: {
+        'price_evaluation': { triggers: ['hover_price', 'slow_read'], confidence: 85 },
+        'sticker_shock': { triggers: ['mouse_recoil', 'quick_leave'], confidence: 90 },
+        'value_comparison': { triggers: ['between_tiers', 'calculator_behavior'], confidence: 85 },
+        'purchase_intent': { triggers: ['cta_hover', 'repeated_visit'], confidence: 90 },
+        'budget_concern': { triggers: ['long_pause', 'scroll_away'], confidence: 75 },
+        'tier_confusion': { triggers: ['excessive_comparison', 'no_selection'], confidence: 70 }
+      },
+      transitionEmotions: {
+        toContact: 'negotiation_intent',
+        toDemo: 'value_verification',
+        toTestimonials: 'reassurance_seeking',
+        toCompetitor: 'comparison_shopping' // Tab switch
+      }
     },
-    cta: {
-      selector: 'button, .btn, [role="button"]',
-      emotions: ['determination', 'uncertainty', 'action_intent']
+    
+    // Contact / CTA sections
+    contact: {
+      emotions: {
+        'commitment_ready': { triggers: ['form_start', 'field_focus'], confidence: 85 },
+        'last_minute_hesitation': { triggers: ['form_abandon', 'field_blur'], confidence: 80 },
+        'trust_verification': { triggers: ['privacy_check', 'terms_read'], confidence: 70 },
+        'submission_confidence': { triggers: ['form_complete', 'submit_click'], confidence: 95 }
+      },
+      transitionEmotions: {
+        toPricing: 'final_price_check',
+        toTestimonials: 'final_validation',
+        away: 'abandonment'
+      }
+    },
+    
+    // Footer / Bottom of page
+    footer: {
+      emotions: {
+        'completion': { triggers: ['reached_end', 'slow_arrival'], confidence: 70 },
+        'information_seeking': { triggers: ['link_hover', 'policy_click'], confidence: 65 },
+        'exit_intent': { triggers: ['quick_arrival', 'no_interaction'], confidence: 75 }
+      },
+      transitionEmotions: {
+        toTop: 'second_evaluation',
+        away: 'session_end'
+      }
+    }
+  };
+
+  // ==========================================
+  // TRANSITION VELOCITY EMOTIONS
+  // ==========================================
+  
+  const TRANSITION_EMOTIONS = {
+    instant: { // < 500ms
+      'scanning': 60,
+      'impatience': 70,
+      'task_focused': 75
+    },
+    quick: { // 500ms - 2s
+      'exploring': 65,
+      'searching': 70,
+      'evaluating': 75
+    },
+    moderate: { // 2s - 5s
+      'considering': 70,
+      'reading': 75,
+      'processing': 70
+    },
+    slow: { // > 5s
+      'deep_engagement': 80,
+      'careful_evaluation': 85,
+      'hesitation': 65
     }
   };
 
@@ -69,364 +176,392 @@
   // ==========================================
   
   const state = {
-    currentZone: null,
+    // Current position
+    currentSection: null,
+    previousSection: null,
+    sectionHistory: [],
+    sectionTimestamps: {},
+    
+    // Emotional state
+    currentEmotion: null,
+    emotionalJourney: [],
+    sectionEmotions: {}, // Emotions per section
+    
+    // Behavioral tracking
     mousePosition: { x: 0, y: 0 },
+    scrollPosition: 0,
     mouseVelocity: 0,
     scrollVelocity: 0,
-    lastScrollY: 0,
-    lastMoveTime: Date.now(),
+    mousePresent: true,
+    lastMouseSeen: Date.now(),
     
     // Interaction tracking
-    hoverTarget: null,
-    hoverStartTime: 0,
-    clickSequence: [],
-    scrollPattern: [],
+    interactions: {
+      clicks: [],
+      hovers: [],
+      scrolls: [],
+      focuses: []
+    },
     
-    // Navigation specific
-    navHovers: new Map(), // Track hover duration per nav item
-    exitIntentScore: 0,
-    
-    // Emotion history
-    detectedEmotions: [],
-    lastEmotion: null,
-    emotionCooldown: {}
+    // Timing
+    sectionEntryTime: null,
+    lastInteractionTime: Date.now(),
+    idleTime: 0
   };
 
   // ==========================================
-  // ZONE DETECTION
+  // SECTION DETECTION
   // ==========================================
   
-  function getCurrentZone(element) {
-    if (!element) return null;
-    
-    // Check element and its parents for zone match
-    let current = element;
-    while (current && current !== document.body) {
-      for (const [zoneName, zoneConfig] of Object.entries(ZONES)) {
-        if (current.matches && current.matches(zoneConfig.selector)) {
-          return zoneName;
-        }
-      }
-      current = current.parentElement;
-    }
-    
-    // Check by viewport position for section-based zones
-    const viewportHeight = window.innerHeight;
+  function detectCurrentSection() {
     const scrollY = window.scrollY;
+    const viewportHeight = window.innerHeight;
     const viewportCenter = scrollY + (viewportHeight / 2);
     
-    // Find sections and determine which one we're in
-    const sections = document.querySelectorAll('section, [class*="section"]');
-    for (const section of sections) {
-      const rect = section.getBoundingClientRect();
-      const sectionTop = rect.top + scrollY;
-      const sectionBottom = sectionTop + rect.height;
-      
-      if (viewportCenter >= sectionTop && viewportCenter <= sectionBottom) {
-        // Try to identify section type
-        const classList = section.className.toLowerCase();
-        const id = section.id?.toLowerCase();
+    // Try to find section by common selectors
+    const sectionSelectors = [
+      { selector: '#hero, .hero, [data-section="hero"]', name: 'hero' },
+      { selector: '#demo, .demo, [data-section="demo"], #how-it-works', name: 'demo' },
+      { selector: '#features, .features, [data-section="features"]', name: 'features' },
+      { selector: '#testimonials, .testimonials, [data-section="testimonials"], .social-proof', name: 'testimonials' },
+      { selector: '#pricing, .pricing, [data-section="pricing"]', name: 'pricing' },
+      { selector: '#contact, .contact, form, [data-section="contact"]', name: 'contact' },
+      { selector: 'footer, .footer', name: 'footer' }
+    ];
+    
+    for (const { selector, name } of sectionSelectors) {
+      const element = document.querySelector(selector);
+      if (element) {
+        const rect = element.getBoundingClientRect();
+        const top = rect.top + scrollY;
+        const bottom = top + rect.height;
         
-        if (classList.includes('hero') || id === 'hero') return 'hero';
-        if (classList.includes('pricing') || id === 'pricing') return 'pricing';
-        if (classList.includes('demo') || id?.includes('demo')) return 'demo';
-        if (classList.includes('feature')) return 'features';
-      }
-    }
-    
-    return 'general';
-  }
-
-  // ==========================================
-  // EMOTION DETECTION FUNCTIONS
-  // ==========================================
-  
-  /**
-   * Navigation-specific emotions
-   */
-  function detectNavigationBehavior(target, eventType) {
-    if (!target) return;
-    
-    const isNavElement = target.closest('nav, header, [role="navigation"]');
-    if (!isNavElement) return;
-    
-    const isExternalLink = target.href && !target.href.includes(window.location.hostname);
-    const isPricingLink = target.textContent?.toLowerCase().includes('pricing') || 
-                         target.href?.includes('#pricing');
-    const isCtaButton = target.classList?.contains('btn-primary') || 
-                       target.textContent?.match(/start|demo|try/i);
-    
-    if (eventType === 'hover') {
-      // Track hover duration on nav items
-      if (!state.navHovers.has(target)) {
-        state.navHovers.set(target, Date.now());
-      }
-    } else if (eventType === 'leave') {
-      // Check hover duration when leaving
-      const hoverStart = state.navHovers.get(target);
-      if (hoverStart) {
-        const duration = Date.now() - hoverStart;
-        state.navHovers.delete(target);
-        
-        if (duration > 2000 && duration < 5000) {
-          // Hesitating on navigation
-          emitEmotion('navigation_hesitation', {
-            confidence: 75,
-            duration: duration,
-            linkText: target.textContent,
-            linkType: isExternalLink ? 'external' : 'internal'
-          });
+        if (viewportCenter >= top && viewportCenter <= bottom) {
+          return name;
         }
       }
-    } else if (eventType === 'click') {
-      // Confident navigation
-      if (isPricingLink) {
-        emitEmotion('pricing_interest', {
-          confidence: 85,
-          source: 'navigation',
-          intent: 'explore_pricing'
-        });
-      } else if (isCtaButton) {
-        emitEmotion('action_intent', {
-          confidence: 90,
-          source: 'navigation',
-          action: target.textContent
-        });
-      } else {
-        emitEmotion('exploration', {
-          confidence: 70,
-          destination: target.textContent,
-          type: isExternalLink ? 'leaving_site' : 'exploring_site'
-        });
-      }
-    }
-  }
-
-  /**
-   * Pricing zone emotions
-   */
-  function detectPricingBehavior(target, eventType) {
-    const zone = getCurrentZone(target);
-    if (zone !== 'pricing') return;
-    
-    const isPriceElement = target.textContent?.includes('$') || 
-                          target.closest('[class*="price"], [class*="tier"]');
-    const isBuyButton = target.textContent?.match(/buy|purchase|get started|subscribe/i);
-    
-    if (eventType === 'hover' && isPriceElement) {
-      // Start tracking price evaluation
-      if (!state.priceHoverStart) {
-        state.priceHoverStart = Date.now();
-      }
-    } else if (eventType === 'leave' && state.priceHoverStart) {
-      const duration = Date.now() - state.priceHoverStart;
-      state.priceHoverStart = null;
-      
-      if (duration > 1500 && duration < 4000) {
-        emitEmotion('price_evaluation', {
-          confidence: 80,
-          duration: duration,
-          evaluationType: 'considering'
-        });
-      } else if (duration > 4000) {
-        emitEmotion('price_hesitation', {
-          confidence: 85,
-          duration: duration,
-          concern: 'cost_analysis'
-        });
-      }
-    } else if (eventType === 'click' && isBuyButton) {
-      emitEmotion('purchase_confidence', {
-        confidence: 95,
-        trigger: 'buy_button_click',
-        readiness: 'high'
-      });
-    }
-  }
-
-  /**
-   * Scroll-based engagement detection
-   */
-  function detectScrollEngagement() {
-    const now = Date.now();
-    const scrollY = window.scrollY;
-    const scrollDelta = scrollY - state.lastScrollY;
-    const timeDelta = now - state.lastScrollTime || 1;
-    const velocity = Math.abs(scrollDelta) / timeDelta;
-    
-    // Update scroll pattern
-    state.scrollPattern.push({
-      y: scrollY,
-      velocity: velocity,
-      direction: scrollDelta > 0 ? 'down' : 'up',
-      time: now
-    });
-    
-    // Keep last 10 scroll events
-    if (state.scrollPattern.length > 10) {
-      state.scrollPattern.shift();
     }
     
-    // Analyze scroll pattern
-    if (state.scrollPattern.length >= 5) {
-      const recent = state.scrollPattern.slice(-5);
-      const directions = recent.map(p => p.direction);
-      const avgVelocity = recent.reduce((sum, p) => sum + p.velocity, 0) / recent.length;
-      
-      // Check for reading pattern (consistent downward scroll)
-      const readingPattern = directions.filter(d => d === 'down').length >= 4;
-      if (readingPattern && avgVelocity > 0.5 && avgVelocity < 2) {
-        const zone = getCurrentZone(document.elementFromPoint(window.innerWidth/2, window.innerHeight/2));
-        emitEmotion('content_engagement', {
-          confidence: 75,
-          zone: zone,
-          pattern: 'reading',
-          velocity: avgVelocity
-        });
-      }
-      
-      // Check for confusion (rapid direction changes)
-      const directionChanges = directions.reduce((changes, dir, i) => {
-        if (i > 0 && dir !== directions[i-1]) changes++;
-        return changes;
-      }, 0);
-      
-      if (directionChanges >= 3 && avgVelocity > 2) {
-        emitEmotion('confusion', {
-          confidence: 80,
-          zone: getCurrentZone(document.elementFromPoint(window.innerWidth/2, window.innerHeight/2)),
-          pattern: 'searching',
-          directionChanges: directionChanges
-        });
-      }
-    }
+    // Fallback: detect by position
+    const scrollPercentage = (scrollY / (document.body.scrollHeight - viewportHeight)) * 100;
     
-    state.lastScrollY = scrollY;
-    state.lastScrollTime = now;
-  }
-
-  /**
-   * Rage click detection
-   */
-  function detectRageClick(x, y) {
-    const now = Date.now();
+    if (scrollPercentage < 15) return 'hero';
+    if (scrollPercentage > 90) return 'footer';
+    if (scrollPercentage > 70) return 'contact';
+    if (scrollPercentage > 50) return 'pricing';
+    if (scrollPercentage > 30) return 'features';
     
-    state.clickSequence.push({
-      time: now,
-      x: x,
-      y: y
-    });
-    
-    // Keep last 5 clicks
-    state.clickSequence = state.clickSequence.filter(c => now - c.time < 2000);
-    
-    if (state.clickSequence.length >= 3) {
-      // Calculate click intervals
-      const intervals = [];
-      for (let i = 1; i < state.clickSequence.length; i++) {
-        intervals.push(state.clickSequence[i].time - state.clickSequence[i-1].time);
-      }
-      const avgInterval = intervals.reduce((a, b) => a + b, 0) / intervals.length;
-      
-      // Check click proximity (are they clicking the same area?)
-      const xVariance = Math.max(...state.clickSequence.map(c => c.x)) - 
-                       Math.min(...state.clickSequence.map(c => c.x));
-      const yVariance = Math.max(...state.clickSequence.map(c => c.y)) - 
-                       Math.min(...state.clickSequence.map(c => c.y));
-      
-      if (avgInterval < 400 && xVariance < 100 && yVariance < 100) {
-        emitEmotion('frustration', {
-          confidence: 90,
-          clickCount: state.clickSequence.length,
-          avgInterval: Math.round(avgInterval),
-          zone: getCurrentZone(document.elementFromPoint(x, y))
-        });
-        state.clickSequence = []; // Reset after detection
-      }
-    }
-  }
-
-  /**
-   * Exit intent detection
-   */
-  function detectExitIntent(x, y) {
-    const screenHeight = window.innerHeight;
-    const screenWidth = window.innerWidth;
-    
-    // Mouse moving toward top of screen (potential tab/close)
-    if (y < 50 && state.mouseVelocity > 3) {
-      state.exitIntentScore += 2;
-    }
-    
-    // Mouse at edges
-    if (x < 10 || x > screenWidth - 10) {
-      state.exitIntentScore += 1;
-    }
-    
-    // Rapid upward movement
-    if (state.lastMouseY && y < state.lastMouseY - 100) {
-      state.exitIntentScore += 3;
-    }
-    
-    if (state.exitIntentScore > 5 && !state.exitIntentFired) {
-      emitEmotion('abandonment_intent', {
-        confidence: Math.min(70 + state.exitIntentScore * 2, 90),
-        trigger: 'exit_movement',
-        lastZone: state.currentZone
-      });
-      state.exitIntentFired = true;
-      setTimeout(() => {
-        state.exitIntentFired = false;
-        state.exitIntentScore = 0;
-      }, 30000); // Reset after 30 seconds
-    }
-    
-    // Decay exit intent score over time
-    state.exitIntentScore = Math.max(0, state.exitIntentScore - 0.1);
-    state.lastMouseY = y;
+    return 'demo'; // Default middle section
   }
 
   // ==========================================
-  // EMOTION EMISSION & API
+  // SECTION TRANSITION TRACKING
   // ==========================================
   
-  function emitEmotion(emotionType, metadata = {}) {
-    // Prevent duplicate emissions within cooldown
-    const cooldownKey = `${emotionType}_${state.currentZone}`;
-    if (state.emotionCooldown[cooldownKey]) {
-      const timeSince = Date.now() - state.emotionCooldown[cooldownKey];
-      if (timeSince < 5000) return; // 5 second cooldown per emotion per zone
+  function handleSectionChange(newSection) {
+    if (newSection === state.currentSection) return;
+    
+    const now = Date.now();
+    const timeInSection = state.sectionEntryTime ? now - state.sectionEntryTime : 0;
+    
+    // Record section transition
+    if (state.currentSection) {
+      // Calculate transition velocity
+      const transitionSpeed = timeInSection < 500 ? 'instant' :
+                            timeInSection < 2000 ? 'quick' :
+                            timeInSection < 5000 ? 'moderate' : 'slow';
+      
+      // Get transition emotion
+      const transitionEmotion = SECTION_EMOTIONS[state.currentSection]?.transitionEmotions?.[`to${capitalize(newSection)}`];
+      
+      if (transitionEmotion) {
+        emitEmotion(transitionEmotion, {
+          from: state.currentSection,
+          to: newSection,
+          speed: transitionSpeed,
+          timeInSection: timeInSection
+        });
+      }
+      
+      // Also emit velocity-based emotion
+      const velocityEmotions = TRANSITION_EMOTIONS[transitionSpeed];
+      if (velocityEmotions) {
+        const emotion = Object.keys(velocityEmotions)[0];
+        const confidence = velocityEmotions[emotion];
+        
+        emitEmotion(emotion, {
+          confidence: confidence,
+          transition: `${state.currentSection}_to_${newSection}`,
+          velocity: transitionSpeed
+        });
+      }
     }
     
+    // Update state
+    state.previousSection = state.currentSection;
+    state.currentSection = newSection;
+    state.sectionEntryTime = now;
+    state.sectionHistory.push({
+      section: newSection,
+      timestamp: now,
+      fromSection: state.previousSection
+    });
+    
+    // Keep history limited
+    if (state.sectionHistory.length > 20) {
+      state.sectionHistory.shift();
+    }
+    
+    if (config.debug) {
+      console.log(`📍 Section: ${newSection} (from ${state.previousSection})`);
+    }
+  }
+
+  // ==========================================
+  // SECTION-SPECIFIC EMOTION DETECTION
+  // ==========================================
+  
+  function detectSectionEmotions() {
+    // Stop detection when tab is not visible
+    if (document.hidden) return;
+    
+    if (!state.currentSection) return;
+    
+    const sectionConfig = SECTION_EMOTIONS[state.currentSection];
+    if (!sectionConfig) return;
+    
+    const timeInSection = Date.now() - state.sectionEntryTime;
+    const recentInteractions = getRecentInteractions(2000); // Last 2 seconds
+    
+    // Check each possible emotion for this section
+    for (const [emotion, config] of Object.entries(sectionConfig.emotions)) {
+      const triggers = config.triggers;
+      let shouldTrigger = false;
+      let matchedTrigger = null;
+      
+      for (const trigger of triggers) {
+        switch(trigger) {
+          case 'first_visit':
+            shouldTrigger = state.sectionHistory.filter(h => h.section === state.currentSection).length === 1;
+            break;
+            
+          case 'cta_hover':
+            shouldTrigger = recentInteractions.hovers.some(h => 
+              h.element.match(/button|cta|btn/i));
+            break;
+            
+          case 'quick_scroll':
+            shouldTrigger = state.scrollVelocity > 3 && timeInSection < 2000;
+            break;
+            
+          case 'slow_read':
+            // Only trigger if actively scrolling slowly, not just sitting still
+            shouldTrigger = state.scrollVelocity < 1 && state.scrollVelocity > 0.1 &&
+                          timeInSection > 5000 && state.idleTime < 2000;
+            break;
+            
+          case 'hover_price':
+            // Only trigger on actual pricing elements, not just any text mentioning price
+            shouldTrigger = recentInteractions.hovers.some(h => {
+              const elem = h.element.toLowerCase();
+              // Must be a button, card, or specific pricing element
+              return (elem.includes('$') && (elem.includes('button') || elem.includes('card'))) ||
+                     elem.match(/pricing-card|price-tier|plan-selector|checkout|subscribe/i);
+            });
+            break;
+            
+          case 'mouse_recoil':
+            shouldTrigger = state.mouseVelocity > 5 && state.mouseDirection === 'away';
+            break;
+            
+          case 'form_start':
+            shouldTrigger = recentInteractions.focuses.length > 0;
+            break;
+            
+          case 'multiple_interactions':
+            shouldTrigger = recentInteractions.clicks.length >= 2 || 
+                          recentInteractions.hovers.length >= 3;
+            break;
+            
+          case 'tab_switch':
+            shouldTrigger = document.hidden;
+            break;
+            
+          case 'hesitation':
+            shouldTrigger = state.idleTime > 2000 && state.idleTime < 5000;
+            break;
+            
+          case 'no_interaction':
+            shouldTrigger = recentInteractions.clicks.length === 0 && 
+                          recentInteractions.hovers.length === 0;
+            break;
+        }
+        
+        if (shouldTrigger) {
+          matchedTrigger = trigger;
+          break;
+        }
+      }
+      
+      if (shouldTrigger) {
+        // Check if we haven't emitted this emotion recently in this section
+        const sectionEmotionKey = `${state.currentSection}_${emotion}`;
+        const lastEmitted = state.sectionEmotions[sectionEmotionKey];
+        
+        if (!lastEmitted || (Date.now() - lastEmitted) > 5000) {
+          emitEmotion(emotion, {
+            confidence: config.confidence,
+            section: state.currentSection,
+            trigger: matchedTrigger,
+            timeInSection: timeInSection
+          });
+          
+          state.sectionEmotions[sectionEmotionKey] = Date.now();
+        }
+      }
+    }
+  }
+
+  // ==========================================
+  // BEHAVIORAL TRACKING
+  // ==========================================
+  
+  function trackMouseBehavior(e) {
+    const now = Date.now();
+    state.lastMouseSeen = now;
+    state.mousePresent = true;
+    const timeDelta = now - state.lastInteractionTime;
+    
+    if (timeDelta > 0) {
+      const distance = Math.sqrt(
+        Math.pow(e.clientX - state.mousePosition.x, 2) + 
+        Math.pow(e.clientY - state.mousePosition.y, 2)
+      );
+      
+      state.mouseVelocity = distance / timeDelta;
+      
+      // Detect direction
+      if (e.clientY < state.mousePosition.y - 50) {
+        state.mouseDirection = 'up';
+      } else if (e.clientY > state.mousePosition.y + 50) {
+        state.mouseDirection = 'down';
+      } else if (Math.abs(e.clientX - state.mousePosition.x) > 50) {
+        state.mouseDirection = 'lateral';
+      }
+      
+      // Check for recoil
+      if (state.mouseVelocity > 5 && state.mouseDirection === 'up') {
+        state.mouseDirection = 'away'; // Recoil detected
+      }
+    }
+    
+    state.mousePosition = { x: e.clientX, y: e.clientY };
+    state.lastInteractionTime = now;
+    state.idleTime = 0;
+  }
+  
+  function trackScrollBehavior() {
+    const now = Date.now();
+    const scrollY = window.scrollY;
+    const scrollDelta = Math.abs(scrollY - state.scrollPosition);
+    const timeDelta = now - state.lastScrollTime || 1;
+    
+    state.scrollVelocity = scrollDelta / timeDelta;
+    state.scrollPosition = scrollY;
+    state.lastScrollTime = now;
+    
+    // Record scroll
+    state.interactions.scrolls.push({
+      position: scrollY,
+      velocity: state.scrollVelocity,
+      timestamp: now
+    });
+    
+    // Limit history
+    if (state.interactions.scrolls.length > 50) {
+      state.interactions.scrolls.shift();
+    }
+    
+    // Check for section change
+    const newSection = detectCurrentSection();
+    handleSectionChange(newSection);
+  }
+  
+  function trackInteraction(type, target) {
+    const interaction = {
+      type: type,
+      element: target.tagName + (target.className ? '.' + target.className : ''),
+      text: target.textContent?.substring(0, 30),
+      timestamp: Date.now()
+    };
+    
+    state.interactions[type + 's'].push(interaction);
+    
+    // Limit history
+    if (state.interactions[type + 's'].length > 20) {
+      state.interactions[type + 's'].shift();
+    }
+    
+    state.lastInteractionTime = Date.now();
+    state.idleTime = 0;
+  }
+  
+  function getRecentInteractions(timeWindow) {
+    const cutoff = Date.now() - timeWindow;
+    
+    return {
+      clicks: state.interactions.clicks.filter(i => i.timestamp > cutoff),
+      hovers: state.interactions.hovers.filter(i => i.timestamp > cutoff),
+      scrolls: state.interactions.scrolls.filter(i => i.timestamp > cutoff),
+      focuses: state.interactions.focuses.filter(i => i.timestamp > cutoff)
+    };
+  }
+
+  // ==========================================
+  // EMOTION EMISSION
+  // ==========================================
+  
+  // Track recently emitted emotions to prevent duplicates
+  const recentEmotions = new Map();
+
+  function emitEmotion(emotionType, metadata = {}) {
+    // Prevent duplicate emotions within 3 seconds
+    const emotionKey = `${emotionType}-${metadata.section || state.currentSection}`;
+    const lastEmitted = recentEmotions.get(emotionKey);
+    if (lastEmitted && Date.now() - lastEmitted < 3000) {
+      return; // Skip duplicate emotion
+    }
+    recentEmotions.set(emotionKey, Date.now());
+
     const event = {
       session_id: config.sessionId,
       user_id: config.apiKey,
-      tenant_id: config.apiKey === 'DEMO_KEY' ? 'demo' : config.apiKey, // Add tenant_id for backend
+      tenant_id: config.apiKey === 'DEMO_KEY' ? 'demo' : config.apiKey,
       emotion: emotionType,
       confidence: metadata.confidence || 75,
-      intensity: metadata.intensity || 70,
-      zone: state.currentZone || 'unknown',
+      section: metadata.section || state.currentSection,
       page_url: window.location.href,
       timestamp: new Date().toISOString(),
       metadata: {
         ...metadata,
         timeOnPage: Date.now() - config.startTime,
-        viewport: {
-          width: window.innerWidth,
-          height: window.innerHeight
-        }
+        sectionHistory: state.sectionHistory.slice(-5),
+        currentSection: state.currentSection
       }
     };
     
-    // Store locally
-    state.detectedEmotions.push(event);
-    state.lastEmotion = emotionType;
-    state.emotionCooldown[cooldownKey] = Date.now();
+    // Update state
+    state.currentEmotion = emotionType;
+    state.emotionalJourney.push({
+      emotion: emotionType,
+      section: state.currentSection,
+      timestamp: Date.now()
+    });
     
     // Emit browser event
     window.dispatchEvent(new CustomEvent('sentientiq:emotion', { detail: event }));
     
-    // Send to API (including DEMO_KEY for testing)
+    // Send to API
     fetch(config.apiEndpoint, {
       method: 'POST',
       headers: {
@@ -439,158 +574,169 @@
     });
     
     if (config.debug) {
-      console.log(`🎯 ${emotionType} (${metadata.confidence}%)`, metadata);
+      console.log(`🎯 [${state.currentSection}] ${emotionType} (${metadata.confidence || 75}%)`, metadata);
     }
   }
 
   // ==========================================
-  // EVENT HANDLERS
+  // UTILITY FUNCTIONS
   // ==========================================
   
-  document.addEventListener('mousemove', function(e) {
-    const now = Date.now();
-    const timeDelta = now - state.lastMoveTime;
-    
-    if (timeDelta > 0) {
-      const distance = Math.sqrt(
-        Math.pow(e.clientX - state.mousePosition.x, 2) + 
-        Math.pow(e.clientY - state.mousePosition.y, 2)
-      );
-      state.mouseVelocity = distance / timeDelta;
+  function capitalize(str) {
+    return str.charAt(0).toUpperCase() + str.slice(1);
+  }
+
+  // ==========================================
+  // EVENT LISTENERS
+  // ==========================================
+  
+  document.addEventListener('mousemove', trackMouseBehavior);
+  document.addEventListener('scroll', trackScrollBehavior);
+  
+  // Track mouse leaving viewport - but only for truly concerning patterns
+  document.addEventListener('mouseleave', function(e) {
+    state.mousePresent = false;
+    const timeSinceLastInteraction = Date.now() - state.lastInteractionTime;
+
+    // Only trigger if mouse leaves to top (likely going to close tab)
+    if (e.clientY <= 0 && timeSinceLastInteraction < 1000) {
+      emitEmotion('abandonment_intent', {
+        trigger: 'mouse_to_tab_bar',
+        confidence: 85,
+        section: state.currentSection
+      });
     }
-    
-    state.mousePosition = { x: e.clientX, y: e.clientY };
-    state.lastMoveTime = now;
-    state.currentZone = getCurrentZone(e.target);
-    
-    // Check for exit intent
-    detectExitIntent(e.clientX, e.clientY);
-  });
-
-  document.addEventListener('mouseover', function(e) {
-    state.hoverTarget = e.target;
-    state.hoverStartTime = Date.now();
-    
-    // Navigation-specific hover
-    detectNavigationBehavior(e.target, 'hover');
-    
-    // Pricing-specific hover
-    detectPricingBehavior(e.target, 'hover');
-  });
-
-  document.addEventListener('mouseout', function(e) {
-    if (state.hoverTarget === e.target) {
-      // Check navigation hesitation
-      detectNavigationBehavior(e.target, 'leave');
-      
-      // Check pricing hesitation
-      detectPricingBehavior(e.target, 'leave');
-      
-      state.hoverTarget = null;
-      state.hoverStartTime = 0;
+    // Less aggressive for other mouse exits
+    else if (timeSinceLastInteraction < 500) {
+      // Just actively moving, might return
+      setTimeout(() => {
+        if (!state.mousePresent && state.idleTime > 10000) {
+          emitEmotion('disinterest', {
+            trigger: 'mouse_gone_extended',
+            confidence: 70,
+            section: state.currentSection
+          });
+        }
+      }, 10000);  // Wait 10 seconds before considering disinterest
     }
   });
-
+  
+  // Track mouse returning
+  document.addEventListener('mouseenter', function() {
+    state.mousePresent = true;
+    state.lastMouseSeen = Date.now();
+  });
+  
   document.addEventListener('click', function(e) {
-    const target = e.target;
-    state.currentZone = getCurrentZone(target);
-    
-    // Check for rage clicking
-    detectRageClick(e.clientX, e.clientY);
-    
-    // Navigation clicks
-    detectNavigationBehavior(target, 'click');
-    
-    // Pricing clicks
-    detectPricingBehavior(target, 'click');
-    
-    // General CTA detection
-    if (target.matches('button, .btn, [role="button"]')) {
-      const buttonText = target.textContent?.toLowerCase() || '';
-      
-      if (buttonText.match(/demo|try|start|begin/)) {
-        emitEmotion('curiosity_action', {
-          confidence: 85,
-          action: 'demo_request',
-          zone: state.currentZone
-        });
-      } else if (buttonText.match(/contact|talk|call/)) {
-        emitEmotion('human_contact_desire', {
-          confidence: 80,
-          action: 'contact_request',
-          zone: state.currentZone
-        });
-      }
+    trackInteraction('click', e.target);
+  });
+  
+  document.addEventListener('mouseover', function(e) {
+    if (e.target.tagName === 'BUTTON' || e.target.tagName === 'A' || 
+        e.target.classList?.contains('btn') || e.target.classList?.contains('cta')) {
+      trackInteraction('hover', e.target);
     }
   });
-
-  window.addEventListener('scroll', function() {
-    detectScrollEngagement();
+  
+  document.addEventListener('focus', function(e) {
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
+      trackInteraction('focus', e.target);
+    }
+  }, true);
+  
+  // Visibility change
+  document.addEventListener('visibilitychange', function() {
+    if (document.hidden && state.currentSection === 'pricing') {
+      // Tab switch from pricing = comparison shopping
+      emitEmotion('comparison_shopping', {
+        trigger: 'tab_switch',
+        section: 'pricing',
+        confidence: 90
+      });
+    }
   });
+  
+  // Track idle time - but be less aggressive
+  setInterval(() => {
+    state.idleTime = Date.now() - state.lastInteractionTime;
+
+    // Only emit abandonment_risk for truly idle users (90+ seconds)
+    if (state.idleTime > 90000 && state.currentSection) {
+      emitEmotion('abandonment_risk', {
+        section: state.currentSection,
+        idleTime: state.idleTime,
+        confidence: 60  // Lower confidence for idle-based detection
+      });
+    }
+  }, 10000);  // Check less frequently
+  
+  // Main detection loop - less frequent to avoid spam
+  setInterval(() => {
+    // Only detect emotions when user is active (moved in last 10 seconds)
+    if (!document.hidden && state.idleTime < 10000) {
+      detectSectionEmotions();
+    }
+  }, 5000);  // Check every 5 seconds instead of 1
+
+  // ==========================================
+  // INITIALIZATION
+  // ==========================================
+  
+  setTimeout(() => {
+    const initialSection = detectCurrentSection();
+    handleSectionChange(initialSection);
+    
+    // Initial emotion based on entry
+    if (document.referrer.includes('google') || document.referrer.includes('bing')) {
+      emitEmotion('search_arrival', {
+        section: initialSection,
+        source: 'search',
+        confidence: 80
+      });
+    } else if (document.referrer.includes(window.location.hostname)) {
+      emitEmotion('navigation', {
+        section: initialSection,
+        source: 'internal',
+        confidence: 70
+      });
+    } else {
+      emitEmotion('direct_arrival', {
+        section: initialSection,
+        source: 'direct',
+        confidence: 60
+      });
+    }
+  }, 2000); // Check every 2 seconds instead of 100ms
 
   // ==========================================
   // PUBLIC API
   // ==========================================
   
   window.SentientIQ = {
-    version: '2.0.0',
+    version: '4.0.0',
     
-    // Core API
-    getSessionId: () => config.sessionId,
-    getCurrentZone: () => state.currentZone,
-    getEmotions: () => state.detectedEmotions,
+    getCurrentSection: () => state.currentSection,
+    getEmotionalJourney: () => state.emotionalJourney,
+    getSectionHistory: () => state.sectionHistory,
     
-    // Manual tracking
-    track: (emotion, confidence, metadata) => {
-      emitEmotion(emotion, { confidence, ...metadata });
-    },
-    
-    // Testing & debugging
     debug: {
       getState: () => state,
-      getZones: () => ZONES,
-      simulateEmotion: (emotion) => {
-        emitEmotion(emotion, { 
-          confidence: 100, 
-          source: 'manual_test' 
-        });
-      },
-      reset: () => {
-        state.detectedEmotions = [];
-        state.emotionCooldown = {};
-      }
-    },
-    
-    // Event subscription
-    on: (event, callback) => {
-      window.addEventListener('sentientiq:' + event, (e) => {
-        callback(e.detail);
-      });
+      getSectionEmotions: () => SECTION_EMOTIONS,
+      forceSection: (section) => handleSectionChange(section),
+      testEmotion: (emotion) => emitEmotion(emotion, { source: 'manual_test' })
     }
   };
-
-  // ==========================================
-  // INITIALIZATION
-  // ==========================================
-  
-  // Send session start
-  setTimeout(() => {
-    emitEmotion('session_start', {
-      confidence: 100,
-      entryPoint: window.location.pathname,
-      referrer: document.referrer
-    });
-  }, 100);
 
   if (config.debug) {
     console.log(`
 ╔══════════════════════════════════════════════════════╗
-║      🧠 SENTIENTIQ v2.0 - CONTEXTUAL DETECTION      ║
+║    🎯 SENTIENTIQ v4.0 - SECTION-AWARE EMOTIONS      ║
 ║                                                      ║
-║  Zone-based emotion detection active                ║
-║  Session: ${config.sessionId.substring(0, 20)}...  ║
+║  Each section has its own emotional vocabulary       ║
+║  Transitions tell their own story                   ║
+║  Complete journey tracking, not fragments           ║
 ║                                                      ║
-║  Debug mode enabled - check SentientIQ.debug        ║
+║  Sections: hero → demo → features → pricing         ║
 ╚══════════════════════════════════════════════════════╝
     `);
   }

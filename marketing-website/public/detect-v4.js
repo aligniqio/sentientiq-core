@@ -1,7 +1,7 @@
 /**
- * SentientIQ Emotion Detection v4.0
+ * SentientIQ Emotion Detection v2.0
  * Section-Aware Emotional Intelligence
- * 
+ *
  * Each section has its own emotional vocabulary.
  * Transitions between sections tell their own story.
  * The complete emotional journey, not fragments.
@@ -355,7 +355,9 @@
             break;
             
           case 'slow_read':
-            shouldTrigger = state.scrollVelocity < 1 && state.scrollVelocity > 0.1 && timeInSection > 3000;
+            // Only trigger if actively scrolling slowly, not just sitting still
+            shouldTrigger = state.scrollVelocity < 1 && state.scrollVelocity > 0.1 &&
+                          timeInSection > 5000 && state.idleTime < 2000;
             break;
             
           case 'hover_price':
@@ -591,34 +593,36 @@
   document.addEventListener('mousemove', trackMouseBehavior);
   document.addEventListener('scroll', trackScrollBehavior);
   
-  // Track mouse leaving viewport - disinterest → exit risk pattern
+  // Track mouse leaving viewport - but only for truly concerning patterns
   document.addEventListener('mouseleave', function(e) {
     state.mousePresent = false;
     const timeSinceLastInteraction = Date.now() - state.lastInteractionTime;
-    
-    // Sudden disappearance = disinterest
-    if (timeSinceLastInteraction < 3000) {
-      emitEmotion('disinterest', {
-        trigger: 'sudden_mouse_exit',
+
+    // Only trigger if mouse leaves to top (likely going to close tab)
+    if (e.clientY <= 0 && timeSinceLastInteraction < 1000) {
+      emitEmotion('abandonment_intent', {
+        trigger: 'mouse_to_tab_bar',
         confidence: 85,
         section: state.currentSection
       });
-      
-      // After disinterest, escalate to exit risk
+    }
+    // Less aggressive for other mouse exits
+    else if (timeSinceLastInteraction < 500) {
+      // Just actively moving, might return
       setTimeout(() => {
-        if (!state.mousePresent) {
-          emitEmotion('abandonment_risk', {
-            trigger: 'mouse_disappeared',
-            confidence: 90,
+        if (!state.mousePresent && state.idleTime > 10000) {
+          emitEmotion('disinterest', {
+            trigger: 'mouse_gone_extended',
+            confidence: 70,
             section: state.currentSection
           });
         }
-      }, 2000);
+      }, 10000);  // Wait 10 seconds before considering disinterest
     }
   });
   
   // Track mouse returning
-  document.addEventListener('mouseenter', function(e) {
+  document.addEventListener('mouseenter', function() {
     state.mousePresent = true;
     state.lastMouseSeen = Date.now();
   });
@@ -652,25 +656,27 @@
     }
   });
   
-  // Track idle time
+  // Track idle time - but be less aggressive
   setInterval(() => {
     state.idleTime = Date.now() - state.lastInteractionTime;
-    
-    if (state.idleTime > 30000 && state.currentSection) {
+
+    // Only emit abandonment_risk for truly idle users (90+ seconds)
+    if (state.idleTime > 90000 && state.currentSection) {
       emitEmotion('abandonment_risk', {
         section: state.currentSection,
         idleTime: state.idleTime,
-        confidence: 80
+        confidence: 60  // Lower confidence for idle-based detection
       });
     }
-  }, 5000);
+  }, 10000);  // Check less frequently
   
-  // Main detection loop
+  // Main detection loop - less frequent to avoid spam
   setInterval(() => {
-    if (!document.hidden) {
+    // Only detect emotions when user is active (moved in last 10 seconds)
+    if (!document.hidden && state.idleTime < 10000) {
       detectSectionEmotions();
     }
-  }, 1000);
+  }, 5000);  // Check every 5 seconds instead of 1
 
   // ==========================================
   // INITIALIZATION

@@ -38,6 +38,17 @@ export const strictLimiter = rateLimit({
   skipFailedRequests: false,
 });
 
+// High-volume limiter for emotion events (detect.js sends many events)
+export const emotionLimiter = rateLimit({
+  windowMs: 1 * 60 * 1000, // 1 minute
+  max: 120, // 120 events per minute per IP (2 per second average)
+  message: 'Too many emotion events, please slow down',
+  standardHeaders: true,
+  legacyHeaders: false,
+  skipSuccessfulRequests: false,
+  skipFailedRequests: true, // Don't count failed requests
+});
+
 // Validation middleware
 export const validateDebateRequest = [
   body('prompt').isString().isLength({ min: 1, max: 5000 }).trim().escape(),

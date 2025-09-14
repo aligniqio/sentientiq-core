@@ -3,11 +3,12 @@ import express, { Request, Response } from 'express';
 import cors from 'cors';
 import { z } from 'zod';
 import { callAnthropic } from './services/hybrid-llm.js';
-import { 
-  generalLimiter, 
-  debateLimiter, 
+import {
+  generalLimiter,
+  debateLimiter,
   sageLimiter,
   strictLimiter,
+  emotionLimiter,
   securityHeaders,
   errorHandler,
   timeoutMiddleware,
@@ -552,7 +553,7 @@ app.get('/api/features', featureFlagsHandler);
 
 // Core Emotional Analytics (always enabled)
 if (true) { // Emotion detection always on
-  app.post('/api/emotional/event', express.json(), emotionalAnalyticsHandlers.recordEvent);
+  app.post('/api/emotional/event', emotionLimiter, express.json(), emotionalAnalyticsHandlers.recordEvent);
   app.get('/api/emotional/patterns', emotionalAnalyticsHandlers.getPatterns);
   app.get('/api/emotional/heatmap', emotionalAnalyticsHandlers.getHeatmap);
   app.post('/api/emotional/predict', express.json(), emotionalAnalyticsHandlers.predictAction);
