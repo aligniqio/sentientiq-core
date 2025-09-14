@@ -102,14 +102,11 @@ force = true
 [[redirects]]
 from = "/v2/detect.js"
 to = "/detect-v3.js"
-status = 200.0
+status = 200
 force = true
 
-[redirects.query]
-
-[redirects.conditions]
-
 [redirects.headers]
+Content-Type = "application/javascript"
 
 [[redirects]]
 from = "/v3/detect.js"

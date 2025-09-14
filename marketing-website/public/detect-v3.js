@@ -14,7 +14,9 @@
   // ==========================================
 
   const scriptTag = document.currentScript;
-  const apiKey = scriptTag?.getAttribute('data-api-key');
+  const apiKey = scriptTag?.getAttribute('data-api-key') ||
+                 new URLSearchParams(scriptTag?.src?.split('?')[1] || '').get('key') ||
+                 'sq_demo_marketing_v3';
   const debugMode = scriptTag?.getAttribute('data-debug') === 'true';
 
   if (!apiKey) {
