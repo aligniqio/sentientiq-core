@@ -180,6 +180,7 @@ export default function SageCrystalBall() {
           onMouseEnter={() => setIsHovering(true)}
           onMouseLeave={() => setIsHovering(false)}
           className="relative group"
+          data-sage-crystal-ball="true"
         >
           {/* Outer glow */}
           <div

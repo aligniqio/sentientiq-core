@@ -70,7 +70,14 @@ export default function SystemImplementation() {
       <motion.div
         initial={{ opacity: 0, x: 20 }}
         animate={{ opacity: 1, x: 0 }}
-        className="fixed top-24 right-6 max-w-xs glass-card p-4 bg-purple-900/20 border-purple-500/30"
+        className="fixed top-24 right-6 max-w-xs glass-card p-4 bg-purple-900/20 border-purple-500/30 z-40 cursor-pointer hover:bg-purple-900/30 transition-all"
+        onClick={() => {
+          // Find and click the Sage crystal ball
+          const sageBall = document.querySelector('[data-sage-crystal-ball]');
+          if (sageBall) {
+            (sageBall as HTMLElement).click();
+          }
+        }}
       >
         <div className="flex items-start gap-3">
           <HelpCircle className="w-5 h-5 text-purple-400 mt-0.5" />
