@@ -24,7 +24,7 @@
   }
 
   const config = {
-    apiEndpoint: 'https://api.sentientiq.app/api/emotional/ingest',
+    apiEndpoint: 'https://api.sentientiq.app/api/emotional/event',
     apiKey: apiKey,
     sessionId: `sq_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
     startTime: Date.now(),
