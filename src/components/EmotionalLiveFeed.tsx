@@ -123,7 +123,7 @@ const EmotionalLiveFeed = () => {
         const wsInfo = await wsInfoResponse.json();
         // Use 'demo' tenant for cross-domain testing
         const tenantId = window.location.hostname === 'localhost' ? user.id : 'demo';
-        const wsUrl = `${wsInfo.ws_url}?tenant_id=${tenantId}`;
+        const wsUrl = `${wsInfo.ws_url}?channel=emotions&tenant_id=${tenantId}`;
         
         // Connect to WebSocket
         ws.current = new WebSocket(wsUrl);

@@ -3,6 +3,9 @@
  * The brain that understands emotional sequences and triggers interventions
  */
 
+import dotenv from 'dotenv';
+dotenv.config();
+
 import { createClient } from '@supabase/supabase-js';
 
 const supabase = createClient(
@@ -210,6 +213,22 @@ class PatternEngine {
         this.interventionHistory.delete(sessionId);
       }
     }
+  }
+
+  /**
+   * Analyze pattern for a session and emotion
+   * This is the method called by the server
+   */
+  async analyzePattern(sessionId: string, emotion: string, tenantId: string = 'demo'): Promise<string | null> {
+    const event: EmotionEvent = {
+      session_id: sessionId,
+      tenant_id: tenantId,
+      emotion: emotion,
+      confidence: 80, // Use percentage format to match pattern thresholds
+      behavior: 'unknown',
+      timestamp: new Date().toISOString()
+    };
+    return await this.processEmotion(event);
   }
 }
 

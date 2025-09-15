@@ -535,26 +535,45 @@
 
       console.log('🔍 [TRACE] Total behaviors detected:', behaviors.length);
       for (const behavior of behaviors) {
+        console.log('🔍 [TRACE] Processing behavior:', behavior.type);
         const context = this.behaviorDetector.getContext(behavior._source);
         const record = this.behaviorDetector.recordBehavior(behavior, context);
-        if (record && this.shouldEmitEmotion(record)) this.emitEmotion(record);
+        console.log('🔍 [TRACE] Record created:', record);
+        if (record && this.shouldEmitEmotion(record)) {
+          console.log('🔍 [TRACE] Should emit - calling emitEmotion');
+          this.emitEmotion(record);
+        } else {
+          console.log('🔍 [TRACE] Not emitting - shouldEmitEmotion returned false');
+        }
       }
     }
 
     shouldEmitEmotion(record) {
+      console.log('🔍 [TRACE] shouldEmitEmotion checking:', record);
+
       // Confidence threshold
-      if (record.confidence <= 50) return false;
+      if (record.confidence <= 50) {
+        console.log('🔍 [TRACE] Rejected - confidence too low:', record.confidence);
+        return false;
+      }
 
       // Per-behavior cooldown
       const now = Date.now();
       const bt = this.lastBehaviorTime[record.behavior] || 0;
       const bc = this.behaviorCooldowns[record.behavior] ?? 1500;
-      if (now - bt < bc) return false;
+      if (now - bt < bc) {
+        console.log('🔍 [TRACE] Rejected - behavior cooldown:', now - bt, '<', bc);
+        return false;
+      }
 
       // Per-emotion cooldown (increased to 15 seconds)
       const et = this.lastEmotionTime[record.emotion] || 0;
-      if (now - et < 15000) return false;
+      if (now - et < 15000) {
+        console.log('🔍 [TRACE] Rejected - emotion cooldown:', now - et, '< 15000');
+        return false;
+      }
 
+      console.log('🔍 [TRACE] APPROVED for emission!');
       this.lastBehaviorTime[record.behavior] = now;
       return true;
     }
