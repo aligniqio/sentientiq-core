@@ -17,6 +17,11 @@
     debug: window.SENTIENTIQ_DEBUG === true
   };
 
+  // Debug what we're getting
+  console.log('Config tenantId:', config.tenantId);
+  console.log('Window var:', window.SENTIENTIQ_TENANT_ID);
+  console.log('LocalStorage:', localStorage.getItem('tenantId'));
+
   // Safety check - must have tenant ID
   if (!config.tenantId || config.tenantId === 'demo') {
     console.warn('SentientIQ: No Tenant ID configured');
