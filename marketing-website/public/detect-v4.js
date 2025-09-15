@@ -387,6 +387,7 @@
     destroy() { this.bound.forEach(fn => fn()); this.behaviorDetector.clearIdleTimer(); if (this._interval) clearInterval(this._interval); }
 
     init() {
+      console.log('🔍 [TRACE] init() called with config:', config);
       if (config.debug) {
         console.log('🚀 SentientIQ v4.1 initialized');
         console.log('📊 Behavioral Taxonomy Engine active');
@@ -394,7 +395,9 @@
       }
 
       if (config.ui.showBanners) this.showInitBanner();
+      console.log('🔍 [TRACE] About to call initListeners()');
       this.initListeners();
+      console.log('🔍 [TRACE] initListeners() completed');
 
       // Enable optional intent brain when configured
       if (config.intentBrain && !this.intentBrainEnabled) {
@@ -402,7 +405,12 @@
       }
 
       // Process behaviors on cadence
-      this._interval = setInterval(() => this.processBehaviors(), config.cadenceMs);
+      console.log('🔍 [TRACE] Setting interval with cadence:', config.cadenceMs, 'ms');
+      this._interval = setInterval(() => {
+        console.log('🔍 [TRACE] Interval tick - processBehaviors()');
+        this.processBehaviors();
+      }, config.cadenceMs);
+      console.log('🔍 [TRACE] Interval set with ID:', this._interval);
 
       // Visibility-aware suspension
       this.on(document, 'visibilitychange', () => {
@@ -425,8 +433,11 @@
     }
 
     initListeners() {
+      console.log('🔍 [TRACE] initListeners() started');
       // CLICK
+      console.log('🔍 [TRACE] Adding click listener');
       this.on(document, 'click', (e) => {
+        console.log('🔍 [TRACE] Click detected');
         const click = { x: e.clientX, y: e.clientY, t: Date.now(), target: e.target };
         const h = this.behaviorDetector.clickHistory; h.push(click); if (h.length > 24) h.shift();
         this.behaviorDetector.resetActivity();
@@ -479,6 +490,7 @@
     }
 
     processBehaviors() {
+      console.log('🔍 [TRACE] processBehaviors() called, suspended:', this.behaviorDetector.suspended);
       if (this.behaviorDetector.suspended) return;
 
       const behaviors = [];
