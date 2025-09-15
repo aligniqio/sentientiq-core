@@ -424,6 +424,7 @@ export class BehaviorProcessor {
     const patterns = this.detectPatterns(session.history);
     if (patterns.length > 0) {
       session.patterns = patterns;
+      console.log(`🎯 Patterns detected for ${sessionId}:`, patterns.map(p => p.type));
 
       // TRIGGER INTERVENTIONS FOR CRITICAL PATTERNS
       this.triggerInterventions(sessionId, patterns, session);
@@ -570,6 +571,11 @@ export class BehaviorProcessor {
     // Recent emotions (last 5-10 for cart patterns)
     const recent = history.slice(-5).map(h => h.emotion);
     const extended = history.slice(-10).map(h => h.emotion);
+
+    // Debug log to see what emotions we're working with
+    if (recent.length > 0) {
+      console.log('📊 Recent emotions:', recent);
+    }
 
     // CART ABANDONMENT PATTERNS - THE MONEY MAKER
     const cartEmotions = ['cart_hesitation', 'cart_review', 'cart_shock'];

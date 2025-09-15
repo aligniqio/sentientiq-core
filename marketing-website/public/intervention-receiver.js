@@ -95,8 +95,8 @@
         break;
 
       case 'intervention':
-        console.log(`🎯 Intervention received: ${data.intervention}`);
-        showIntervention(data.intervention);
+        console.log(`🎯 Intervention received: ${data.intervention_type || data.intervention}`);
+        showIntervention(data.intervention_type || data.intervention);
         break;
 
       case 'pong':
@@ -956,10 +956,12 @@
   // Export for debugging
   window.SentientIQInterventions = {
     ws: () => ws,
-    sessionId: () => sessionStorage.getItem('sq_session_id'),
-    tenantId: () => tenantId,
+    getSessionId: () => sessionStorage.getItem('sq_session_id'),
+    getTenantId: () => tenantId,
     reconnect: connect,
-    showIntervention: showIntervention
+    showIntervention: showIntervention,
+    // Backwards compatibility
+    sessionId: () => sessionStorage.getItem('sq_session_id')
   };
 
 })();

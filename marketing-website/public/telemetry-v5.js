@@ -42,7 +42,8 @@
     velocityHistory: [], // Track velocity for deceleration detection
     exitDirection: null, // Track where mouse left viewport
     erraticHistory: [], // Track erratic movements over pricing
-    lastDirectionChange: 0 // Track zigzag patterns
+    lastDirectionChange: 0, // Track zigzag patterns
+    lastPricingInteraction: 0 // Track when user last interacted with pricing
   };
 
   // Record telemetry event
@@ -374,6 +375,11 @@
                      elClass.includes('btn') ||
                      elClass.includes('button');
 
+        // Track pricing interactions
+        if (isPricing) {
+          state.lastPricingInteraction = now;
+        }
+
         record('hover', {
           x, y,
           duration: now - state.hoverStart,
@@ -509,8 +515,14 @@
 
   // Mouse leave/enter
   window.addEventListener('pointerleave', (e) => {
+    const now = Date.now();
+
+    // Check if user interacted with pricing in last 5 seconds
+    const recentPricingInteraction = (now - state.lastPricingInteraction) < 5000;
+
     // Check what they were looking at BEFORE marking off canvas
-    const wasViewingPricing = state.hoverElement?.classList?.contains('price') ||
+    const wasViewingPricing = recentPricingInteraction ||
+                             state.hoverElement?.classList?.contains('price') ||
                              state.hoverElement?.textContent?.includes('$');
 
     // Determine exit direction
@@ -524,7 +536,8 @@
       dir: exitDir,
       x: e.clientX,
       y: e.clientY,
-      after_pricing: wasViewingPricing
+      after_pricing: wasViewingPricing,
+      time_since_pricing: now - state.lastPricingInteraction
     });
 
     // NOW halt all tracking
