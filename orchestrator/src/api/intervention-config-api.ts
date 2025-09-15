@@ -620,19 +620,10 @@ router.get('/stats', async (req: Request, res: Response) => {
     }
 
     if (!supabase) {
-      // Return demo data if no database
-      return res.json({
-        success: true,
-        stats: {
-          exitIntentModal: { fired: 347, interacted: 89, revenue: 44500 },
-          confusionHelper: { fired: 523, interacted: 267, revenue: 28900 },
-          priceHoverAssist: { fired: 891, interacted: 445, revenue: 67300 },
-          rageClickDeescalation: { fired: 156, interacted: 78, revenue: 12400 },
-          socialProof: { fired: 234, interacted: 117, revenue: 34200 },
-          urgencyNudge: { fired: 412, interacted: 206, revenue: 51500 }
-        },
-        timeRange: range,
-        lastUpdated: new Date().toISOString()
+      // No database connection - fail honestly
+      return res.status(503).json({
+        error: 'Database connection unavailable',
+        message: 'Cannot retrieve intervention statistics without database connection'
       });
     }
 
@@ -663,12 +654,7 @@ router.get('/stats', async (req: Request, res: Response) => {
 
     res.json({
       success: true,
-      stats: Object.keys(stats).length > 0 ? stats : {
-        // Fallback demo data if no real data
-        exitIntentModal: { fired: 45, interacted: 12, revenue: 8900 },
-        confusionHelper: { fired: 67, interacted: 34, revenue: 4200 },
-        priceHoverAssist: { fired: 123, interacted: 61, revenue: 12300 }
-      },
+      stats: stats, // Return actual data or empty object
       timeRange: range,
       lastUpdated: new Date().toISOString()
     });
@@ -706,29 +692,10 @@ router.get('/metrics', async (req: Request, res: Response) => {
     }
 
     if (!supabase) {
-      // Return realistic demo data
-      return res.json({
-        success: true,
-        metrics: {
-          total_interventions: 2563,
-          total_interactions: 878,
-          interaction_rate: 34.3,
-          revenue_influenced: 238900,
-          avg_deal_size: 15000,
-          deals_influenced: 16,
-          top_performing: 'priceHoverAssist',
-          worst_performing: 'rageClickDeescalation',
-          by_emotion: {
-            frustration: { count: 456, interactions: 123 },
-            confusion: { count: 523, interactions: 267 },
-            high_consideration: { count: 891, interactions: 445 },
-            abandonment_risk: { count: 347, interactions: 89 },
-            delight: { count: 234, interactions: 189 },
-            curiosity: { count: 112, interactions: 78 }
-          }
-        },
-        period,
-        lastUpdated: new Date().toISOString()
+      // No database connection - fail honestly
+      return res.status(503).json({
+        error: 'Database connection unavailable',
+        message: 'Cannot retrieve intervention metrics without database connection'
       });
     }
 
@@ -807,16 +774,13 @@ router.get('/metrics', async (req: Request, res: Response) => {
         total_interactions: totalInteractions,
         interaction_rate: parseFloat(interactionRate as string),
         revenue_influenced: revenueInfluenced,
-        avg_deal_size: 15000, // Default, should come from config
-        deals_influenced: Math.floor(revenueInfluenced / 15000),
-        top_performing: topPerforming || 'priceHoverAssist',
-        worst_performing: worstPerforming || 'rageClickDeescalation',
-        by_emotion: Object.keys(byEmotion).length > 0 ? byEmotion : {
-          // Fallback demo data
-          frustration: { count: 45, interactions: 12 },
-          confusion: { count: 67, interactions: 34 },
-          high_consideration: { count: 123, interactions: 61 }
-        }
+        avg_deal_size: revenueInfluenced > 0 && totalInteractions > 0
+          ? Math.round(revenueInfluenced / totalInteractions)
+          : 0,
+        deals_influenced: totalInteractions, // Each interaction could be a deal
+        top_performing: topPerforming || null,
+        worst_performing: worstPerforming || null,
+        by_emotion: byEmotion // Return actual data or empty object
       },
       period,
       lastUpdated: new Date().toISOString()

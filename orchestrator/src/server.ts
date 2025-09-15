@@ -528,7 +528,7 @@ app.post('/api/sage/analyze', sageLimiter, timeoutMiddleware(30), validateSageRe
     
     res.json({
       response: response,
-      bullshit_score: Math.random() * 100, // TODO: Implement actual BS detection
+      bullshit_score: null, // Honest: not yet implemented
       sage_says: "I've seen worse, but not by much."
     });
   } catch (error) {
