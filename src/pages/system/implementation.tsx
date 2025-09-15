@@ -11,6 +11,8 @@ export default function SystemImplementation() {
   const [apiKeys, setApiKeys] = useState<Array<{id: string, name: string, key: string, created: string}>>([]);
   const [newKeyName, setNewKeyName] = useState('');
   const [generatingKey, setGeneratingKey] = useState(false);
+  const [userTier, setUserTier] = useState<'starter' | 'growth' | 'scale' | 'enterprise'>('starter');
+  const [isAutomotive, setIsAutomotive] = useState(false);
 
   // Sage hint management
   const { shouldShow, trackShown, trackDismissed, dismissPermanently } = useSageHint('/system/implementation');
@@ -24,11 +26,27 @@ export default function SystemImplementation() {
     }
   }, [shouldShow, hintShown, trackShown]);
 
-  // Load existing API keys
+  // Load existing API keys and check user configuration
   useEffect(() => {
     const storedKeys = localStorage.getItem(`sentientiq_keys_${user?.id}`);
     if (storedKeys) {
       setApiKeys(JSON.parse(storedKeys));
+    }
+
+    // Check if user has automotive template configured
+    const tenantId = localStorage.getItem('tenantId');
+    if (tenantId) {
+      fetch(`/api/interventions/config/${tenantId}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.config?.template === 'automotive') {
+            setIsAutomotive(true);
+          }
+          if (data.config?.tier) {
+            setUserTier(data.config.tier);
+          }
+        })
+        .catch(() => {}); // Silently fail if no config
     }
   }, [user]);
 
@@ -158,8 +176,8 @@ export default function SystemImplementation() {
             </p>
             <div className="flex gap-4">
               <a
-                href="https://cdn.sentientiq.ai/sentientiq.tpl"
-                download="sentientiq.tpl"
+                href="https://cdn.sentientiq.app/gtm/sentientiq-v4.tpl"
+                download="sentientiq-v4.tpl"
                 className="inline-flex items-center gap-2 px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-all"
               >
                 <ExternalLink className="w-4 h-4" />
@@ -180,6 +198,50 @@ export default function SystemImplementation() {
           </div>
         </div>
       </motion.div>
+
+      {/* Automotive-Specific Guidance */}
+      {isAutomotive && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.05 }}
+          className="glass-card p-6 mb-8 bg-gradient-to-br from-blue-900/10 to-green-900/10 border-green-500/20"
+        >
+          <div className="flex items-start gap-4">
+            <Zap className="w-6 h-6 text-green-400 mt-1" />
+            <div className="flex-1">
+              <h3 className="text-xl font-bold text-white mb-3">Automotive Dealership Setup</h3>
+              <p className="text-white/70 mb-4">
+                Your configuration is optimized for automotive retail. The tag will automatically:
+              </p>
+              <div className="grid md:grid-cols-2 gap-4 mb-4">
+                <div className="bg-black/30 rounded-lg p-3 border border-white/10">
+                  <div className="text-green-400 font-medium mb-1">✓ Track Vehicle Interest</div>
+                  <div className="text-sm text-white/60">Detect when shoppers hover on pricing, features, or photos</div>
+                </div>
+                <div className="bg-black/30 rounded-lg p-3 border border-white/10">
+                  <div className="text-green-400 font-medium mb-1">✓ Exit Intent Offers</div>
+                  <div className="text-sm text-white/60">Present financing specials or test drive scheduling</div>
+                </div>
+                <div className="bg-black/30 rounded-lg p-3 border border-white/10">
+                  <div className="text-green-400 font-medium mb-1">✓ Confusion Detection</div>
+                  <div className="text-sm text-white/60">Offer live chat when browsing trade-in or financing</div>
+                </div>
+                <div className="bg-black/30 rounded-lg p-3 border border-white/10">
+                  <div className="text-green-400 font-medium mb-1">✓ High Intent Signals</div>
+                  <div className="text-sm text-white/60">Alert sales team when someone views 3+ vehicles</div>
+                </div>
+              </div>
+              <div className="p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
+                <p className="text-sm text-yellow-400">
+                  <strong>Pro Tip:</strong> Add the tag to your VDP (Vehicle Detail Pages) and SRP (Search Results Pages) first.
+                  These pages have the highest conversion impact.
+                </p>
+              </div>
+            </div>
+          </div>
+        </motion.div>
+      )}
 
       {/* API Key Management */}
       <motion.div
@@ -317,7 +379,7 @@ export default function SystemImplementation() {
                 Click "New" → 3 dots menu → "Import" → Enter URL or upload the template file
               </p>
               <div className="bg-black/30 rounded-lg p-3 border border-white/10">
-                <code className="text-green-400 text-sm">URL: https://cdn.sentientiq.ai/sentientiq.tpl</code>
+                <code className="text-green-400 text-sm">URL: https://cdn.sentientiq.app/gtm/sentientiq-v4.tpl</code>
               </div>
             </div>
           </div>
@@ -362,6 +424,10 @@ export default function SystemImplementation() {
                 <div className="flex items-center gap-2">
                   <span className="text-white/50 text-sm">API Key:</span>
                   <code className="text-purple-400 text-sm">{primaryApiKey}</code>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-white/50 text-sm">Tenant ID:</span>
+                  <code className="text-blue-400 text-sm">{localStorage.getItem('tenantId') || 'YOUR_TENANT_ID'}</code>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-white/50 text-sm">Trigger:</span>
@@ -447,9 +513,10 @@ export default function SystemImplementation() {
                 {'<script>'}<br/>
                 {'  (function() {'}<br/>
                 {'    var s = document.createElement("script");'}<br/>
-                {'    s.src = "https://cdn.sentientiq.ai/v2/detect.js";'}<br/>
+                {'    s.src = "https://cdn.sentientiq.app/interventions-v4.js";'}<br/>
                 {'    s.setAttribute("data-api-key", "'}{primaryApiKey}{'");'}<br/>
-                {'    document.body.appendChild(s);'}<br/>
+                {'    s.setAttribute("data-tenant-id", "'}{localStorage.getItem('tenantId') || 'YOUR_TENANT_ID'}{'");'}<br/>
+                {'    document.head.appendChild(s);'}<br/>
                 {'  })();'}<br/>
                 {'</script>'}
               </code>

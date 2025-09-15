@@ -16,7 +16,8 @@ import {
   Globe,
   Video,
   FileText,
-  Settings
+  Settings,
+  Info
 } from 'lucide-react';
 import PageHeader from '../../components/PageHeader';
 import { useUser } from '@clerk/clerk-react';
@@ -54,11 +55,23 @@ interface ConfigState {
 
   // Template
   template: 'saas' | 'ecommerce' | 'automotive' | 'custom';
+
+  // Custom template fields
+  customOffer1Title?: string;
+  customOffer1Value?: string;
+  customOffer2Title?: string;
+  customCTA?: string;
+  customUrgency?: string;
+
+  // CRM Integration (no OAuth required)
+  crmProvider?: 'none' | 'hubspot' | 'salesforce' | 'webhook';
+  crmApiKey?: string;
+  crmWebhookUrl?: string;
 }
 
 const SystemConfiguration: React.FC = () => {
   const { user } = useUser();
-  const [step, setStep] = useState<'brand' | 'offers' | 'channels' | 'interventions' | 'review'>('brand');
+  const [step, setStep] = useState<'brand' | 'offers' | 'channels' | 'crm' | 'interventions' | 'review'>('brand');
   const [config, setConfig] = useState<ConfigState>({
     companyName: '',
     logoUrl: '',
@@ -202,11 +215,11 @@ const SystemConfiguration: React.FC = () => {
         subtitle="Set up your behavioral interventions in minutes"
       />
 
-      <div className="px-4 sm:px-6 lg:px-8 py-8">
+      <div className="px-4 sm:px-6 lg:px-8 py-8 max-w-7xl mx-auto">
 
         {/* Progress Steps */}
         <div className="flex items-center justify-between mb-12">
-          {['brand', 'offers', 'channels', 'interventions', 'review'].map((s, index) => (
+          {['brand', 'offers', 'channels', 'crm', 'interventions', 'review'].map((s, index) => (
             <div key={s} className="flex items-center">
               <motion.div
                 className={`w-10 h-10 rounded-full flex items-center justify-center border-2 ${
@@ -348,8 +361,81 @@ const SystemConfiguration: React.FC = () => {
               <h2 className="text-2xl font-bold mb-6">Configure Your Offers</h2>
 
               <div className="space-y-6">
-                {/* Automotive-specific offers */}
-                {config.template === 'automotive' ? (
+                {/* Template-specific offers */}
+                {config.template === 'custom' ? (
+                  /* Custom template - let them define everything */
+                  <>
+                    <div>
+                      <label className="block text-sm font-medium mb-2">
+                        <Tag className="w-4 h-4 inline mr-1" />
+                        Primary Offer Title
+                      </label>
+                      <input
+                        type="text"
+                        value={config.customOffer1Title || 'Your Main Offer'}
+                        onChange={(e) => setConfig(prev => ({ ...prev, customOffer1Title: e.target.value }))}
+                        className="w-full px-4 py-3 bg-black/50 border border-gray-700 rounded-lg focus:border-purple-500 focus:outline-none"
+                        placeholder="e.g., Free Consultation, 50% Off First Month"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium mb-2">
+                        <DollarSign className="w-4 h-4 inline mr-1" />
+                        Primary Offer Value
+                      </label>
+                      <input
+                        type="text"
+                        value={config.customOffer1Value || ''}
+                        onChange={(e) => setConfig(prev => ({ ...prev, customOffer1Value: e.target.value }))}
+                        className="w-full px-4 py-3 bg-black/50 border border-gray-700 rounded-lg focus:border-purple-500 focus:outline-none"
+                        placeholder="e.g., $500 value, 2 hours free, Save $1,000"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium mb-2">
+                        <Calendar className="w-4 h-4 inline mr-1" />
+                        Secondary Offer Title
+                      </label>
+                      <input
+                        type="text"
+                        value={config.customOffer2Title || 'Your Secondary Offer'}
+                        onChange={(e) => setConfig(prev => ({ ...prev, customOffer2Title: e.target.value }))}
+                        className="w-full px-4 py-3 bg-black/50 border border-gray-700 rounded-lg focus:border-purple-500 focus:outline-none"
+                        placeholder="e.g., Money-Back Guarantee, Free Shipping"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium mb-2">
+                        <TrendingUp className="w-4 h-4 inline mr-1" />
+                        Call-to-Action Text
+                      </label>
+                      <input
+                        type="text"
+                        value={config.customCTA || 'Get Started'}
+                        onChange={(e) => setConfig(prev => ({ ...prev, customCTA: e.target.value }))}
+                        className="w-full px-4 py-3 bg-black/50 border border-gray-700 rounded-lg focus:border-purple-500 focus:outline-none"
+                        placeholder="e.g., Book Now, Start Free, Get Quote"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium mb-2">
+                        <Info className="w-4 h-4 inline mr-1" />
+                        Urgency Message (Optional)
+                      </label>
+                      <input
+                        type="text"
+                        value={config.customUrgency || ''}
+                        onChange={(e) => setConfig(prev => ({ ...prev, customUrgency: e.target.value }))}
+                        className="w-full px-4 py-3 bg-black/50 border border-gray-700 rounded-lg focus:border-purple-500 focus:outline-none"
+                        placeholder="e.g., Limited spots available, Offer ends Friday"
+                      />
+                    </div>
+                  </>
+                ) : config.template === 'automotive' ? (
                   <>
                     <div>
                       <label className="block text-sm font-medium mb-2">
@@ -563,10 +649,126 @@ const SystemConfiguration: React.FC = () => {
                   Back
                 </button>
                 <button
-                  onClick={() => setStep('interventions')}
+                  onClick={() => setStep('crm')}
                   className="px-6 py-3 bg-purple-600 rounded-lg hover:bg-purple-700 transition-colors flex items-center"
                 >
                   Next: Choose Interventions
+                  <ArrowRight className="w-4 h-4 ml-2" />
+                </button>
+              </div>
+            </motion.div>
+          )}
+
+          {/* CRM Connection - The WHO */}
+          {step === 'crm' && (
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+              <h2 className="text-2xl font-bold mb-6">Connect Your CRM (Optional)</h2>
+              <p className="text-gray-400 mb-8">
+                Link emotional insights to real customers. No OAuth required.
+              </p>
+
+              <div className="space-y-6">
+                {/* CRM Provider Selection */}
+                <div className="grid grid-cols-2 gap-4">
+                  {[
+                    { id: 'none', name: 'Skip for Now', desc: 'Anonymous tracking only' },
+                    { id: 'hubspot', name: 'HubSpot', desc: 'Private App API Key' },
+                    { id: 'salesforce', name: 'Salesforce', desc: 'Connected App JWT' },
+                    { id: 'webhook', name: 'Webhook/Zapier', desc: 'Any CRM via webhooks' }
+                  ].map((crm) => (
+                    <button
+                      key={crm.id}
+                      onClick={() => setConfig(prev => ({ ...prev, crmProvider: crm.id as any }))}
+                      className={`p-4 rounded-lg border-2 transition-all text-left ${
+                        config.crmProvider === crm.id
+                          ? 'border-purple-500 bg-purple-500/10'
+                          : 'border-gray-700 hover:border-gray-600'
+                      }`}
+                    >
+                      <div className="font-medium">{crm.name}</div>
+                      <div className="text-xs text-gray-400 mt-1">{crm.desc}</div>
+                    </button>
+                  ))}
+                </div>
+
+                {/* API Key Input */}
+                {(config.crmProvider === 'hubspot' || config.crmProvider === 'salesforce') && (
+                  <div>
+                    <label className="block text-sm font-medium mb-2">
+                      {config.crmProvider === 'hubspot' ? 'HubSpot Private App Key' : 'Salesforce Connected App Key'}
+                    </label>
+                    <input
+                      type="password"
+                      value={config.crmApiKey || ''}
+                      onChange={(e) => setConfig(prev => ({ ...prev, crmApiKey: e.target.value }))}
+                      className="w-full px-4 py-3 bg-black/50 border border-gray-700 rounded-lg focus:border-purple-500 focus:outline-none"
+                      placeholder={config.crmProvider === 'hubspot'
+                        ? 'pat-na1-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'
+                        : 'Your Salesforce JWT or API Key'
+                      }
+                    />
+                    <p className="text-xs text-gray-400 mt-2">
+                      {config.crmProvider === 'hubspot'
+                        ? 'Create at: HubSpot → Settings → Integrations → Private Apps'
+                        : 'Get from your Salesforce Connected App settings'
+                      }
+                    </p>
+                  </div>
+                )}
+
+                {/* Webhook URL for Zapier/Make */}
+                {config.crmProvider === 'webhook' && (
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Your Webhook URL</label>
+                    <div className="p-4 bg-black/50 border border-gray-700 rounded-lg">
+                      <code className="text-green-400 text-sm break-all">
+                        https://api.sentientiq.app/webhooks/crm/{tenantId}
+                      </code>
+                    </div>
+                    <p className="text-xs text-gray-400 mt-2">
+                      Add this URL to Zapier/Make to send customer data from any CRM
+                    </p>
+                  </div>
+                )}
+
+                {/* What Gets Synced */}
+                {config.crmProvider !== 'none' && (
+                  <div className="p-4 bg-gradient-to-r from-purple-900/20 to-blue-900/20 rounded-lg border border-purple-500/30">
+                    <h3 className="font-medium mb-3">What Gets Synced:</h3>
+                    <ul className="space-y-2 text-sm text-gray-300">
+                      <li className="flex items-center">
+                        <Check className="w-4 h-4 text-green-400 mr-2" />
+                        Emotional state → Contact custom fields
+                      </li>
+                      <li className="flex items-center">
+                        <Check className="w-4 h-4 text-green-400 mr-2" />
+                        Confusion events → Support tickets
+                      </li>
+                      <li className="flex items-center">
+                        <Check className="w-4 h-4 text-green-400 mr-2" />
+                        High intent → Deal score increase
+                      </li>
+                      <li className="flex items-center">
+                        <Check className="w-4 h-4 text-green-400 mr-2" />
+                        Exit intent → At-risk flag
+                      </li>
+                    </ul>
+                  </div>
+                )}
+              </div>
+
+              <div className="mt-8 flex justify-between">
+                <button
+                  onClick={() => setStep('channels')}
+                  className="px-6 py-3 bg-gray-800 rounded-lg hover:bg-gray-700 transition-colors"
+                >
+                  Back
+                </button>
+                <button
+                  onClick={() => setStep('interventions')}
+                  className="px-6 py-3 bg-purple-600 rounded-lg hover:bg-purple-700 transition-colors flex items-center"
+                >
+                  Next: Configure Interventions
                   <ArrowRight className="w-4 h-4 ml-2" />
                 </button>
               </div>
@@ -658,7 +860,7 @@ const SystemConfiguration: React.FC = () => {
 
               <div className="mt-8 flex justify-between">
                 <button
-                  onClick={() => setStep('channels')}
+                  onClick={() => setStep('crm')}
                   className="px-6 py-3 bg-gray-800 rounded-lg hover:bg-gray-700 transition-colors"
                 >
                   Back

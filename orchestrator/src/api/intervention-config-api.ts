@@ -248,28 +248,14 @@ router.post('/config/:tenantId/publish', async (req: Request, res: Response) => 
 
     // Generate GTM snippet
     const gtmSnippet = `<!-- SentientIQ v4.1 - Real Emotions, Real Interventions -->
-<!-- Step 1: Load Detection Engine -->
-<script src="https://sentientiq.ai/detect-v4.js"></script>
-
-<!-- Step 2: Load Intervention Library -->
-<script src="https://sentientiq.ai/interventions-v4.js"></script>
-
-<!-- Step 3: Initialize with your configuration -->
+<!-- Step 1: Load Intervention Library with Configuration -->
 <script>
 (function() {
-  // Initialize detection engine
-  window.SentientIQ = window.SentientIQ || {};
-  window.SentientIQ.config = {
-    tenantId: '${tenantId}',
-    apiKey: '${config.apiKey}',
-    apiUrl: 'https://api.sentientiq.app',
-    tier: '${config.tier || 'starter'}'
-  };
-
-  // Configuration will be loaded from CDN
-  // ${cdnUrl}
-
-  console.log('[SentientIQ] v4.1 initialized for ${config.branding?.companyName || tenantId}');
+  var s = document.createElement('script');
+  s.src = 'https://cdn.sentientiq.app/interventions-v4.js';
+  s.setAttribute('data-api-key', '${config.api_key || config.apiKey || 'sq_demo_test'}');
+  s.setAttribute('data-tenant-id', '${tenantId}');
+  document.head.appendChild(s);
 })();
 </script>`;
 
@@ -788,6 +774,76 @@ router.get('/metrics', async (req: Request, res: Response) => {
 
   } catch (error: any) {
     console.error('Error fetching intervention metrics:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * Record intervention event - THE CRITICAL ENDPOINT
+ * This is how we know interventions actually fired and got interactions
+ */
+router.post('/event', async (req: Request, res: Response) => {
+  try {
+    const {
+      tenantId,
+      type,
+      triggerEmotion,
+      confidence,
+      interactionOccurred,
+      interactionType,
+      userId,
+      sessionId,
+      pageUrl,
+      elementSelector
+    } = req.body;
+
+    // Validate required fields
+    if (!tenantId || !type) {
+      return res.status(400).json({
+        error: 'Missing required fields: tenantId and type'
+      });
+    }
+
+    if (!supabase) {
+      // No database - fail honestly
+      return res.status(503).json({
+        error: 'Database unavailable',
+        message: 'Cannot record intervention events without database'
+      });
+    }
+
+    // Record the event
+    const { data, error } = await supabase
+      .from('intervention_events')
+      .insert({
+        tenant_id: tenantId,
+        type,
+        trigger_emotion: triggerEmotion,
+        confidence: confidence || 0,
+        interaction_occurred: interactionOccurred || false,
+        interaction_type: interactionType,
+        revenue_attributed: 0, // Will be updated later if conversion happens
+        user_id: userId,
+        session_id: sessionId,
+        page_url: pageUrl,
+        element_selector: elementSelector
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Failed to record intervention event:', error);
+      return res.status(500).json({ error: 'Failed to record event' });
+    }
+
+    res.json({
+      success: true,
+      eventId: data.id,
+      message: 'Intervention event recorded'
+    });
+
+  } catch (error: any) {
+    console.error('Error recording intervention event:', error);
     res.status(500).json({ error: error.message });
   }
 });

@@ -80,8 +80,8 @@
     return Date.now() - lastFired < cooldownPeriod;
   }
 
-  // Record intervention firing
-  function recordIntervention(type, triggered = false) {
+  // Record intervention firing - THIS MAKES IT REAL
+  function recordIntervention(type, triggered = false, emotion = null) {
     interventionState.fired[type] = (interventionState.fired[type] || 0) + 1;
     interventionState.cooldowns[type] = Date.now();
 
@@ -89,7 +89,46 @@
       interventionState.interacted[type] = (interventionState.interacted[type] || 0) + 1;
     }
 
-    // Send to analytics
+    // Get session and user IDs
+    const sessionId = window.SentientIQ?.sessionId ||
+      sessionStorage.getItem('sq_session_id') ||
+      'session_' + Date.now() + '_' + Math.random().toString(36).substring(2);
+
+    const userId = window.SentientIQ?.userId ||
+      localStorage.getItem('sq_user_id') ||
+      'anon_' + Date.now() + '_' + Math.random().toString(36).substring(2);
+
+    // Save IDs for consistency
+    sessionStorage.setItem('sq_session_id', sessionId);
+    localStorage.setItem('sq_user_id', userId);
+
+    // POST to API - THE CRITICAL PIECE
+    const eventData = {
+      tenantId: config.tenantId || 'unknown',
+      type: type,
+      triggerEmotion: emotion,
+      confidence: 0.8, // Default confidence
+      interactionOccurred: triggered,
+      interactionType: triggered ? 'clicked' : 'shown',
+      userId: userId,
+      sessionId: sessionId,
+      pageUrl: window.location.href,
+      elementSelector: null
+    };
+
+    // Fire and forget - don't block UI
+    fetch('https://api.sentientiq.app/api/interventions/event', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-API-Key': config.apiKey || ''
+      },
+      body: JSON.stringify(eventData)
+    }).catch(err => {
+      console.warn('[SentientIQ] Failed to record event:', err);
+    });
+
+    // Also send to legacy analytics if available
     if (window.SentientIQ?.track) {
       window.SentientIQ.track('intervention_fired', {
         type,
@@ -266,13 +305,13 @@
 
     // Handle interactions
     modal.querySelector('.sq-close-btn').addEventListener('click', () => {
-      recordIntervention('exitIntent', false);
+      recordIntervention('exitIntent', false, 'abandonment_risk');
       modal.remove();
       backdrop.remove();
     });
 
     modal.querySelector('.sq-claim-btn').addEventListener('click', () => {
-      recordIntervention('exitIntent', true);
+      recordIntervention('exitIntent', true, 'abandonment_risk');
       if (automotive && config.channels.supportUrl) {
         window.open(config.channels.supportUrl, '_blank');
       } else if (!automotive) {
@@ -284,12 +323,12 @@
     });
 
     modal.querySelector('.sq-dismiss-btn').addEventListener('click', () => {
-      recordIntervention('exitIntent', false);
+      recordIntervention('exitIntent', false, 'abandonment_risk');
       modal.remove();
       backdrop.remove();
     });
 
-    recordIntervention('exitIntent', false);
+    recordIntervention('exitIntent', false, 'abandonment_risk');
   }
 
   /**

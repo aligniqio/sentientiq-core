@@ -103,7 +103,7 @@
     [BEHAVIORS.EXIT_INTENT]: { emotion: 'abandonment_risk', confidence: 85 },
     [BEHAVIORS.IDLE_LONG]: { emotion: 'abandonment_risk', confidence: 70 },
     [BEHAVIORS.ABANDONED]: { emotion: 'abandonment_risk', confidence: 95 },
-    [BEHAVIORS.MOUSE_OFF_SUSTAINED]: { emotion: 'disinterest', confidence: 70 },
+    [BEHAVIORS.MOUSE_OFF_SUSTAINED]: { emotion: 'abandonment_risk', confidence: 75 },
 
     [BEHAVIORS.FAST_SCROLL]: { emotion: 'scanning', confidence: 65 },
     [BEHAVIORS.SKIM_SCROLL]: { emotion: 'scanning', confidence: 75 },
@@ -111,14 +111,13 @@
     [BEHAVIORS.SINGLE_CLICK]: { emotion: 'engaged', confidence: 40 },
     [BEHAVIORS.DOUBLE_CLICK]: { emotion: 'interest', confidence: 50 },
 
-    [BEHAVIORS.MOUSE_OFF_BRIEF]: { emotion: 'context_switching', confidence: 40 },
+    [BEHAVIORS.MOUSE_OFF_BRIEF]: { emotion: 'distracted', confidence: 45 },
     [BEHAVIORS.IDLE_SHORT]: { emotion: 'reading', confidence: 50 }
   };
 
   // Context modifiers
   const CONTEXT_MODIFIERS = {
     // Element-based modifiers
-    PRICE_TIER: { emotions: ['interest', 'engaged', 'hover'], boost: 30, becomes: 'high_consideration' },
     PRICE_ELEMENT: { emotions: ['interest', 'engaged'], boost: 20, becomes: 'purchase_intent' },
     CTA_BUTTON: { emotions: ['interest'], boost: 15 },
     NAVIGATION: { emotions: ['confusion'], boost: 10 },
@@ -143,10 +142,6 @@
   function safeElementRole(el) {
     try {
       if (!el) return null;
-      // Check for price tiers first (more specific selectors)
-      const priceTier = el.closest?.('[data-sq-role="price-tier"], .pricing-card, .price-tier, .plan-card, [class*="tier"][class*="price"], [class*="pricing"][class*="plan"]');
-      if (priceTier) return 'PRICE_TIER';
-
       const root = el.closest?.('[data-sq-role], button, nav, form, .price, [role="navigation"]');
       if (!root) return null;
       if (root.matches?.('[data-sq-role="price"], .price')) return 'PRICE_ELEMENT';
@@ -233,16 +228,11 @@
         return { type: BEHAVIORS.SHAKE, confidence: 85, _source: { kind:'move', x: recent.at(-1).x, y: recent.at(-1).y } };
       }
 
-      // Exit intent: upward movement specifically toward browser tabs/address bar
+      // Exit intent: sustained upward trend near top + brisk
       const last = recent.at(-1);
       const upwardStreak = recent.slice(-4).every((m,i,a) => i===0 || a[i].y < a[i-1].y);
-      // Only trigger exit intent if moving upward toward browser chrome (tabs/address bar)
-      // Not when moving sideways off the viewport (VS Code interaction)
-      const centerThird = window.innerWidth / 3;
-      const isTowardBrowserChrome = last.x > centerThird && last.x < (window.innerWidth - centerThird);
-
-      if (last.y < 8 && upwardStreak && avgVelocity > 12 && isTowardBrowserChrome && !document.hidden) {
-        if (config.debug) console.log('🚪 Exit intent detected - moving toward browser chrome');
+      if (last.y < 8 && upwardStreak && avgVelocity > 12 && !document.hidden) {
+        if (config.debug) console.log('🚪 Exit intent detected');
         return { type: BEHAVIORS.EXIT_INTENT, confidence: 85, _source: { kind:'move', x: last.x, y: last.y } };
       }
 
@@ -332,27 +322,12 @@
       let emotion = mapping.emotion;
       let confidence = behavior.confidence || mapping.confidence;
 
-      // Special handling for price tier interactions
-      if (context.element === 'PRICE_TIER') {
-        if (behavior.type === BEHAVIORS.SINGLE_CLICK || behavior.type === BEHAVIORS.DOUBLE_CLICK) {
-          // Click on price tier = strong conversion signal
-          emotion = 'conversion_delight';
-          confidence = Math.min(95, 85 + (behavior.type === BEHAVIORS.DOUBLE_CLICK ? 5 : 0));
-          if (config.debug) console.log(`💳 Price tier click detected - conversion signal!`);
-        } else if (behavior.type === BEHAVIORS.HOVER) {
-          // Hover on price tier = high consideration
-          emotion = 'high_consideration';
-          confidence = Math.min(95, 75 + Math.min(20, (Date.now() - (this.hoverStart || Date.now())) / 200));
-          if (config.debug) console.log(`🎯 Price tier hover - high consideration detected`);
-        }
-      }
-      // Apply standard context modifiers for other elements
-      else if (context.element && CONTEXT_MODIFIERS[context.element]) {
+      // Apply context modifiers
+      if (context.element && CONTEXT_MODIFIERS[context.element]) {
         const modifier = CONTEXT_MODIFIERS[context.element];
         if (modifier.becomes && modifier.emotions.includes(emotion)) emotion = modifier.becomes;
         if (modifier.boost) confidence = Math.min(95, confidence + modifier.boost);
       }
-
       if (context.sequence && CONTEXT_MODIFIERS[context.sequence]) {
         const modifier = CONTEXT_MODIFIERS[context.sequence];
         confidence = Math.min(95, confidence + modifier.boost);
@@ -395,35 +370,12 @@
     on(el, evt, fn, opts) { el.addEventListener(evt, fn, opts); this.bound.push(() => el.removeEventListener(evt, fn, opts)); }
     destroy() { this.bound.forEach(fn => fn()); this.behaviorDetector.clearIdleTimer(); if (this._interval) clearInterval(this._interval); }
 
-    async loadTenantConfig() {
-      try {
-        if (!config.tenantId || config.tenantId === 'unknown') return;
-
-        const response = await fetch(`${config.apiEndpoint.replace('/event', '')}/config/${config.tenantId}`);
-        if (response.ok) {
-          const data = await response.json();
-          window.SentientIQ = window.SentientIQ || {};
-          window.SentientIQ.tenantConfig = data;
-
-          if (config.debug) {
-            console.log(`🏢 Tenant: ${config.tenantId} (${data.tier} tier)`);
-            console.log(`✨ Features:`, Object.keys(data.features).filter(k => data.features[k]));
-          }
-        }
-      } catch (e) {
-        if (config.debug) console.warn('Failed to load tenant config:', e);
-      }
-    }
-
     init() {
       if (config.debug) {
         console.log('🚀 SentientIQ v4.1 initialized');
         console.log('📊 Behavioral Taxonomy Engine active');
         console.log('🔑 API Key:', (config.apiKey||'').toString().substring(0, 20) + '...');
       }
-
-      // Load tenant configuration for tier-based routing
-      this.loadTenantConfig();
 
       if (config.ui.showBanners) this.showInitBanner();
       this.initListeners();
@@ -630,7 +582,7 @@
         const note = document.createElement('div');
         note.id = 'sentientiq-notification';
         note.style.cssText = `position:fixed;top:20px;right:20px;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:#fff;padding:16px 24px;border-radius:12px;box-shadow:0 10px 40px rgba(0,0,0,.2);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:14px;z-index:999999;animation:slideIn .3s ease-out;max-width:320px;`;
-        const emojiMap = { frustration:'😤', confusion:'🤔', interest:'👀', satisfaction:'😊', purchase_intent:'💳', abandonment_risk:'🚪', engaged:'✨', scanning:'👁️', reading:'📖', distracted:'💭', high_consideration:'🤑', conversion_delight:'🎉', disinterest:'😑', context_switching:'🔄' };
+        const emojiMap = { frustration:'😤', confusion:'🤔', interest:'👀', satisfaction:'😊', purchase_intent:'💳', abandonment_risk:'🚪', engaged:'✨', scanning:'👁️', reading:'📖', distracted:'💭' };
         note.innerHTML = `
           <div style="display:flex;align-items:center;gap:12px;">
             <span style="font-size:24px;">${emojiMap[emotion] || '🎯'}</span>
@@ -657,66 +609,12 @@
         return null;
       };
       this.intentOnEmotion = ({ emotion, behavior, context }) => {
-        const boost = {
-          interest:+8, engaged:+6, purchase_intent:+15,
-          high_consideration:+25, conversion_delight:+40,
-          scanning:+3, reading:+2,
-          confusion:-6, frustration:-10, abandonment_risk:-15,
-          disinterest:-8, context_switching:-2
-        }[emotion] ?? 0;
-        const ctx = (context?.element === 'PRICE_TIER') ? +10 : (context?.element === 'PRICE_ELEMENT') ? +6 : (context?.element === 'CTA_BUTTON') ? +4 : 0;
+        const boost = { interest:+8, engaged:+6, purchase_intent:+15, scanning:+3, reading:+2, confusion:-6, frustration:-10, abandonment_risk:-15 }[emotion] ?? 0;
+        const ctx = (context?.element === 'PRICE_ELEMENT') ? +6 : (context?.element === 'CTA_BUTTON') ? +4 : 0;
         add(boost + ctx);
         const action = tick(); if (!action) return;
         if (config.debug) console.log('🧭 Intent action:', action, 'score=', Math.round(score));
-
-        // Tenant-aware routing
-        const tenantConfig = window.SentientIQ?.tenantConfig;
-
-        if (tenantConfig?.tier === 'scale' || tenantConfig?.tier === 'enterprise') {
-          // Scale/Enterprise: Send to backend for full processing
-          fetch(`${config.apiEndpoint.replace('/event', '')}/trigger`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'X-API-Key': config.apiKey,
-              'X-Tenant-ID': config.tenantId
-            },
-            body: JSON.stringify({
-              action,
-              emotion,
-              behavior,
-              context,
-              sessionId: config.sessionId,
-              pageUrl: location.href,
-              confidence: score
-            }),
-            keepalive: true
-          }).catch(() => {});
-        } else if (tenantConfig?.tier === 'growth') {
-          // Growth: Hybrid - both UI and backend
-          window.SentientIQ?.actions?.[action]?.(); // UI intervention
-          fetch(`${config.apiEndpoint.replace('/event', '')}/trigger`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'X-API-Key': config.apiKey,
-              'X-Tenant-ID': config.tenantId
-            },
-            body: JSON.stringify({
-              action,
-              emotion,
-              behavior,
-              context,
-              sessionId: config.sessionId,
-              pageUrl: location.href,
-              confidence: score
-            }),
-            keepalive: true
-          }).catch(() => {});
-        } else {
-          // Starter: UI only
-          window.SentientIQ?.actions?.[action]?.();
-        }
+        // hook for userland: window.SentientIQ?.actions?.[action]?.();
       };
       this.intentBrainEnabled = true;
     }
