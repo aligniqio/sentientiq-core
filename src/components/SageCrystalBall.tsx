@@ -86,6 +86,36 @@ export default function SageCrystalBall() {
       ];
     }
 
+    // Special context for configuration page
+    if (currentPath.includes('/system/configuration')) {
+      context.isConfigurationPage = true;
+      context.configurationSteps = [
+        'Brand Setup: Upload logo, pick colors',
+        'Offers: Set discount percentage and code',
+        'Channels: Add support/calendar URLs',
+        'Interventions: Toggle which ones to enable',
+        'Review: Copy GTM code'
+      ];
+      context.pricingTiers = {
+        starter: { price: '$497/mo', features: 'UI interventions, basic analytics, GTM ready' },
+        growth: { price: '$1,997/mo', features: 'Email interventions, A/B testing, advanced analytics' },
+        scale: { price: '$4,997/mo', features: 'Slack/CRM integration, webhooks, API access' },
+        enterprise: { price: 'Custom', features: 'White glove service, executive alerts, dedicated Slack' }
+      };
+      context.interventionTypes = {
+        price_hover_assist: 'Shows help when visitor hovers on pricing - perfect for high consideration moments',
+        exit_save: 'Offers discount when visitor is leaving - saves abandoning customers',
+        confusion_help: 'Assists when users seem confused - reduces frustration'
+      };
+      context.commonQuestions = [
+        'What discount percentage works best? (Usually 15-25%)',
+        'Should I enable all interventions? (Start with price hover and exit save)',
+        'How do I test it? (Use preview link or add ?sq_debug=true to your site)',
+        'What template should I choose? (SaaS for B2B, E-commerce for retail)',
+        'Can I change this later? (Yes, anytime from this page)'
+      ];
+    }
+
     setPageContext(context);
   }, []);
 
@@ -132,6 +162,27 @@ export default function SageCrystalBall() {
         enhancedMessage = `${message}${contextNote}\n\nPage Context: ${JSON.stringify(pageContext)}`;
       }
 
+      // Add configuration context if on that page
+      if (pageContext.isConfigurationPage) {
+        const lowerMessage = message.toLowerCase();
+
+        if (lowerMessage.includes('discount') || lowerMessage.includes('percent') || lowerMessage.includes('offer')) {
+          contextNote = '\n\n[Context: User is configuring discount offers. Best practices: 15-25% for B2B SaaS, 10-20% for e-commerce]';
+        } else if (lowerMessage.includes('tier') || lowerMessage.includes('pricing') || lowerMessage.includes('plan')) {
+          contextNote = '\n\n[Context: User asking about pricing tiers. They have Starter ($497), Growth ($1,997), Scale ($4,997), Enterprise (custom) options]';
+        } else if (lowerMessage.includes('intervention') || lowerMessage.includes('which') || lowerMessage.includes('enable')) {
+          contextNote = '\n\n[Context: User deciding which interventions to enable. Recommend starting with price_hover_assist and exit_save]';
+        } else if (lowerMessage.includes('test') || lowerMessage.includes('preview') || lowerMessage.includes('debug')) {
+          contextNote = '\n\n[Context: User wants to test their configuration. They can use the preview link or add ?sq_debug=true to their site]';
+        } else if (lowerMessage.includes('logo') || lowerMessage.includes('color') || lowerMessage.includes('brand')) {
+          contextNote = '\n\n[Context: User is setting up branding. Logo should be square (recommended 512x512), colors should match brand guidelines]';
+        } else if (lowerMessage.includes('gtm') || lowerMessage.includes('tag')) {
+          contextNote = '\n\n[Context: User needs help with GTM installation. They should copy the snippet from step 5 and paste in GTM Custom HTML tag]';
+        }
+
+        enhancedMessage = `${message}${contextNote}\n\nPage Context: ${JSON.stringify(pageContext)}`;
+      }
+
       // Check if Sage has already seen this content
       const seenCheck = await sageContext.hasSeenContent(message, user?.id);
 
@@ -152,9 +203,12 @@ export default function SageCrystalBall() {
       } else {
         // New content - normal analysis
         const memories = await sage.findSimilarMemories(enhancedMessage, 0.7, 3);
+        const contextType = pageContext.isImplementationPage ? 'implementation_help' :
+                          pageContext.isConfigurationPage ? 'configuration_wizard' :
+                          'crystal_ball_consultation';
         const response = await sage.generateResponse(
           enhancedMessage,
-          pageContext.isImplementationPage ? 'implementation_help' : 'crystal_ball_consultation',
+          contextType,
           memories
         );
         setSageResponse(response);

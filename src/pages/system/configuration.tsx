@@ -674,7 +674,8 @@ const SystemConfiguration: React.FC = () => {
           <a href="/docs/interventions" className="text-purple-400 hover:text-purple-300">
             implementation guide
           </a>
-          {' '}or{' '}
+          , ask Sage{' '}
+          or{' '}
           <a href="mailto:support@sentientiq.ai" className="text-purple-400 hover:text-purple-300">
             contact support
           </a>
