@@ -18,6 +18,8 @@ import {
   FileText,
   Settings
 } from 'lucide-react';
+import PageHeader from '../../components/PageHeader';
+import { useUser } from '@clerk/clerk-react';
 
 interface ConfigState {
   // Branding
@@ -48,6 +50,7 @@ interface ConfigState {
 }
 
 const SystemConfiguration: React.FC = () => {
+  const { user } = useUser();
   const [step, setStep] = useState<'brand' | 'offers' | 'channels' | 'interventions' | 'review'>('brand');
   const [config, setConfig] = useState<ConfigState>({
     companyName: '',
@@ -186,15 +189,14 @@ const SystemConfiguration: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-black text-white">
-      <div className="max-w-6xl mx-auto p-8">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">
-            Intervention Configuration
-          </h1>
-          <p className="text-gray-400">Set up your behavioral interventions in minutes</p>
-        </div>
+    <div className="min-h-screen">
+      <PageHeader
+        title="Intervention Configuration"
+        subtitle="Set up your behavioral interventions in minutes"
+        icon={<Zap className="w-8 h-8" />}
+      />
+
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
 
         {/* Progress Steps */}
         <div className="flex items-center justify-between mb-12">
