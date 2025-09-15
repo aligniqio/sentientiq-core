@@ -270,6 +270,21 @@
 
     const velocity = (y - state.lastScroll.y) / (dt / 100);
 
+    // Check what's visible in viewport - pricing elements?
+    const viewportElements = document.elementsFromPoint(window.innerWidth / 2, window.innerHeight / 2);
+    const visibleText = viewportElements.map(el => (el.textContent || '').toLowerCase()).join(' ');
+    const visibleClasses = viewportElements.map(el => (el.className || '').toLowerCase()).join(' ');
+
+    const isPricingVisible = visibleText.includes('$') ||
+                            visibleText.includes('price') ||
+                            visibleText.includes('tier') ||
+                            visibleText.includes('plan') ||
+                            visibleText.includes('month') ||
+                            visibleText.includes('year') ||
+                            visibleClasses.includes('price') ||
+                            visibleClasses.includes('tier') ||
+                            visibleClasses.includes('plan');
+
     // Detect rapid scroll to top (tab shopping behavior)
     if (y < 50 && velocity < -20) {
       record('scroll_to_tabs', {
@@ -283,11 +298,16 @@
         v: velocity,
         dir: velocity > 0 ? 'down' : 'up',
         at_top: y < 50,
-        at_bottom: y > document.body.scrollHeight - window.innerHeight - 100
+        at_bottom: y > document.body.scrollHeight - window.innerHeight - 100,
+        ctx: {
+          pricing: isPricingVisible,
+          // Track if user is going back and forth (comparison behavior)
+          oscillating: state.lastScroll.v && Math.sign(velocity) !== Math.sign(state.lastScroll.v)
+        }
       });
     }
 
-    state.lastScroll = { y, t: now };
+    state.lastScroll = { y, t: now, v: velocity };
   }
 
   // Send telemetry to backend
