@@ -265,17 +265,17 @@ export class BehaviorProcessor {
         if (event.dir === 'top') {
           // Leaving via top after looking at pricing = checking competitors
           return event.after_pricing
-            ? { emotion: 'comparison_shopping', confidence: 85 }
+            ? { emotion: 'comparison_shopping', confidence: 90 }
             : { emotion: 'tab_switching', confidence: 75 };
         }
 
         // Side exits after pricing = high abandonment risk
         if (event.after_pricing) {
           if (event.dir === 'left' || event.dir === 'right') {
-            return { emotion: 'abandonment_warning', confidence: 85 };
+            return { emotion: 'abandonment_warning', confidence: 90 };
           }
           // Bottom exit after pricing
-          return { emotion: 'abandonment_risk', confidence: 80 };
+          return { emotion: 'abandonment_risk', confidence: 85 };
         }
 
         // Non-pricing exits
@@ -620,30 +620,59 @@ export class BehaviorProcessor {
 
     // Sticker shock = immediate price justification needed
     if (recent.includes('sticker_shock')) {
-      patterns.push({ type: 'price_reaction', intervention: 'value_proposition' });
+      patterns.push({
+        type: 'price_reaction',
+        intervention: 'value_proposition',
+        priority: 'HIGH'  // Add priority!
+      });
     }
 
     // Comparison shopping = competitive advantage needed
     if (recent.includes('comparison_shopping')) {
-      patterns.push({ type: 'shopping_around', intervention: 'comparison_chart' });
+      patterns.push({
+        type: 'shopping_around',
+        intervention: 'comparison_chart',
+        priority: 'HIGH'
+      });
     }
 
     // Hesitation followed by distracted/abandonment = losing them
     if (recent.includes('hesitation') &&
         (recent.includes('distracted') || recent.includes('abandonment_intent'))) {
-      patterns.push({ type: 'abandonment_risk', intervention: 'urgency_message' });
+      patterns.push({
+        type: 'abandonment_risk',
+        intervention: 'urgency_message',
+        priority: 'CRITICAL'
+      });
     }
 
     // Purchase intent but no click = needs nudge
     const hasIntent = recent.includes('purchase_intent');
     const hasClick = history.slice(-5).some(h => h.behavior === 'click');
     if (hasIntent && !hasClick) {
-      patterns.push({ type: 'purchase_hesitation', intervention: 'price_assist' });
+      patterns.push({
+        type: 'purchase_hesitation',
+        intervention: 'price_assist',
+        priority: 'HIGH'
+      });
     }
 
     // Re-engaged after leaving = second chance
     if (recent.includes('re_engaged') && recent.includes('purchase_intent')) {
-      patterns.push({ type: 'second_chance', intervention: 'limited_offer' });
+      patterns.push({
+        type: 'second_chance',
+        intervention: 'limited_offer',
+        priority: 'CRITICAL'
+      });
+    }
+
+    // SIMPLE ABANDONMENT TRIGGER - for testing
+    if (recent.includes('abandonment_warning') || recent.includes('abandonment_risk')) {
+      patterns.push({
+        type: 'exit_intent_detected',
+        intervention: 'discount_offer',
+        priority: 'CRITICAL'
+      });
     }
 
     // FEAR-BASED PATTERNS - The real human emotions

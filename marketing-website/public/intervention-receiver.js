@@ -29,10 +29,14 @@
   let reconnectTimer = null;
 
   function connect() {
+    // Get the CURRENT session ID (might have been updated after initialization)
+    const currentSessionId = sessionStorage.getItem('sq_session_id') || sessionId;
+
     // Build connection URL with parameters
-    const wsUrl = `${API_ENDPOINT}?channel=${CHANNEL}&session=${sessionId}&tenant=${tenantId}`;
+    const wsUrl = `${API_ENDPOINT}?channel=${CHANNEL}&session=${currentSessionId}&tenant=${tenantId}`;
 
     console.log('🔌 Connecting to SentientIQ interventions...');
+    console.log('📍 Session ID:', currentSessionId);
 
     try {
       ws = new WebSocket(wsUrl);
@@ -925,22 +929,20 @@
 
   // Wait for telemetry to be ready (ensures same session)
   function initialize() {
-    if (window.SentientIQTelemetry) {
-      // Update session ID to match telemetry
+    if (window.SentientIQTelemetry && window.SentientIQTelemetry.getSessionId) {
+      // Get and use telemetry's session ID
       const telemetrySessionId = window.SentientIQTelemetry.getSessionId();
       if (telemetrySessionId) {
+        // Override our session with telemetry's session
         sessionStorage.setItem('sq_session_id', telemetrySessionId);
         console.log('🔗 Using telemetry session:', telemetrySessionId);
-      }
 
-      // Update tenant ID if available from telemetry
-      const telemetryTenantId = window.SentientIQTelemetry.getTenantId();
-      if (telemetryTenantId && telemetryTenantId !== 'unknown') {
-        console.log('🏢 Using tenant ID from telemetry:', telemetryTenantId);
+        // Now connect with the CORRECT session
+        connect();
+      } else {
+        console.log('⏳ Telemetry session not ready, retrying...');
+        setTimeout(initialize, 100);
       }
-
-      // Now connect with proper session/tenant
-      connect();
     } else {
       // Telemetry not loaded yet, wait
       console.log('⏳ Waiting for telemetry to load...');
