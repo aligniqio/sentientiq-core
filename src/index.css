@@ -177,4 +177,35 @@
   }
   
   /* Typewriter effect replaced fadeIn animation */
+
+  /* Neural network pulse animations */
+  @keyframes pulse-slow {
+    0%, 100% {
+      opacity: 0.1;
+      transform: scale(1) translateZ(0);
+    }
+    50% {
+      opacity: 0.3;
+      transform: scale(1.1) translateZ(0);
+    }
+  }
+
+  @keyframes pulse-slow-reverse {
+    0%, 100% {
+      opacity: 0.3;
+      transform: scale(1.1) translateZ(0);
+    }
+    50% {
+      opacity: 0.1;
+      transform: scale(1) translateZ(0);
+    }
+  }
+
+  .animate-pulse-slow {
+    animation: pulse-slow 8s ease-in-out infinite;
+  }
+
+  .animate-pulse-slow-reverse {
+    animation: pulse-slow-reverse 10s ease-in-out infinite;
+  }
 }

@@ -20,6 +20,7 @@ import {
   Check
 } from 'lucide-react';
 import { useSuperAdmin } from '../hooks/useSuperAdmin';
+import NeuralBackground from './NeuralBackground';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -113,24 +114,8 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
   return (
     <div className="min-h-screen bg-black text-white relative overflow-hidden">
-      {/* Neural Cathedral Background - Layered for depth */}
-      <div className="neural-bg" />
-      
-      {/* Neural Network Pattern - Above the animated orbs for visual depth */}
-      <div className="fixed inset-0 z-[1] pointer-events-none opacity-[0.03]">
-        <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
-          <defs>
-            <pattern id="neural-grid" x="0" y="0" width="60" height="60" patternUnits="userSpaceOnUse">
-              <circle cx="30" cy="30" r="1" fill="currentColor" className="text-purple-400" />
-              <line x1="30" y1="30" x2="60" y2="30" stroke="currentColor" strokeWidth="0.5" className="text-purple-400/50" />
-              <line x1="30" y1="30" x2="30" y2="60" stroke="currentColor" strokeWidth="0.5" className="text-purple-400/50" />
-              <line x1="30" y1="30" x2="0" y2="30" stroke="currentColor" strokeWidth="0.5" className="text-purple-400/50" />
-              <line x1="30" y1="30" x2="30" y2="0" stroke="currentColor" strokeWidth="0.5" className="text-purple-400/50" />
-            </pattern>
-          </defs>
-          <rect width="100%" height="100%" fill="url(#neural-grid)" />
-        </svg>
-      </div>
+      {/* Neural Network Background - Full transparency philosophy */}
+      <NeuralBackground />
 
 
       {/* Mobile Menu Button */}
@@ -149,7 +134,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             animate={{ x: 0 }}
             exit={{ x: -280 }}
             transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-            className="fixed left-0 top-0 h-full w-64 z-40 backdrop-blur-2xl bg-white/5 border-r border-white/10"
+            className="fixed left-0 top-0 h-full w-64 z-40 backdrop-blur-2xl bg-black/40 border-r border-white/10"
           >
             {/* Logo */}
             <div className="p-6 border-b border-white/10">
@@ -299,7 +284,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         <div className="min-h-screen">
           {/* Super Admin Context Switcher */}
           {isSuperAdmin && (
-            <div className="sticky top-0 z-20 bg-black/80 backdrop-blur-xl border-b border-white/10">
+            <div className="sticky top-0 z-20 bg-black/40 backdrop-blur-xl border-b border-white/10">
               <div className="mx-auto max-w-7xl px-6 py-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
