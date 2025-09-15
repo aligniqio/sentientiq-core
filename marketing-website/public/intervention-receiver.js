@@ -126,6 +126,25 @@
       case 'guidance':
         showGuidanceHelper();
         break;
+      // CART ABANDONMENT INTERVENTIONS
+      case 'save_cart_urgent':
+        showCartSaveUrgent();
+        break;
+      case 'discount_offer':
+        showDiscountOffer();
+        break;
+      case 'free_shipping':
+        showFreeShipping();
+        break;
+      case 'value_proposition':
+        showValueProp();
+        break;
+      case 'comparison_chart':
+        showComparisonChart();
+        break;
+      case 'limited_offer':
+        showLimitedOffer();
+        break;
       default:
         console.log('Unknown intervention type:', type);
     }
@@ -397,6 +416,274 @@
     `;
 
     document.head.appendChild(styles);
+  }
+
+  // CART ABANDONMENT INTERVENTIONS - THE MONEY MAKERS
+
+  function showCartSaveUrgent() {
+    const urgent = document.createElement('div');
+    urgent.className = 'sq-intervention sq-urgent-cart';
+    urgent.innerHTML = `
+      <div class="sq-urgent-content" style="
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: linear-gradient(135deg, #ff6b6b, #ff5252);
+        color: white;
+        padding: 20px;
+        border-radius: 12px;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        max-width: 350px;
+        animation: slideLeft 0.4s ease-out;
+        z-index: 10000;
+      ">
+        <button class="sq-close" style="
+          position: absolute;
+          top: 10px;
+          right: 10px;
+          background: none;
+          border: none;
+          color: white;
+          font-size: 24px;
+          cursor: pointer;
+        ">&times;</button>
+        <h3 style="margin: 0 0 10px 0;">⚡ Wait! Don't leave yet!</h3>
+        <p style="margin: 0 0 15px 0;">Complete your order in the next 5 minutes and get:</p>
+        <div style="background: rgba(255,255,255,0.2); padding: 10px; border-radius: 8px; margin-bottom: 15px;">
+          <strong style="font-size: 20px;">15% OFF</strong> your entire order<br>
+          <small>Code: SAVE15NOW</small>
+        </div>
+        <button class="sq-claim" style="
+          background: white;
+          color: #ff5252;
+          border: none;
+          padding: 12px 24px;
+          border-radius: 6px;
+          cursor: pointer;
+          font-size: 16px;
+          font-weight: bold;
+          width: 100%;
+        ">Apply Discount & Checkout</button>
+      </div>
+    `;
+    document.body.appendChild(urgent);
+
+    urgent.querySelector('.sq-close').onclick = () => {
+      urgent.remove();
+      trackInteraction('save_cart_urgent', false);
+    };
+
+    urgent.querySelector('.sq-claim').onclick = () => {
+      urgent.remove();
+      trackInteraction('save_cart_urgent', true);
+      // Apply discount code and redirect to checkout
+      if (window.applyDiscount) window.applyDiscount('SAVE15NOW');
+    };
+  }
+
+  function showDiscountOffer() {
+    const discount = document.createElement('div');
+    discount.className = 'sq-intervention sq-discount';
+    discount.innerHTML = `
+      <div class="sq-discount-content" style="
+        position: fixed;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: linear-gradient(135deg, #667eea, #764ba2);
+        color: white;
+        padding: 20px 30px;
+        border-radius: 50px;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        animation: slideUp 0.4s ease-out;
+        z-index: 10000;
+        display: flex;
+        align-items: center;
+        gap: 20px;
+      ">
+        <div style="font-size: 32px;">💰</div>
+        <div>
+          <strong>Price too high?</strong> Here's 10% off!
+          <div style="opacity: 0.8; font-size: 14px;">Auto-applied at checkout</div>
+        </div>
+        <button style="
+          background: white;
+          color: #667eea;
+          border: none;
+          padding: 10px 20px;
+          border-radius: 25px;
+          cursor: pointer;
+          font-weight: bold;
+        ">Continue</button>
+      </div>
+    `;
+    document.body.appendChild(discount);
+
+    setTimeout(() => discount.remove(), 8000);
+
+    discount.querySelector('button').onclick = () => {
+      discount.remove();
+      trackInteraction('discount_offer', true);
+    };
+  }
+
+  function showFreeShipping() {
+    const shipping = document.createElement('div');
+    shipping.className = 'sq-intervention sq-shipping';
+    shipping.innerHTML = `
+      <div class="sq-shipping-bar" style="
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        background: linear-gradient(90deg, #00b09b, #96c93d);
+        color: white;
+        padding: 12px;
+        text-align: center;
+        font-weight: bold;
+        animation: slideDown 0.3s ease-out;
+        z-index: 10000;
+      ">
+        🚚 FREE SHIPPING unlocked for the next 10 minutes! No minimum order.
+        <button style="
+          margin-left: 20px;
+          background: white;
+          color: #00b09b;
+          border: none;
+          padding: 6px 16px;
+          border-radius: 4px;
+          cursor: pointer;
+        ">Checkout Now</button>
+      </div>
+    `;
+    document.body.appendChild(shipping);
+
+    shipping.querySelector('button').onclick = () => {
+      shipping.remove();
+      trackInteraction('free_shipping', true);
+    };
+  }
+
+  function showValueProp() {
+    // Show value proposition for sticker shock
+    const value = document.createElement('div');
+    value.className = 'sq-intervention sq-value';
+    value.innerHTML = `
+      <div style="
+        position: fixed;
+        bottom: 80px;
+        right: 20px;
+        background: white;
+        border: 2px solid #4CAF50;
+        padding: 15px;
+        border-radius: 8px;
+        max-width: 300px;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+        z-index: 10000;
+      ">
+        <div style="color: #4CAF50; font-weight: bold; margin-bottom: 10px;">
+          ✓ Why it's worth it:
+        </div>
+        <ul style="margin: 0; padding-left: 20px; font-size: 14px;">
+          <li>Save 10+ hours per week</li>
+          <li>30-day money-back guarantee</li>
+          <li>Trusted by 10,000+ businesses</li>
+        </ul>
+      </div>
+    `;
+    document.body.appendChild(value);
+    setTimeout(() => value.remove(), 10000);
+  }
+
+  function showComparisonChart() {
+    // Show comparison for comparison shoppers
+    const comparison = document.createElement('div');
+    comparison.className = 'sq-intervention sq-comparison';
+    comparison.innerHTML = `
+      <div style="
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: white;
+        padding: 30px;
+        border-radius: 12px;
+        box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        max-width: 500px;
+        z-index: 10000;
+      ">
+        <h3>Why Choose Us?</h3>
+        <table style="width: 100%; margin: 20px 0;">
+          <tr>
+            <th></th>
+            <th style="color: #4CAF50;">Us ✓</th>
+            <th style="color: #999;">Competitor A</th>
+            <th style="color: #999;">Competitor B</th>
+          </tr>
+          <tr><td>24/7 Support</td><td>✓</td><td>✗</td><td>✗</td></tr>
+          <tr><td>Free Updates</td><td>✓</td><td>✗</td><td>✓</td></tr>
+          <tr><td>No Setup Fee</td><td>✓</td><td>✗</td><td>✗</td></tr>
+        </table>
+        <button style="
+          background: #4CAF50;
+          color: white;
+          border: none;
+          padding: 12px 24px;
+          border-radius: 6px;
+          cursor: pointer;
+          width: 100%;
+        ">Continue with the Best Choice</button>
+      </div>
+    `;
+    document.body.appendChild(comparison);
+
+    comparison.querySelector('button').onclick = () => {
+      comparison.remove();
+      trackInteraction('comparison_chart', true);
+    };
+  }
+
+  function showLimitedOffer() {
+    // Second chance offer for returning users
+    const limited = document.createElement('div');
+    limited.className = 'sq-intervention sq-limited';
+    limited.innerHTML = `
+      <div style="
+        position: fixed;
+        top: 50%;
+        right: 20px;
+        transform: translateY(-50%);
+        background: linear-gradient(135deg, #f093fb, #f5576c);
+        color: white;
+        padding: 25px;
+        border-radius: 12px;
+        max-width: 320px;
+        box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+        z-index: 10000;
+      ">
+        <div style="font-size: 24px; margin-bottom: 10px;">🎁 Welcome Back!</div>
+        <p>We saved your cart and added something special...</p>
+        <div style="background: rgba(255,255,255,0.2); padding: 10px; border-radius: 8px; margin: 15px 0;">
+          <strong>20% OFF</strong> - Expires in 1 hour
+        </div>
+        <button style="
+          background: white;
+          color: #f5576c;
+          border: none;
+          padding: 12px;
+          border-radius: 6px;
+          cursor: pointer;
+          width: 100%;
+          font-weight: bold;
+        ">Claim My Discount</button>
+      </div>
+    `;
+    document.body.appendChild(limited);
+
+    limited.querySelector('button').onclick = () => {
+      limited.remove();
+      trackInteraction('limited_offer', true);
+    };
   }
 
   // Keep connection alive
