@@ -164,6 +164,9 @@
 
   // Detect movement patterns
   function processMove(x, y) {
+    // Stop processing if mouse is off canvas
+    if (state.mouseOffCanvas) return;
+
     const now = Date.now();
     const dt = now - state.lastMove.t;
     if (dt < 50) return; // Throttle to 20Hz
@@ -355,6 +358,14 @@
   window.addEventListener('pointerleave', (e) => {
     state.mouseOffCanvas = true;
 
+    // Check what they were looking at BEFORE clearing
+    const wasViewingPricing = state.hoverElement?.classList?.contains('price') ||
+                             state.hoverElement?.textContent?.includes('$');
+
+    // CRITICAL: Stop all hover tracking immediately
+    state.hoverElement = null;
+    state.hoverStart = null;
+
     // Determine exit direction
     const exitDir = state.exitDirection ||
       (e.clientY < 10 ? 'top' :
@@ -365,7 +376,7 @@
       dir: exitDir,
       x: e.clientX,
       y: e.clientY,
-      after_pricing: state.hoverElement?.classList?.contains('price')
+      after_pricing: wasViewingPricing
     });
   }, { passive: true });
 
