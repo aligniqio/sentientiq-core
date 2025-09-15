@@ -314,7 +314,7 @@ export default function AccountabilityScorecard() {
             <span className="text-sm text-white/60">Value Touched</span>
           </div>
           <div className="text-4xl font-bold mb-1">
-            {formatCurrency(metrics?.interventionsWithInteraction * averageDealSize || 0)}
+            {formatCurrency((metrics?.interventionsWithInteraction || 0) * averageDealSize)}
           </div>
           <div className="text-sm text-white/40">
             @ {formatCurrency(averageDealSize)} each
