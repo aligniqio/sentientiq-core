@@ -14,9 +14,12 @@ const supabase = createClient(
 );
 
 export class BehaviorProcessor {
-  constructor() {
+  constructor(websocketServer = null) {
     // Session buffers for context
     this.sessions = new Map();
+
+    // WebSocket server for sending interventions
+    this.wsServer = websocketServer;
 
     // PATTERN LEARNING - The predictive engine
     this.patternMemory = {
@@ -421,6 +424,9 @@ export class BehaviorProcessor {
     const patterns = this.detectPatterns(session.history);
     if (patterns.length > 0) {
       session.patterns = patterns;
+
+      // TRIGGER INTERVENTIONS FOR CRITICAL PATTERNS
+      this.triggerInterventions(sessionId, patterns, session);
     }
 
     return { emotions: diagnosed, patterns };
@@ -470,6 +476,87 @@ export class BehaviorProcessor {
     }
 
     return emotion;
+  }
+
+  /**
+   * Trigger interventions based on detected patterns
+   */
+  triggerInterventions(sessionId, patterns, session) {
+    if (!this.wsServer) return;
+
+    // Track intervention cooldowns per session
+    if (!session.interventionHistory) {
+      session.interventionHistory = new Map();
+    }
+
+    const now = Date.now();
+
+    for (const pattern of patterns) {
+      // Check cooldown (don't spam interventions)
+      const lastTriggered = session.interventionHistory.get(pattern.intervention) || 0;
+      const cooldownMs = 60000; // 1 minute cooldown per intervention type
+
+      if (now - lastTriggered < cooldownMs) {
+        console.log(`⏸️ Intervention ${pattern.intervention} on cooldown for ${sessionId}`);
+        continue;
+      }
+
+      // Only trigger HIGH and CRITICAL priority interventions automatically
+      if (pattern.priority === 'CRITICAL' || pattern.priority === 'HIGH') {
+        console.log(`🎯 Triggering ${pattern.intervention} for pattern: ${pattern.type}`);
+
+        // Map pattern interventions to actual intervention types
+        const interventionMap = {
+          'save_cart_urgent': 'cart_save_modal',
+          'discount_offer': 'discount_modal',
+          'free_shipping': 'shipping_offer',
+          'help_offer': 'live_chat',
+          'value_proposition': 'value_popup',
+          'comparison_chart': 'comparison_modal',
+          'urgency_message': 'urgency_banner',
+          'price_assist': 'payment_plan_modal',
+          'limited_offer': 'time_limited_discount',
+          'payment_plan_offer': 'installments_modal',
+          'money_back_guarantee': 'guarantee_badge',
+          'risk_free_trial': 'trial_offer_modal',
+          'success_stories': 'testimonial_popup'
+        };
+
+        const interventionType = interventionMap[pattern.intervention] || pattern.intervention;
+
+        // Send intervention via WebSocket
+        const sent = this.wsServer.sendIntervention(sessionId, interventionType);
+
+        if (sent) {
+          // Record intervention
+          session.interventionHistory.set(pattern.intervention, now);
+
+          // Log to database for tracking
+          this.logIntervention(sessionId, pattern, interventionType);
+
+          console.log(`✅ Intervention ${interventionType} sent to session ${sessionId}`);
+        } else {
+          console.log(`⚠️ No active WebSocket for session ${sessionId}`);
+        }
+      }
+    }
+  }
+
+  /**
+   * Log intervention to database for effectiveness tracking
+   */
+  async logIntervention(sessionId, pattern, interventionType) {
+    try {
+      await supabase.from('intervention_log').insert({
+        session_id: sessionId,
+        pattern_type: pattern.type,
+        intervention_type: interventionType,
+        priority: pattern.priority,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error('Failed to log intervention:', error);
+    }
   }
 
   /**
@@ -1186,7 +1273,13 @@ export class BehaviorProcessor {
   }
 }
 
+// Create instance
 export const behaviorProcessor = new BehaviorProcessor();
+
+// Method to set WebSocket server after initialization
+behaviorProcessor.setWebSocketServer = function(wsServer) {
+  this.wsServer = wsServer;
+};
 
 // Cleanup every 10 minutes
 setInterval(() => {

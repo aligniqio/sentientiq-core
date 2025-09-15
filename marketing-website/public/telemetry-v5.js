@@ -656,6 +656,7 @@
     version: '5.0',
     flush,
     getSessionId: () => config.sessionId,
+    getTenantId: () => config.tenantId,
     getSiteMap: () => siteMap,
     destroy: () => {
       clearInterval(flushTimer);

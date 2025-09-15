@@ -13,6 +13,7 @@ command = "npm run build && cp -r public/* dist/"
 functions = "/Users/matthewkiselstein/projects/sentientiq-core/marketing-website/netlify/functions"
 
 [build.environment]
+SECRETS_SCAN_ENABLED = "true"
 
 [build.processing]
 

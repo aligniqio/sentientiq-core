@@ -10,13 +10,18 @@
   const API_ENDPOINT = 'wss://api.sentientiq.app/ws';
   const CHANNEL = 'interventions';
 
-  // Get or create session ID
-  const sessionId = sessionStorage.getItem('sq_session_id') ||
+  // Get or create session ID (MUST match telemetry's session ID)
+  const sessionId = window.SentientIQTelemetry?.getSessionId?.() ||
+    sessionStorage.getItem('sq_session_id') ||
     `session_${Date.now()}_${Math.random().toString(36).slice(2)}`;
   sessionStorage.setItem('sq_session_id', sessionId);
 
-  // Get tenant ID from localStorage (set by GTM)
-  const tenantId = localStorage.getItem('tenantId') || 'unknown';
+  // Get tenant ID from window.SentientIQ (set by GTM) or script tag
+  const scriptTag = document.currentScript || document.querySelector('script[src*="intervention-receiver"]');
+  const tenantId = window.SentientIQ?.tenantId ||
+    scriptTag?.getAttribute('data-tenant-id') ||
+    localStorage.getItem('tenantId') ||
+    'unknown';
 
   let ws = null;
   let reconnectAttempts = 0;
@@ -144,6 +149,46 @@
         break;
       case 'limited_offer':
         showLimitedOffer();
+        break;
+      // NEW MAPPED INTERVENTIONS
+      case 'cart_save_modal':
+        showCartSaveUrgent();
+        break;
+      case 'discount_modal':
+        showDiscountOffer();
+        break;
+      case 'shipping_offer':
+        showFreeShipping();
+        break;
+      case 'live_chat':
+        showHelpTooltip();
+        break;
+      case 'value_popup':
+        showValueProp();
+        break;
+      case 'comparison_modal':
+        showComparisonChart();
+        break;
+      case 'urgency_banner':
+        showUrgencyBanner();
+        break;
+      case 'payment_plan_modal':
+        showPaymentPlanModal();
+        break;
+      case 'time_limited_discount':
+        showLimitedOffer();
+        break;
+      case 'installments_modal':
+        showInstallmentsModal();
+        break;
+      case 'guarantee_badge':
+        showGuaranteeBadge();
+        break;
+      case 'trial_offer_modal':
+        showTrialOfferModal();
+        break;
+      case 'testimonial_popup':
+        showTestimonialPopup();
         break;
       default:
         console.log('Unknown intervention type:', type);
@@ -686,6 +731,191 @@
     };
   }
 
+  // Additional intervention functions for mapped types
+  function showUrgencyBanner() {
+    const banner = document.createElement('div');
+    banner.className = 'sq-intervention sq-urgency-banner';
+    banner.innerHTML = `
+      <div style="
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        background: linear-gradient(90deg, #ff6b6b, #ff5252);
+        color: white;
+        padding: 12px;
+        text-align: center;
+        font-weight: bold;
+        z-index: 10000;
+        animation: slideDown 0.3s ease-out;
+      ">
+        ⏰ Limited Time: Free shipping ends in 2 hours!
+        <button style="
+          margin-left: 20px;
+          background: white;
+          color: #ff5252;
+          border: none;
+          padding: 6px 12px;
+          border-radius: 4px;
+          cursor: pointer;
+        ">Shop Now</button>
+      </div>
+    `;
+    document.body.appendChild(banner);
+
+    setTimeout(() => banner.remove(), 10000); // Auto-remove after 10s
+  }
+
+  function showPaymentPlanModal() {
+    const modal = document.createElement('div');
+    modal.className = 'sq-intervention sq-payment-plan';
+    modal.innerHTML = `
+      <div class="sq-modal-overlay"></div>
+      <div class="sq-modal-content" style="
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: white;
+        padding: 30px;
+        border-radius: 12px;
+        box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        max-width: 400px;
+        z-index: 10001;
+      ">
+        <button class="sq-close" style="position: absolute; top: 10px; right: 10px;">&times;</button>
+        <h2 style="color: #333;">Split Your Payment</h2>
+        <p>Make it easier with our payment plans:</p>
+        <div style="background: #f0f4ff; padding: 15px; border-radius: 8px; margin: 20px 0;">
+          <strong>3 Easy Payments</strong> of $33/month
+        </div>
+        <button style="
+          background: #667eea;
+          color: white;
+          border: none;
+          padding: 12px 24px;
+          border-radius: 6px;
+          cursor: pointer;
+          width: 100%;
+        ">Choose Payment Plan</button>
+      </div>
+    `;
+    document.body.appendChild(modal);
+    addStyles();
+
+    modal.querySelector('.sq-close').onclick = () => modal.remove();
+    modal.querySelector('.sq-modal-overlay').onclick = () => modal.remove();
+  }
+
+  function showInstallmentsModal() {
+    showPaymentPlanModal(); // Reuse payment plan modal
+  }
+
+  function showGuaranteeBadge() {
+    const badge = document.createElement('div');
+    badge.className = 'sq-intervention sq-guarantee';
+    badge.innerHTML = `
+      <div style="
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        background: #28a745;
+        color: white;
+        padding: 15px 20px;
+        border-radius: 8px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        z-index: 10000;
+        animation: slideLeft 0.4s ease-out;
+      ">
+        <div style="font-size: 24px;">✓</div>
+        <div>
+          <strong>30-Day Money Back Guarantee</strong>
+          <div style="font-size: 12px; opacity: 0.9;">No questions asked</div>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(badge);
+
+    setTimeout(() => badge.remove(), 8000); // Auto-remove after 8s
+  }
+
+  function showTrialOfferModal() {
+    const modal = document.createElement('div');
+    modal.className = 'sq-intervention sq-trial';
+    modal.innerHTML = `
+      <div class="sq-modal-overlay"></div>
+      <div class="sq-modal-content" style="
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: white;
+        padding: 30px;
+        border-radius: 12px;
+        text-align: center;
+        max-width: 400px;
+        z-index: 10001;
+      ">
+        <button class="sq-close" style="position: absolute; top: 10px; right: 10px;">&times;</button>
+        <div style="font-size: 48px; margin-bottom: 10px;">🎯</div>
+        <h2>Try Risk-Free for 14 Days</h2>
+        <p>No credit card required. Full access to all features.</p>
+        <button style="
+          background: #28a745;
+          color: white;
+          border: none;
+          padding: 15px 30px;
+          border-radius: 6px;
+          cursor: pointer;
+          font-size: 16px;
+          margin-top: 20px;
+        ">Start Free Trial</button>
+      </div>
+    `;
+    document.body.appendChild(modal);
+    addStyles();
+
+    modal.querySelector('.sq-close').onclick = () => modal.remove();
+    modal.querySelector('.sq-modal-overlay').onclick = () => modal.remove();
+  }
+
+  function showTestimonialPopup() {
+    const popup = document.createElement('div');
+    popup.className = 'sq-intervention sq-testimonial';
+    popup.innerHTML = `
+      <div style="
+        position: fixed;
+        bottom: 20px;
+        left: 20px;
+        background: white;
+        padding: 20px;
+        border-radius: 12px;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+        max-width: 350px;
+        z-index: 10000;
+        animation: slideRight 0.4s ease-out;
+      ">
+        <button class="sq-close" style="position: absolute; top: 10px; right: 10px;">&times;</button>
+        <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+          <div>⭐⭐⭐⭐⭐</div>
+        </div>
+        <p style="font-style: italic; color: #555;">
+          "SentientIQ increased our conversion rate by 34% in just 2 weeks!"
+        </p>
+        <div style="font-weight: bold; color: #333; margin-top: 10px;">
+          — Sarah Chen, VP Product
+        </div>
+      </div>
+    `;
+    document.body.appendChild(popup);
+
+    popup.querySelector('.sq-close').onclick = () => popup.remove();
+    setTimeout(() => popup.remove(), 10000); // Auto-remove after 10s
+  }
+
   // Keep connection alive
   setInterval(() => {
     if (ws && ws.readyState === WebSocket.OPEN) {
@@ -693,13 +923,39 @@
     }
   }, 30000);
 
+  // Wait for telemetry to be ready (ensures same session)
+  function initialize() {
+    if (window.SentientIQTelemetry) {
+      // Update session ID to match telemetry
+      const telemetrySessionId = window.SentientIQTelemetry.getSessionId();
+      if (telemetrySessionId) {
+        sessionStorage.setItem('sq_session_id', telemetrySessionId);
+        console.log('🔗 Using telemetry session:', telemetrySessionId);
+      }
+
+      // Update tenant ID if available from telemetry
+      const telemetryTenantId = window.SentientIQTelemetry.getTenantId();
+      if (telemetryTenantId && telemetryTenantId !== 'unknown') {
+        console.log('🏢 Using tenant ID from telemetry:', telemetryTenantId);
+      }
+
+      // Now connect with proper session/tenant
+      connect();
+    } else {
+      // Telemetry not loaded yet, wait
+      console.log('⏳ Waiting for telemetry to load...');
+      setTimeout(initialize, 100);
+    }
+  }
+
   // Initialize connection
-  connect();
+  initialize();
 
   // Export for debugging
   window.SentientIQInterventions = {
     ws: () => ws,
-    sessionId: sessionId,
+    sessionId: () => sessionStorage.getItem('sq_session_id'),
+    tenantId: () => tenantId,
     reconnect: connect,
     showIntervention: showIntervention
   };

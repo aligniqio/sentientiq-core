@@ -245,6 +245,10 @@ const server = app.listen(PORT, async () => {
 // Initialize unified WebSocket server
 unifiedWS.init(server);
 
+// Connect WebSocket server to behavior processor for interventions
+behaviorProcessor.setWebSocketServer(unifiedWS);
+console.log('🔗 Connected WebSocket to behavior processor for interventions');
+
 // Listen for intervention events
 unifiedWS.on('intervention_shown', async (data) => {
   await supabase

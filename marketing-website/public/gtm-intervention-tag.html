@@ -1,0 +1,55 @@
+<!--
+  SentientIQ Intervention Receiver Tag for GTM
+  This is OPTIONAL - only add if you want interventions
+  Must be used WITH the telemetry tag
+-->
+
+<script>
+  (function() {
+    'use strict';
+
+    // IMPORTANT: This tag requires the telemetry tag to be loaded first
+    // The window.SentientIQ config will already be set by telemetry tag
+
+    // Wait for telemetry to load first
+    function loadInterventions() {
+      if (window.SentientIQTelemetry) {
+        // Telemetry is loaded, now load interventions
+        var script = document.createElement('script');
+        script.src = 'https://sentientiq.ai/intervention-receiver.js';
+        script.setAttribute('data-tenant-id', '{{Tenant ID}}');
+        document.head.appendChild(script);
+
+        console.log('🎯 SentientIQ Interventions loading for tenant:', '{{Tenant ID}}');
+      } else {
+        // Telemetry not ready, try again in 100ms
+        setTimeout(loadInterventions, 100);
+      }
+    }
+
+    // Start loading process
+    loadInterventions();
+  })();
+</script>
+
+<!--
+  GTM Setup Instructions:
+
+  1. Create a new Custom HTML tag
+  2. Name it: "SentientIQ - Interventions"
+  3. Paste this code
+  4. Set the same {{Tenant ID}} variable as your telemetry tag
+  5. Trigger: All Pages (or specific pages where you want interventions)
+  6. Tag Sequencing: Set to fire AFTER "SentientIQ - Telemetry" tag
+
+  The interventions will:
+  - Use the same session ID as telemetry
+  - Use the same tenant ID
+  - Only fire when patterns are detected
+  - Display contextual modals/banners
+
+  Crystal Palace of Truth:
+  All interventions are labeled with your tenant ID.
+  You can see exactly which interventions fire for YOUR users.
+  Complete transparency in the dashboard.
+-->
