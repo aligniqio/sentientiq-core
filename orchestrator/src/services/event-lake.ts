@@ -16,7 +16,7 @@ import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { AthenaClient, StartQueryExecutionCommand, GetQueryExecutionCommand, GetQueryResultsCommand } from '@aws-sdk/client-athena';
 import * as crypto from 'crypto';
 import { getDeploymentConfig } from '../config/deployment-mode.js';
-import { stubDataLake } from './pipeline-stubs';
+import { stubDataLake } from './pipeline-stubs.js';
 
 // Event schema for the data lake
 export interface EventLakeRecord {

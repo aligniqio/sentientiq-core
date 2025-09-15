@@ -247,15 +247,30 @@ router.post('/config/:tenantId/publish', async (req: Request, res: Response) => 
       .eq('tenant_id', tenantId);
 
     // Generate GTM snippet
-    const gtmSnippet = `<!-- SentientIQ Interventions - Paste this in Google Tag Manager -->
-<script src="${BUNDLE_URL}"></script>
+    const gtmSnippet = `<!-- SentientIQ v4.1 - Real Emotions, Real Interventions -->
+<!-- Step 1: Load Detection Engine -->
+<script src="https://sentientiq.ai/detect-v4.js"></script>
+
+<!-- Step 2: Load Intervention Library -->
+<script src="https://sentientiq.ai/interventions-v4.js"></script>
+
+<!-- Step 3: Initialize with your configuration -->
 <script>
-  new SQInterventions({
-    configUrl: '${cdnUrl}',
-    apiKey: '${config.apiKey}',
+(function() {
+  // Initialize detection engine
+  window.SentientIQ = window.SentientIQ || {};
+  window.SentientIQ.config = {
     tenantId: '${tenantId}',
-    debug: false
-  }).init();
+    apiKey: '${config.apiKey}',
+    apiUrl: 'https://api.sentientiq.app',
+    tier: '${config.tier || 'starter'}'
+  };
+
+  // Configuration will be loaded from CDN
+  // ${cdnUrl}
+
+  console.log('[SentientIQ] v4.1 initialized for ${config.branding?.companyName || tenantId}');
+})();
 </script>`;
 
     res.json({
