@@ -26,7 +26,7 @@ class UnifiedWebSocketServer extends EventEmitter {
       const url = new URL(req.url, `http://${req.headers.host}`);
       const channel = url.searchParams.get('channel') || 'interventions';
       const sessionId = url.searchParams.get('session') || `ws_${Date.now()}`;
-      const tenantId = url.searchParams.get('tenant') || 'unknown';
+      const tenantId = url.searchParams.get('tenant_id') || url.searchParams.get('tenant') || 'unknown';
 
       console.log(`🔌 WebSocket connected: ${channel} channel, session: ${sessionId}`);
 
@@ -155,9 +155,12 @@ class UnifiedWebSocketServer extends EventEmitter {
   // Broadcast emotion to all dashboard clients
   broadcastEmotion(emotionData) {
     const message = JSON.stringify({
-      type: 'emotion',
-      ...emotionData,
-      timestamp: new Date().toISOString()
+      type: 'event',
+      payload: {
+        id: `${emotionData.session_id}_${Date.now()}`,
+        ...emotionData,
+        timestamp: Date.now()
+      }
     });
 
     let sent = 0;

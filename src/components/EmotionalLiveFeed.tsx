@@ -7,7 +7,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useUser } from '@clerk/clerk-react';
-import { Activity, Users, TrendingUp, AlertCircle, Zap } from 'lucide-react';
+import { Users, AlertCircle, Zap, Brain, Lightbulb } from 'lucide-react';
 import PageHeader from './PageHeader';
 import EVIDisplay from './EVIDisplay';
 
@@ -99,6 +99,7 @@ const EmotionalLiveFeed = () => {
   const [isConnected, setIsConnected] = useState(false);
   const [lastEtag, setLastEtag] = useState<string | null>(null);
   const [connectionType, setConnectionType] = useState<'websocket' | 'polling'>('polling');
+  const [tenantInsights, setTenantInsights] = useState<any>(null);
   const pollingInterval = useRef<NodeJS.Timeout>();
   const ws = useRef<WebSocket | null>(null);
 
@@ -274,6 +275,34 @@ const EmotionalLiveFeed = () => {
     };
   }, [user, lastEtag]);
 
+  // Fetch tenant insights periodically
+  useEffect(() => {
+    if (!user) return;
+
+    const fetchInsights = async () => {
+      try {
+        const response = await fetch(
+          `${import.meta.env.VITE_API_URL || 'https://api.sentientiq.app'}/api/emotional/tenant-insights/${user.id}`
+        );
+
+        if (response.ok) {
+          const data = await response.json();
+          setTenantInsights(data);
+        }
+      } catch (error) {
+        console.error('Error fetching tenant insights:', error);
+      }
+    };
+
+    // Initial fetch
+    fetchInsights();
+
+    // Refresh every 30 seconds
+    const interval = setInterval(fetchInsights, 30000);
+
+    return () => clearInterval(interval);
+  }, [user]);
+
   // Listen for detect.js events on the current page (if instrumented)
   useEffect(() => {
     const handleLocalEmotion = (e: CustomEvent) => {
@@ -324,74 +353,113 @@ const EmotionalLiveFeed = () => {
         )}
       </div>
 
-      {/* Emotional Volatility Index - Our Data Moat */}
-      <div className="mb-8">
-        <EVIDisplay 
-          value={stats.volatilityIndex || 50} 
-          trend={stats.volatilityIndex && stats.volatilityIndex > 60 ? 'up' : stats.volatilityIndex && stats.volatilityIndex < 40 ? 'down' : 'stable'}
-          className="w-full"
-        />
-      </div>
+      {/* EVI and Active Users - Top Level Metrics */}
+      <div className="flex gap-4 mb-8">
+        {/* Emotional Volatility Index - 80% width */}
+        <div className="flex-1" style={{ maxWidth: '80%' }}>
+          <EVIDisplay
+            value={stats.volatilityIndex || 50}
+            trend={stats.volatilityIndex && stats.volatilityIndex > 60 ? 'up' : stats.volatilityIndex && stats.volatilityIndex < 40 ? 'down' : 'stable'}
+            className="w-full"
+          />
+        </div>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        {/* Active Users Card - 20% width */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="glass-card p-6"
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="glass-card p-6 flex flex-col items-center justify-center min-w-[160px]"
         >
-          <div className="flex items-center justify-between mb-2">
-            <Users className="w-5 h-5 text-purple-400" />
-            <span className="text-xs text-white/40">LIVE</span>
-          </div>
-          <div className="text-2xl font-bold text-white">{stats.activeUsers}</div>
-          <div className="text-sm text-white/60">Active Users</div>
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="glass-card p-6"
-        >
-          <div className="flex items-center justify-between mb-2">
-            <Activity className="w-5 h-5 text-blue-400" />
-            <span className="text-xs text-white/40">TODAY</span>
-          </div>
-          <div className="text-2xl font-bold text-white">{stats.totalEvents}</div>
-          <div className="text-sm text-white/60">Emotions Detected</div>
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className="glass-card p-6"
-        >
-          <div className="flex items-center justify-between mb-2">
-            <TrendingUp className="w-5 h-5 text-green-400" />
-            <span className="text-xs text-white/40">RATE</span>
-          </div>
-          <div className="text-2xl font-bold text-white">{stats.interventionRate}%</div>
-          <div className="text-sm text-white/60">Intervention Success</div>
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-          className="glass-card p-6"
-        >
-          <div className="flex items-center justify-between mb-2">
-            <AlertCircle className="w-5 h-5 text-amber-400" />
-            <span className="text-xs text-white/40">DOMINANT</span>
-          </div>
-          <div className="text-2xl font-bold text-white">
-            {stats.dominantEmotion ? EMOTION_LABELS[stats.dominantEmotion] : '—'}
-          </div>
-          <div className="text-sm text-white/60">Most Common</div>
+          <Users className="w-8 h-8 text-purple-400 mb-3" />
+          <div className="text-3xl font-bold text-white">{stats.activeUsers}</div>
+          <div className="text-sm text-white/60 mt-1">Active Now</div>
+          <div className="mt-2 text-xs text-green-400 animate-pulse">● LIVE</div>
         </motion.div>
       </div>
+
+      {/* Intelligent Shopping Pattern Assessment */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="glass-card p-6 mb-8"
+      >
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-xl font-bold text-white">Shopping Pattern Intelligence</h2>
+          <div className="flex items-center gap-2">
+            <Brain className="w-5 h-5 text-purple-400" />
+            <span className="text-sm text-white/60">AI Analysis</span>
+          </div>
+        </div>
+
+        {/* Pattern Insights */}
+        <div className="space-y-4">
+          {tenantInsights && tenantInsights.insights.length > 0 ? (
+            tenantInsights.insights.map((insight: any, index: number) => (
+              <motion.div
+                key={insight.id}
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: index * 0.1 }}
+                className="p-4 bg-white/5 rounded-xl border border-white/10"
+              >
+                <div className="flex items-start justify-between mb-2">
+                  <h3 className="font-semibold text-white">{insight.headline}</h3>
+                  <span className={`text-xs px-2 py-1 rounded-full ${
+                    insight.impact_score > 80 ? 'bg-red-500/20 text-red-400' :
+                    insight.impact_score > 60 ? 'bg-amber-500/20 text-amber-400' :
+                    'bg-blue-500/20 text-blue-400'
+                  }`}>
+                    Impact: {insight.impact_score}
+                  </span>
+                </div>
+                <p className="text-sm text-white/70 mb-3">{insight.description}</p>
+                {insight.recommendation && (
+                  <div className="p-3 bg-purple-500/10 rounded-lg border border-purple-500/20">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Lightbulb className="w-4 h-4 text-purple-400" />
+                      <span className="text-xs font-semibold text-purple-400">RECOMMENDATION</span>
+                    </div>
+                    <p className="text-sm text-white/80">{insight.recommendation}</p>
+                  </div>
+                )}
+              </motion.div>
+            ))
+          ) : (
+            <div className="text-center py-8 text-white/40">
+              <Brain className="w-12 h-12 mx-auto mb-4 text-white/20" />
+              <p className="text-lg mb-2">Pattern learning in progress...</p>
+              <p className="text-sm">
+                As visitors browse your site, we'll identify emotional patterns that lead to conversions or abandonment.
+              </p>
+            </div>
+          )}
+        </div>
+
+        {/* Pattern Statistics */}
+        {tenantInsights && tenantInsights.stats && (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6 pt-6 border-t border-white/10">
+            <div className="text-center">
+              <div className="text-2xl font-bold text-white">{tenantInsights.stats.total_patterns_learned || 0}</div>
+              <div className="text-xs text-white/60">Patterns Learned</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-green-400">{tenantInsights.stats.conversion_patterns || 0}</div>
+              <div className="text-xs text-white/60">Success Paths</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-red-400">{tenantInsights.stats.abandonment_patterns || 0}</div>
+              <div className="text-xs text-white/60">Abandonment Paths</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-purple-400">
+                {tenantInsights.stats.overall_conversion_rate ?
+                  `${tenantInsights.stats.overall_conversion_rate.toFixed(1)}%` : '—'}
+              </div>
+              <div className="text-xs text-white/60">Conversion Rate</div>
+            </div>
+          </div>
+        )}
+      </motion.div>
 
       {/* Live Event Feed */}
       <motion.div

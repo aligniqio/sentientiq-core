@@ -12,5 +12,10 @@
     "skipLibCheck": true
   },
   "include": ["src"],
-  "exclude": ["src/**/*.bak", "src/EventSourceEndpoint.ts"]
+  "exclude": [
+    "src/**/*.bak",
+    "src/EventSourceEndpoint.ts",
+    "src/**/_archived*/**",
+    "src/_archived*/**"
+  ]
 }

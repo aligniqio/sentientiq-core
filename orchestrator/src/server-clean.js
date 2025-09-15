@@ -9,6 +9,7 @@ import dotenv from 'dotenv';
 import { createClient } from '@supabase/supabase-js';
 import { unifiedWS } from './services/unified-websocket.js';
 import { patternEngine } from './services/pattern-engine.js';
+import { behaviorProcessor } from './services/behavior-processor.js';
 
 dotenv.config();
 
@@ -38,7 +39,73 @@ app.get('/health', (req, res) => {
   });
 });
 
-// Emotion event endpoint
+// NEW: Telemetry stream endpoint (behaviors → emotions)
+app.post('/api/telemetry/stream', async (req, res) => {
+  try {
+    const { session_id, tenant_id, events } = req.body;
+
+    console.log(`📡 Telemetry received: ${events.length} events from ${session_id}`);
+
+    // Process behaviors into emotions
+    const { emotions, patterns } = behaviorProcessor.processBatch(session_id, events);
+
+    // Store and broadcast each diagnosed emotion
+    for (const emotion of emotions) {
+      // Store in database
+      await supabase
+        .from('emotional_events')
+        .insert({
+          session_id,
+          tenant_id,
+          emotion: emotion.emotion,
+          confidence: emotion.confidence,
+          behavior: emotion.behavior,
+          metadata: emotion.context,
+          timestamp: new Date(emotion.timestamp).toISOString()
+        });
+
+      // Broadcast to dashboard
+      unifiedWS.broadcastEmotion({
+        session_id,
+        tenant_id,
+        emotion: emotion.emotion,
+        confidence: emotion.confidence,
+        metadata: emotion.context
+      });
+    }
+
+    // Check patterns for interventions
+    for (const pattern of patterns) {
+      console.log(`🎯 Pattern detected: ${pattern.type} → ${pattern.intervention}`);
+
+      const sent = unifiedWS.sendIntervention(session_id, pattern.intervention);
+
+      if (sent) {
+        await supabase
+          .from('intervention_logs')
+          .insert({
+            session_id,
+            tenant_id,
+            intervention_type: pattern.intervention,
+            pattern_type: pattern.type,
+            triggered_at: new Date().toISOString()
+          });
+      }
+    }
+
+    res.json({
+      success: true,
+      processed: events.length,
+      diagnosed: emotions.length,
+      patterns: patterns.length
+    });
+  } catch (error) {
+    console.error('Error processing telemetry:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Legacy emotion event endpoint (for v4 scripts)
 app.post('/api/emotional/event', async (req, res) => {
   try {
     const { session_id, tenant_id, emotion, confidence, metadata } = req.body;
@@ -112,6 +179,37 @@ app.get('/api/emotional/ws-info', (req, res) => {
   });
 });
 
+// BLOOMBERG TERMINAL ENDPOINT - The crown jewel
+app.get('/api/emotional/market-insights', (req, res) => {
+  const insights = behaviorProcessor.getMarketInsights();
+  res.json(insights);
+});
+
+// EVI endpoint for dashboard widget
+app.get('/api/emotional/evi', (req, res) => {
+  const evi = behaviorProcessor.calculateEVI();
+  const prediction = {
+    value: evi,
+    trend: evi > 50 ? 'volatile' : 'stable',
+    timestamp: Date.now(),
+    sessions_tracked: behaviorProcessor.sessions.size,
+    patterns_learned: behaviorProcessor.patternMemory.conversionPaths.size +
+                     behaviorProcessor.patternMemory.abandonmentPaths.size
+  };
+  res.json(prediction);
+});
+
+// Tenant pattern insights endpoint - CRO dashboard data
+app.get('/api/emotional/tenant-insights/:tenantId', async (req, res) => {
+  try {
+    const insights = await behaviorProcessor.getTenantInsights(req.params.tenantId);
+    res.json(insights);
+  } catch (error) {
+    console.error('Error fetching tenant insights:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // Intervention feedback endpoint
 app.post('/api/emotional/intervention-feedback', async (req, res) => {
   try {
@@ -135,9 +233,13 @@ app.post('/api/emotional/intervention-feedback', async (req, res) => {
 });
 
 // Start server
-const server = app.listen(PORT, () => {
+const server = app.listen(PORT, async () => {
   console.log(`🚀 Clean Orchestrator running on port ${PORT}`);
   console.log(`✨ Emotional Intelligence Engine active`);
+
+  // Load learned patterns from database
+  console.log(`📊 Loading pattern learning data...`);
+  await behaviorProcessor.loadPatterns();
 });
 
 // Initialize unified WebSocket server

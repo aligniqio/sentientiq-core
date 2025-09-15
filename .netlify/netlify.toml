@@ -1,15 +1,16 @@
-functionsDirectory = "/Users/matthewkiselstein/projects/sentientiq-core/netlify/functions"
-functionsDirectoryOrigin = "ui"
+functionsDirectory = "/Users/matthewkiselstein/projects/sentientiq-core/marketing-website/netlify/functions"
+functionsDirectoryOrigin = "default"
 headersOrigin = "config"
 redirectsOrigin = "config"
 plugins = []
 
 [build]
-publish = "/Users/matthewkiselstein/projects/sentientiq-core/dist"
+publish = "/Users/matthewkiselstein/projects/sentientiq-core/marketing-website/dist"
 publishOrigin = "config"
 commandOrigin = "config"
-command = "npm run build"
-functions = "/Users/matthewkiselstein/projects/sentientiq-core/netlify/functions"
+base = "/Users/matthewkiselstein/projects/sentientiq-core/marketing-website"
+command = "npm run build && cp -r public/* dist/"
+functions = "/Users/matthewkiselstein/projects/sentientiq-core/marketing-website/netlify/functions"
 
 [build.environment]
 
@@ -47,57 +48,19 @@ for = "/*"
 Referrer-Policy = "strict-origin-when-cross-origin"
 X-Content-Type-Options = "nosniff"
 X-Frame-Options = "DENY"
+Permissions-Policy = "camera=(), microphone=(), geolocation=(), payment=()"
+Strict-Transport-Security = "max-age=31536000; includeSubDomains; preload"
+
+[[headers]]
+for = "/*"
+
+[headers.values]
+Referrer-Policy = "strict-origin-when-cross-origin"
+X-Content-Type-Options = "nosniff"
+X-Frame-Options = "DENY"
 Permissions-Policy = "camera=(), microphone=(), geolocation=()"
 Strict-Transport-Security = "max-age=31536000; includeSubDomains; preload"
-Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.clerk.com https://*.clerk.accounts.dev https://clerk.sentientiq.app https://js.stripe.com; worker-src 'self' blob:; child-src 'self' blob:; img-src 'self' data: https:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; connect-src 'self' https://api.sentientiq.app wss://api.sentientiq.app https://*.supabase.co wss://*.supabase.co https://*.clerk.com https://*.clerk.accounts.dev https://clerk.sentientiq.app https://api.stripe.com; frame-src https://*.clerk.com https://*.clerk.accounts.dev https://js.stripe.com https://hooks.stripe.com; base-uri 'self'; form-action 'self';"
-
-[[headers]]
-for = "/assets/*"
-
-[headers.values]
-Cache-Control = "public, max-age=31536000, immutable"
-
-[[headers]]
-for = "/api/*"
-
-[headers.values]
-Cache-Control = "no-store"
-
-[[redirects]]
-from = "/api/boardroom/save-brief"
-to = "https://api.sentientiq.app/api/boardroom/save-brief"
-status = 200.0
-force = true
-
-[redirects.query]
-
-[redirects.conditions]
-
-[redirects.headers]
-
-[[redirects]]
-from = "/api/sage/analyze"
-to = "https://api.sentientiq.app/api/sage/analyze"
-status = 200.0
-force = true
-
-[redirects.query]
-
-[redirects.conditions]
-
-[redirects.headers]
-
-[[redirects]]
-from = "/api/health"
-to = "https://api.sentientiq.app/api/health"
-status = 200.0
-force = true
-
-[redirects.query]
-
-[redirects.conditions]
-
-[redirects.headers]
+Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://www.googletagmanager.com https://www.google-analytics.com https://cdn.sentientiq.ai https://sentientiq.ai; img-src 'self' data: https: https://www.googletagmanager.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://tagmanager.google.com https://www.googletagmanager.com; font-src 'self' https://fonts.gstatic.com data:; connect-src 'self' https://api.stripe.com https://api.sentientiq.app wss://api.sentientiq.app https://www.google-analytics.com https://www.googletagmanager.com https://sentientiq.ai https://cdn.sentientiq.ai; frame-src https://js.stripe.com https://hooks.stripe.com https://www.googletagmanager.com; base-uri 'self'; form-action 'self';"
 
 [[redirects]]
 from = "/api/v1/debate"
@@ -114,6 +77,30 @@ force = true
 [[redirects]]
 from = "/api/sage/debate"
 to = "https://api.sentientiq.app/api/sage/debate"
+status = 200.0
+force = true
+
+[redirects.query]
+
+[redirects.conditions]
+
+[redirects.headers]
+
+[[redirects]]
+from = "/api/boardroom/save-brief"
+to = "https://api.sentientiq.app/api/boardroom/save-brief"
+status = 200.0
+force = true
+
+[redirects.query]
+
+[redirects.conditions]
+
+[redirects.headers]
+
+[[redirects]]
+from = "/api/sage/analyze"
+to = "https://api.sentientiq.app/api/sage/analyze"
 status = 200.0
 force = true
 
@@ -148,8 +135,128 @@ force = true
 [redirects.headers]
 
 [[redirects]]
+from = "/api/health"
+to = "https://api.sentientiq.app/api/health"
+status = 200.0
+force = true
+
+[redirects.query]
+
+[redirects.conditions]
+
+[redirects.headers]
+
+[[redirects]]
 from = "/api/*"
 to = "https://api.sentientiq.app/api/:splat"
+status = 200.0
+force = true
+
+[redirects.query]
+
+[redirects.conditions]
+
+[redirects.headers]
+
+[[redirects]]
+from = "/detect.js"
+to = "/detect.js"
+status = 200.0
+force = true
+
+[redirects.query]
+
+[redirects.conditions]
+
+[redirects.headers]
+
+[[redirects]]
+from = "/favicon-32x32.png"
+to = "/favicon-32x32.png"
+status = 200.0
+force = true
+
+[redirects.query]
+
+[redirects.conditions]
+
+[redirects.headers]
+
+[[redirects]]
+from = "/logo.png"
+to = "/logo.png"
+status = 200.0
+force = true
+
+[redirects.query]
+
+[redirects.conditions]
+
+[redirects.headers]
+
+[[redirects]]
+from = "/red_pulse.png"
+to = "/red_pulse.png"
+status = 200.0
+force = true
+
+[redirects.query]
+
+[redirects.conditions]
+
+[redirects.headers]
+
+[[redirects]]
+from = "/detect-v2.js"
+to = "/detect-v4.js"
+status = 200.0
+force = true
+
+[redirects.query]
+
+[redirects.conditions]
+
+[redirects.headers]
+
+[[redirects]]
+from = "/detect-v3.js"
+to = "/detect-v4.js"
+status = 200.0
+force = true
+
+[redirects.query]
+
+[redirects.conditions]
+
+[redirects.headers]
+
+[[redirects]]
+from = "/v3/detect.js"
+to = "/detect-v4.js"
+status = 200.0
+force = true
+
+[redirects.query]
+
+[redirects.conditions]
+
+[redirects.headers]
+
+[[redirects]]
+from = "/detect.js"
+to = "/detect-v4.js"
+status = 200.0
+force = true
+
+[redirects.query]
+
+[redirects.conditions]
+
+[redirects.headers]
+
+[[redirects]]
+from = "/detect-v4.js"
+to = "/detect-v4.js"
 status = 200.0
 force = true
 
