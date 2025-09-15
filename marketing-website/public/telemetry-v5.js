@@ -25,6 +25,7 @@
   let flushTimer = null;
 
   // State tracking
+  const sessionStart = Date.now();
   const state = {
     lastClick: { x: 0, y: 0, t: 0 },
     lastMove: { x: 0, y: 0, t: 0, v: 0 },
@@ -42,10 +43,14 @@
   function record(type, data) {
     if (state.suspended) return;
 
+    const now = Date.now();
+    const sessionAge = now - sessionStart;
+
     const event = {
-      t: Date.now(),
+      t: now,
       type,
       ...data,
+      session_age: sessionAge,  // How long user has been on page
       url: window.location.href,
       vp: { w: window.innerWidth, h: window.innerHeight } // viewport
     };
