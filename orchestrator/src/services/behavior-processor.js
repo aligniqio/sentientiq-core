@@ -115,20 +115,25 @@ export class BehaviorProcessor {
                               target.includes('price') ||
                               target.includes('cost') ||
                               target.includes('$') ||
-                              target.includes('total');
+                              target.includes('total') ||
+                              target.includes('tier') ||
+                              target.includes('plan') ||
+                              target.includes('subscription');
 
         if (isPriceElement) {
-          // Nuanced price hovering emotions
-          if (event.duration < 800) {
-            return { emotion: 'price_scan', confidence: 65 };
-          } else if (event.duration < 2000) {
-            return { emotion: 'purchase_intent', confidence: 80 };
-          } else if (event.duration < 3500) {
-            return { emotion: 'price_consideration', confidence: 85 };
-          } else if (event.duration < 5000) {
-            return { emotion: 'sticker_shock', confidence: 88 };
+          // Nuanced price hovering emotions - purchase intent focus
+          if (event.duration < 500) {
+            return { emotion: 'price_glance', confidence: 60 };
+          } else if (event.duration < 1200) {
+            return { emotion: 'price_scan', confidence: 70 };
+          } else if (event.duration < 2500) {
+            return { emotion: 'purchase_intent', confidence: 85 }; // Strong intent in this range
+          } else if (event.duration < 4000) {
+            return { emotion: 'price_consideration', confidence: 88 };
+          } else if (event.duration < 6000) {
+            return { emotion: 'price_hesitation', confidence: 90 };
           } else {
-            return { emotion: 'price_paralysis', confidence: 92 };
+            return { emotion: 'price_paralysis', confidence: 93 };
           }
         }
 
@@ -169,6 +174,22 @@ export class BehaviorProcessor {
           return { emotion: 'sticker_shock', confidence: 92 };
         }
         return { emotion: 'surprise', confidence: 70 };
+      },
+
+      erratic_movement: (event) => {
+        // Erratic behavior over pricing = internal conflict
+        if (event.ctx?.pricing) {
+          // Multiple rapid direction changes over pricing
+          if (event.changes >= 5) {
+            return { emotion: 'price_panic', confidence: 95 };
+          }
+          if (event.changes >= 3) {
+            return { emotion: 'sticker_shock', confidence: 90 };
+          }
+          return { emotion: 'price_confusion', confidence: 80 };
+        }
+        // Non-pricing erratic movement = general confusion
+        return { emotion: 'confusion', confidence: 70 };
       },
 
       scroll: (event) => {

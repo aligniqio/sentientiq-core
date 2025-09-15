@@ -1,7 +1,7 @@
 /**
  * SentientIQ Telemetry v5.0 - Hybrid Approach
  * Lean behavioral telemetry collector - no emotion diagnosis
- * ~200 lines instead of 700+
+ * Now with intelligent site mapping
  */
 
 (function() {
@@ -16,8 +16,12 @@
     sessionId: `sq_${Date.now()}_${Math.random().toString(36).slice(2,9)}`,
     batchSize: 20,
     flushInterval: 1000, // Send every second
-    debug: scriptTag?.getAttribute('data-debug') === 'true'
+    debug: scriptTag?.getAttribute('data-debug') === 'true',
+    useMapping: scriptTag?.getAttribute('data-use-mapping') !== 'false' // Default true
   };
+
+  // Site map storage
+  let siteMap = null;
 
   // Telemetry buffer
   const buffer = [];
@@ -36,12 +40,14 @@
     mouseOffCanvas: false,
     suspended: false,
     velocityHistory: [], // Track velocity for deceleration detection
-    exitDirection: null // Track where mouse left viewport
+    exitDirection: null, // Track where mouse left viewport
+    erraticHistory: [], // Track erratic movements over pricing
+    lastDirectionChange: 0 // Track zigzag patterns
   };
 
   // Record telemetry event
   function record(type, data) {
-    if (state.suspended) return;
+    if (state.suspended || state.mouseOffCanvas) return; // HALT when mouse is off canvas
 
     const now = Date.now();
     const sessionAge = now - sessionStart;
@@ -72,38 +78,139 @@
     }
   }
 
+  // Initialize site mapping
+  function initializeSiteMapping() {
+    if (!config.useMapping) return;
+
+    // Load site mapper if available
+    if (window.SentientIQSiteMapper) {
+      siteMap = window.SentientIQSiteMapper.init();
+      if (config.debug) {
+        console.log('📍 Site map loaded:', siteMap);
+        if (siteMap.warnings?.length > 0) {
+          console.warn('⚠️ Site map warnings:', siteMap.warnings);
+        }
+      }
+    } else {
+      // Fallback: load site mapper dynamically
+      const script = document.createElement('script');
+      script.src = scriptTag?.src?.replace('telemetry-v5.js', 'site-mapper.js') || '/site-mapper.js';
+      script.onload = () => {
+        if (window.SentientIQSiteMapper) {
+          siteMap = window.SentientIQSiteMapper.init();
+          if (config.debug) {
+            console.log('📍 Site mapper loaded dynamically:', siteMap);
+          }
+        }
+      };
+      document.head.appendChild(script);
+    }
+  }
+
+  // Check if element matches any mapped selector
+  function checkMappedElement(el) {
+    if (!siteMap) return null;
+
+    const result = {
+      isPricing: false,
+      isCart: false,
+      isCTA: false,
+      isDemo: false,
+      isForm: false,
+      confidence: 0,
+      type: null
+    };
+
+    // Check each category
+    for (const category of ['pricing', 'cart', 'cta', 'demo', 'forms']) {
+      if (!siteMap[category]) continue;
+
+      for (const item of siteMap[category]) {
+        try {
+          // Check if element matches selector or is child of selector
+          if (el.matches(item.selector) || el.closest(item.selector)) {
+            switch (category) {
+              case 'pricing':
+                result.isPricing = true;
+                result.type = item.type;
+                break;
+              case 'cart':
+                result.isCart = true;
+                result.type = item.type;
+                break;
+              case 'cta':
+                result.isCTA = true;
+                result.type = item.type;
+                break;
+              case 'demo':
+                result.isDemo = true;
+                result.type = item.type;
+                break;
+              case 'forms':
+                result.isForm = true;
+                result.type = item.type;
+                break;
+            }
+            result.confidence = Math.max(result.confidence, item.confidence || 70);
+          }
+        } catch (e) {
+          // Invalid selector, skip
+        }
+      }
+    }
+
+    return result.confidence > 0 ? result : null;
+  }
+
   // Get element context (what user is interacting with)
   function getElementContext(el) {
     const ctx = {};
 
-    // Element type
-    if (el.tagName) ctx.tag = el.tagName.toLowerCase();
-
-    // Special elements
-    if (el.href) ctx.href = el.href;
-    if (el.classList.contains('price') || el.classList.contains('pricing')) ctx.pricing = true;
-    if (el.type === 'submit' || el.role === 'button') ctx.cta = true;
-
-    // Cart/checkout detection
-    const cartIndicators = ['cart', 'basket', 'checkout', 'payment', 'shipping', 'billing'];
-    const elementText = (el.textContent + ' ' + el.className + ' ' + el.id).toLowerCase();
-    if (cartIndicators.some(indicator => elementText.includes(indicator))) {
-      ctx.cart = true;
-      // Detect specific cart stage
-      if (elementText.includes('checkout') || elementText.includes('payment')) ctx.stage = 'checkout';
-      else if (elementText.includes('shipping')) ctx.stage = 'shipping';
-      else if (elementText.includes('billing')) ctx.stage = 'billing';
-      else ctx.stage = 'cart';
+    // First check mapped elements for high confidence
+    const mapped = checkMappedElement(el);
+    if (mapped) {
+      Object.assign(ctx, {
+        pricing: mapped.isPricing,
+        cart: mapped.isCart,
+        cta: mapped.isCTA,
+        demo: mapped.isDemo,
+        form: mapped.isForm,
+        mapped_type: mapped.type,
+        confidence: mapped.confidence
+      });
     }
 
-    // Form field detection (critical for checkout forms)
-    if (el.tagName === 'INPUT' || el.tagName === 'SELECT') {
-      ctx.form = true;
-      ctx.fieldType = el.type;
-      ctx.fieldName = el.name || el.id;
+    // Fallback to heuristic detection if not mapped or low confidence
+    if (!mapped || mapped.confidence < 70) {
+      // Element type
+      if (el.tagName) ctx.tag = el.tagName.toLowerCase();
+
+      // Special elements
+      if (el.href) ctx.href = el.href;
+      if (el.classList.contains('price') || el.classList.contains('pricing')) ctx.pricing = true;
+      if (el.type === 'submit' || el.role === 'button') ctx.cta = true;
+
+      // Cart/checkout detection
+      const cartIndicators = ['cart', 'basket', 'checkout', 'payment', 'shipping', 'billing'];
+      const elementText = (el.textContent + ' ' + el.className + ' ' + el.id).toLowerCase();
+      if (cartIndicators.some(indicator => elementText.includes(indicator))) {
+        ctx.cart = true;
+        // Detect specific cart stage
+        if (elementText.includes('checkout') || elementText.includes('payment')) ctx.stage = 'checkout';
+        else if (elementText.includes('shipping')) ctx.stage = 'shipping';
+        else if (elementText.includes('billing')) ctx.stage = 'billing';
+        else ctx.stage = 'cart';
+      }
+
+      // Form field detection (critical for checkout forms)
+      if (el.tagName === 'INPUT' || el.tagName === 'SELECT') {
+        ctx.form = true;
+        ctx.fieldType = el.type;
+        ctx.fieldName = el.name || el.id;
+      }
     }
 
-    // Text content (first 50 chars)
+    // Always include text content
     const text = el.textContent?.trim().slice(0, 50);
     if (text) ctx.text = text;
 
@@ -130,38 +237,19 @@
     const behavior = state.clickSequence.length >= 3 ? 'rage_click' :
                      timeSinceLastClick < 500 ? 'double_click' : 'click';
 
-    // Extract element context
+    // Get full context using site map
+    const fullContext = getElementContext(target);
+
+    // Build target string for debugging
     const elText = (target.textContent || '').toLowerCase();
     const elClass = (target.className || '').toLowerCase();
-    const elId = (target.id || '').toLowerCase();
-    const elHref = target.href || '';
-    const targetStr = `${elClass} ${elId} ${elText} ${elHref}`.toLowerCase();
-
-    // Detect context
-    const isPricing = targetStr.includes('price') ||
-                     targetStr.includes('pricing') ||
-                     targetStr.includes('plan') ||
-                     targetStr.includes('cost') ||
-                     target.closest('[class*="price"], [id*="price"], [href*="price"]');
-
-    const isCart = targetStr.includes('cart') ||
-                  targetStr.includes('checkout') ||
-                  target.closest('[class*="cart"], [id*="cart"]');
-
-    const isCTA = target.tagName === 'BUTTON' ||
-                 target.tagName === 'A' ||
-                 elClass.includes('btn') ||
-                 elClass.includes('button');
+    const targetStr = `${elClass} ${elText}`.substring(0, 100);
 
     record(behavior, {
       x, y,
       count: state.clickSequence.length,
-      target: targetStr.substring(0, 100), // Limit length
-      ctx: {
-        pricing: isPricing,
-        cart: isCart,
-        cta: isCTA
-      }
+      target: targetStr,
+      ctx: fullContext
     });
 
     state.lastClick = { x, y, t: now };
@@ -182,6 +270,51 @@
     // Track velocity history for deceleration detection
     state.velocityHistory.push({ v: velocity, t: now });
     if (state.velocityHistory.length > 10) state.velocityHistory.shift();
+
+    // Detect erratic behavior (rapid direction changes)
+    if (state.lastMove.x !== 0 && state.lastMove.y !== 0) {
+      const dx = x - state.lastMove.x;
+      const dy = y - state.lastMove.y;
+      const lastDx = state.lastMove.dx || 0;
+      const lastDy = state.lastMove.dy || 0;
+
+      // Check for direction reversal
+      const directionChange = (dx * lastDx < 0) || (dy * lastDy < 0);
+
+      if (directionChange && velocity > 5) {
+        state.lastDirectionChange = now;
+        state.erraticHistory.push({ t: now, v: velocity });
+
+        // Keep only recent history (last 2 seconds)
+        state.erraticHistory = state.erraticHistory.filter(h => now - h.t < 2000);
+
+        // If 3+ direction changes in 2 seconds with high velocity = erratic
+        if (state.erraticHistory.length >= 3) {
+          const el = document.elementFromPoint(x, y);
+          const elText = (el?.textContent || '').toLowerCase();
+          const elClass = (el?.className || '').toLowerCase();
+
+          const isPricingContext = elText.includes('$') ||
+                                  elClass.includes('price') ||
+                                  elClass.includes('tier') ||
+                                  elClass.includes('plan');
+
+          if (isPricingContext) {
+            record('erratic_movement', {
+              x, y,
+              changes: state.erraticHistory.length,
+              avg_velocity: state.erraticHistory.reduce((sum, h) => sum + h.v, 0) / state.erraticHistory.length,
+              target: `${elClass} ${elText.substring(0, 50)}`,
+              ctx: { pricing: true }
+            });
+            state.erraticHistory = []; // Reset after recording
+          }
+        }
+      }
+
+      state.lastMove.dx = dx;
+      state.lastMove.dy = dy;
+    }
 
     // Detect sudden deceleration (sticker shock indicator)
     if (state.velocityHistory.length >= 3) {
@@ -376,15 +509,9 @@
 
   // Mouse leave/enter
   window.addEventListener('pointerleave', (e) => {
-    state.mouseOffCanvas = true;
-
-    // Check what they were looking at BEFORE clearing
+    // Check what they were looking at BEFORE marking off canvas
     const wasViewingPricing = state.hoverElement?.classList?.contains('price') ||
                              state.hoverElement?.textContent?.includes('$');
-
-    // CRITICAL: Stop all hover tracking immediately
-    state.hoverElement = null;
-    state.hoverStart = null;
 
     // Determine exit direction
     const exitDir = state.exitDirection ||
@@ -392,12 +519,20 @@
        e.clientX < 10 ? 'left' :
        e.clientX > window.innerWidth - 10 ? 'right' : 'bottom');
 
+    // Record exit BEFORE halting
     record('mouse_exit', {
       dir: exitDir,
       x: e.clientX,
       y: e.clientY,
       after_pricing: wasViewingPricing
     });
+
+    // NOW halt all tracking
+    state.mouseOffCanvas = true;
+    state.hoverElement = null;
+    state.hoverStart = null;
+    state.velocityHistory = [];
+    state.exitDirection = null;
   }, { passive: true });
 
   window.addEventListener('pointerenter', () => {
@@ -509,11 +644,19 @@
   window.addEventListener('pagehide', flush);
   window.addEventListener('beforeunload', flush);
 
+  // Initialize site mapping on load
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initializeSiteMapping);
+  } else {
+    initializeSiteMapping();
+  }
+
   // Public API
   window.SentientIQTelemetry = {
     version: '5.0',
     flush,
     getSessionId: () => config.sessionId,
+    getSiteMap: () => siteMap,
     destroy: () => {
       clearInterval(flushTimer);
       flush();
