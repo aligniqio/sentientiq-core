@@ -1,0 +1,113 @@
+{
+  "tenantId": "sidk",
+  "branding": {
+    "companyName": "AutoDeal Motors",
+    "primaryColor": "#007bff",
+    "accentColor": "#28a745",
+    "logo": null
+  },
+  "offers": {
+    "primary": {
+      "type": "cashback",
+      "headline": "$2,000 Cash Back",
+      "description": "Limited time offer on select models",
+      "cta": "View Eligible Vehicles",
+      "value": 2000
+    },
+    "secondary": {
+      "type": "financing",
+      "headline": "0% APR for 72 Months",
+      "description": "On approved credit for qualified buyers",
+      "cta": "Check Qualification",
+      "value": 0
+    },
+    "tertiary": {
+      "type": "test_drive",
+      "headline": "Schedule a Test Drive",
+      "description": "Experience the difference today",
+      "cta": "Book Now",
+      "value": null
+    }
+  },
+  "channels": {
+    "email": {
+      "enabled": true,
+      "provider": "sendgrid",
+      "fromEmail": "deals@autodeal.com",
+      "fromName": "AutoDeal Motors"
+    },
+    "sms": {
+      "enabled": false,
+      "provider": null
+    },
+    "push": {
+      "enabled": false
+    }
+  },
+  "interventions": [
+    {
+      "type": "exitIntent",
+      "enabled": true,
+      "trigger": {
+        "emotion": "abandonment_risk",
+        "threshold": 75
+      },
+      "content": {
+        "headline": "Wait! Don't Miss Out",
+        "body": "Get exclusive deals before you go",
+        "offer": "primary"
+      }
+    },
+    {
+      "type": "priceHover",
+      "enabled": true,
+      "trigger": {
+        "emotion": "purchase_intent",
+        "threshold": 60,
+        "element": "[data-price], .price, .pricing"
+      },
+      "content": {
+        "headline": "Interested in This Price?",
+        "body": "We have flexible financing options",
+        "offer": "secondary"
+      }
+    },
+    {
+      "type": "confusion",
+      "enabled": true,
+      "trigger": {
+        "emotion": "confusion",
+        "threshold": 70
+      },
+      "content": {
+        "headline": "Need Help?",
+        "body": "Our team is here to assist you",
+        "cta": "Chat with Expert"
+      }
+    },
+    {
+      "type": "frustration",
+      "enabled": true,
+      "trigger": {
+        "emotion": "frustration",
+        "threshold": 80
+      },
+      "content": {
+        "headline": "Having Trouble?",
+        "body": "Let us help you find what you're looking for",
+        "cta": "Get Assistance"
+      }
+    }
+  ],
+  "cooldowns": {
+    "exitIntent": 86400000,
+    "priceHover": 600000,
+    "confusion": 300000,
+    "frustration": 300000
+  },
+  "tier": "growth",
+  "limits": {
+    "interventionsPerSession": 3,
+    "interventionsPerDay": 10
+  }
+}

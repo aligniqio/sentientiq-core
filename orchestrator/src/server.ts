@@ -23,16 +23,18 @@ import { enqueueDebate } from './queue/redis.js';
 import { createClient } from '@supabase/supabase-js';
 import { createClerkClient } from '@clerk/clerk-sdk-node';
 import interventionConfigRoutes from './api/intervention-config-api.js';
-import { 
-  pickPersonas, 
-  rivalPairs, 
-  speak, 
-  streamPersonaOpening, 
-  streamPersonaRebuttal, 
+import emotionalEventsApi from './api/emotional-events-api.js';
+import { wsManager } from './services/websocket-manager.js';
+import {
+  pickPersonas,
+  rivalPairs,
+  speak,
+  streamPersonaOpening,
+  streamPersonaRebuttal,
   streamSynthesis,
   takeTopCTAs,
   TOK,
-  sseWrite 
+  sseWrite
 } from './theatrical-helpers.js';
 import { exportBriefHandler } from './services/brief/exportBrief.js';
 import { debateInit, debateMaybeQuote, debateSetSynthesis } from './services/brief/store.js';
@@ -602,6 +604,10 @@ app.get('/api/cancellation-report', generalLimiter, recommendationHandlers.getCa
 // UI-driven config builder with CDN publishing for GTM
 app.use('/api/interventions', interventionConfigRoutes);
 
+// ---------- EMOTIONAL EVENTS API ----------
+// Pattern recognition and intervention triggering
+app.use('/api/emotional', emotionalEventsApi);
+
 // Identity Resolution & Intervention API routes
 app.use('/api', generalLimiter, identityInterventionApi);
 
@@ -626,6 +632,10 @@ process.on('SIGINT', () => {
 const server = app.listen(PORT, () => {
   console.log(`orchestrator listening on :${PORT}`);
   console.log(`✨ Emotional Intelligence Engine active`);
+
+  // Initialize WebSocket server
+  wsManager.init(server);
+  console.log(`🔌 WebSocket server ready on ws://localhost:${PORT}/ws`);
   console.log(`📊 SentientIQ Scorecard available at /api/scorecard`);
   console.log(`🎯 Marketing at the Speed of Emotion™`);
 });

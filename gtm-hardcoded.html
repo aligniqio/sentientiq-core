@@ -1,0 +1,24 @@
+<script>
+// NO VARIABLES - PURE HARDCODED
+(function() {
+  // Check if already loaded
+  if (window.SentientIQ_loaded) return;
+  window.SentientIQ_loaded = true;
+
+  // Store in localStorage
+  localStorage.setItem('tenantId', 'sidk');
+  localStorage.setItem('apiKey', 'sq_live_sidk_test');
+
+  // Load interventions
+  var s1 = document.createElement('script');
+  s1.src = 'https://sentientiq.ai/interventions-v4.js?tenant=sidk&key=sq_live_sidk_test';
+  s1.onload = function() { console.log('[SentientIQ] Interventions loaded'); };
+  document.head.appendChild(s1);
+
+  // Load detection
+  var s2 = document.createElement('script');
+  s2.src = 'https://sentientiq.ai/detect-v4.js?tenant=sidk&key=sq_live_sidk_test';
+  s2.onload = function() { console.log('[SentientIQ] Detection loaded'); };
+  document.head.appendChild(s2);
+})();
+</script>

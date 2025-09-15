@@ -54,7 +54,7 @@
         return;
       }
 
-      const response = await fetch(`https://cdn.sentientiq.ai/configs/${tenantId}.json`);
+      const response = await fetch(`https://sentientiq.ai/configs/${tenantId}.json`);
       if (response.ok) {
         const cdnConfig = await response.json();
         config = { ...config, ...cdnConfig };

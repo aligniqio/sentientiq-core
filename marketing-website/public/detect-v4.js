@@ -39,6 +39,9 @@
 
   const sessionId = (window.crypto?.randomUUID?.() || `sq_${Date.now()}_${Math.random().toString(36).slice(2,9)}`);
 
+  // Global rate limiter to prevent 429s
+  let globalLastApiCall = 0;
+
   const config = {
     apiEndpoint: 'https://api.sentientiq.app/api/emotional/event',
     apiKey: apiKey,
@@ -46,7 +49,7 @@
     tenantId: tenantIdAttr,
     debug: debugMode,
     ui: { showBanners: debugMode && !reduceMotion },
-    cadenceMs: 1000, // processing cadence
+    cadenceMs: 3000, // processing cadence (reduced to every 3 seconds)
     intentBrain: true // ✅ enabled by default
   };
 
@@ -144,7 +147,9 @@
       if (!el) return null;
       const root = el.closest?.('[data-sq-role], button, nav, form, .price, [role="navigation"]');
       if (!root) return null;
-      if (root.matches?.('[data-sq-role="price"], .price')) return 'PRICE_ELEMENT';
+      // Check for pricing elements including navigation links
+      if (root.matches?.('[data-sq-role="price"], .price, [href*="pricing"], [href*="price"]')) return 'PRICE_ELEMENT';
+      if (root.textContent?.toLowerCase().includes('pricing') || root.textContent?.toLowerCase().includes('price')) return 'PRICE_ELEMENT';
       if (root.matches?.('button,[role="button"]')) return 'CTA_BUTTON';
       if (root.matches?.('nav,[role="navigation"]')) return 'NAVIGATION';
       if (root.closest?.('input,textarea,select,form')) return 'FORM_FIELD';
@@ -255,9 +260,19 @@
         this.hoverStart = null; this.hoverElement = null;
       }
 
-      // Velocity buckets
-      if (avgVelocity < 2) return { type: BEHAVIORS.DRIFT, confidence: 55, _source: { kind:'move', x: last.x, y: last.y } };
-      if (avgVelocity < 15) return { type: BEHAVIORS.SCAN, confidence: 60, _source: { kind:'move', x: last.x, y: last.y } };
+      // Velocity buckets (require minimum movement distance to avoid noise)
+      const totalDistance = history.reduce((sum, p, i) => {
+        if (i === 0) return 0;
+        const dx = p.x - history[i-1].x;
+        const dy = p.y - history[i-1].y;
+        return sum + Math.sqrt(dx*dx + dy*dy);
+      }, 0);
+
+      // Only emit drift/scan if there's meaningful movement
+      if (totalDistance > 50) {
+        if (avgVelocity < 0.3) return { type: BEHAVIORS.DRIFT, confidence: 55, _source: { kind:'move', x: last.x, y: last.y } };
+        if (avgVelocity > 5 && avgVelocity < 15) return { type: BEHAVIORS.SCAN, confidence: 60, _source: { kind:'move', x: last.x, y: last.y } };
+      }
       return null;
     }
 
@@ -499,9 +514,9 @@
       const bc = this.behaviorCooldowns[record.behavior] ?? 1500;
       if (now - bt < bc) return false;
 
-      // Per-emotion cooldown
+      // Per-emotion cooldown (increased to 15 seconds)
       const et = this.lastEmotionTime[record.emotion] || 0;
-      if (now - et < 5000) return false;
+      if (now - et < 15000) return false;
 
       this.lastBehaviorTime[record.behavior] = now;
       return true;
@@ -534,17 +549,32 @@
       // UI (debug only)
       if (config.ui.showBanners) this.showNotification(record.emotion, Math.round(record.confidence));
 
-      // Send to API (use keepalive; queue for beacon on unload)
+      // Send to API with STRICT rate limiting (max 1 request per 5 seconds)
       if (config.apiKey && config.apiKey !== 'sq_demo_v4') {
-        this.pending.push(event); if (this.pending.length > 50) this.pending.shift();
-        try {
-          fetch(config.apiEndpoint, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'X-API-Key': config.apiKey },
-            body: JSON.stringify(event),
-            keepalive: true
-          }).catch(() => {});
-        } catch {}
+        this.pending.push(event);
+        if (this.pending.length > 50) this.pending.shift();
+
+        // Check GLOBAL API rate limit
+        const now = Date.now();
+        if (now - globalLastApiCall > 5000) {
+          globalLastApiCall = now;
+
+          // Send only the most recent event
+          if (this.pending.length > 0) {
+            const latestEvent = this.pending[this.pending.length - 1];
+            try {
+              fetch(config.apiEndpoint, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-API-Key': config.apiKey },
+                body: JSON.stringify(latestEvent),
+                keepalive: true
+              }).catch(() => {});
+
+              // Clear sent event
+              this.pending = [];
+            } catch {}
+          }
+        }
       }
 
       if (config.debug) console.log(`🎯 EMOTION: ${record.emotion} (${Math.round(record.confidence)}% via ${record.behavior})`);

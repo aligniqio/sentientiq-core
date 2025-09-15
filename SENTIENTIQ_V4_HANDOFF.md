@@ -1,8 +1,8 @@
 # SentientIQ v4.1 Handoff - The Tool No Website Should Be Without
 
-## Current State: September 14, 2025 - Evening
+## Current State: September 15, 2025 - GTM Integration Almost Complete
 
-After 5 months and 7 pivots, we've arrived at something revolutionary: **honest software that tracks real emotions on real websites and takes real action**.
+After implementing the full stack today, we have emotions flowing but interventions need one final fix to start firing.
 
 ## The Philosophy
 - **Transparency as philosophy, not design** - Glassmorphism because you can't build closer to glass
@@ -82,9 +82,59 @@ Enterprise: Custom + CRM integration
 - Knows pricing tiers and limitations
 - Purple crystal ball in corner (always watching)
 
+## CRITICAL ISSUE TO FIX
+
+### GTM Integration - Scripts Load But Don't Communicate
+
+**Current Status:**
+- ✅ Detection script loads and tracks emotions
+- ✅ Interventions script loads
+- ⚠️ Interventions can't find tenant configuration
+- Console shows: `[SentientIQ Interventions] No tenant ID found`
+
+**The Problem:**
+Interventions script expects `window.SentientIQ.config.tenantId` but detection script doesn't set this.
+
+**Current GTM Tag (Container: GTM-P5SL4DLB):**
+```javascript
+<script>
+(function() {
+  if (window.SentientIQ_loaded) return;
+  window.SentientIQ_loaded = true;
+
+  localStorage.setItem('tenantId', 'sidk');
+  localStorage.setItem('apiKey', 'sq_live_sidk_test');
+
+  // Load detection first
+  var detect = document.createElement('script');
+  detect.src = 'https://sentientiq.ai/detect-v4.js?tenant=sidk&key=sq_live_sidk_test';
+  detect.onload = function() {
+    console.log('[SentientIQ] Detection loaded');
+
+    // THIS IS WHAT'S MISSING - ADD THIS:
+    if (window.SentientIQ) {
+      window.SentientIQ.emotions = window.SentientIQ.getEmotionHistory || function() { return []; };
+      window.SentientIQ.config = {
+        tenantId: 'sidk',
+        apiKey: 'sq_live_sidk_test'
+      };
+    }
+
+    // Load interventions after delay
+    setTimeout(function() {
+      var interventions = document.createElement('script');
+      interventions.src = 'https://sentientiq.ai/interventions-v4.js?tenant=sidk&key=sq_live_sidk_test';
+      document.head.appendChild(interventions);
+    }, 100);
+  };
+  document.head.appendChild(detect);
+})();
+</script>
+```
+
 ## What Needs Implementation Next
 
-### Priority 1: Wire the APIs (Day 1)
+### Priority 1: Fix Script Communication (5 minutes)
 ```javascript
 // These UIs are complete, just need endpoints:
 1. Configuration publish → CDN endpoint
@@ -161,20 +211,36 @@ sentientiq-core/
 │       └── SageCrystalBall.tsx    # Context-aware AI
 ```
 
-## Backend Services (EC2: 98.87.12.130)
+## Backend Services (EC2: api.sentientiq.app)
 
 ```bash
 # SSH access
-ssh -i .ssh/collective-backend.pem ec2-user@98.87.12.130
+ssh -i ~/.ssh/collective-backend.pem ec2-user@api.sentientiq.app
 
-# Services running
+# Services running (via PM2)
 pm2 list
-- orchestrator-emotion (handles events)
-- sage-api (AI assistant)
+- orchestrator (port 8787) - handles all APIs
+- sage-api - AI assistant
 
 # Restart if needed
-pm2 restart orchestrator-emotion
+cd /home/ec2-user/orchestrator
+pm2 restart orchestrator
+
+# View logs
+pm2 logs orchestrator
 ```
+
+## Database (Supabase)
+
+**Tables Created Today:**
+- `organizations` - with new `tenant_id` column
+- `intervention_configs` - stores tenant configurations
+- `emotional_events` - real-time emotion stream
+- `intervention_events` - tracks intervention performance
+
+**Test Data:**
+- Tenant ID: `sidk` (automotive dealership)
+- API Key: `sq_live_sidk_test`
 
 ## The Business Model That Works
 

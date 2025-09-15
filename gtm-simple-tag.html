@@ -1,0 +1,31 @@
+<script>
+(function() {
+  // Hardcode values for testing
+  const tenantId = 'sidk';
+  const apiKey = 'sq_live_sidk_test';
+
+  // Store in localStorage
+  localStorage.setItem('tenantId', tenantId);
+  localStorage.setItem('apiKey', apiKey);
+
+  // Check if already loaded
+  if (window.SentientIQ_loaded) return;
+  window.SentientIQ_loaded = true;
+
+  // Load interventions script
+  const script1 = document.createElement('script');
+  script1.src = 'https://sentientiq.ai/interventions-v4.js?tenant=' + tenantId + '&key=' + apiKey;
+  script1.onload = function() {
+    console.log('[SentientIQ] Interventions loaded');
+  };
+  document.head.appendChild(script1);
+
+  // Load detection script
+  const script2 = document.createElement('script');
+  script2.src = 'https://sentientiq.ai/detect-v4.js?tenant=' + tenantId + '&key=' + apiKey;
+  script2.onload = function() {
+    console.log('[SentientIQ] Detection loaded');
+  };
+  document.head.appendChild(script2);
+})();
+</script>
