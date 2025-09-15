@@ -10,6 +10,7 @@ import { Request, Response } from 'express';
 import { EmotionalLearningEngine } from './emotional-learning.js';
 import { eventLakeService, EventLakeRecord } from './event-lake.js';
 import { EVICalculator } from './evi-calculator.js';
+import { broadcastEmotion } from '../websocket-handler.js';
 
 // Lazy-initialize Supabase client
 let supabase: SupabaseClient | null = null;
@@ -432,7 +433,13 @@ export const emotionalAnalyticsHandlers = {
         ...req.body,
         tenant_id: req.body.user_id || 'DEMO_TENANT'
       };
+
+      // Record the event
       await EmotionalAnalytics.recordEmotionalEvent(eventWithTenant);
+
+      // Broadcast to WebSocket clients for real-time dashboard
+      broadcastEmotion(eventWithTenant);
+
       res.json({ success: true });
     } catch (error) {
       console.error('❌ Error in recordEvent handler:', error);
