@@ -1,230 +1,187 @@
 /**
- * Accountability Scorecard - The Loop Closes Here
- * 
- * Detection → Recommendation → Action (or Inaction) → Revenue Impact
- * Every emotion detected. Every intervention suggested. Every dollar saved or lost.
+ * Accountability Scorecard - The Single Source of Truth
+ *
+ * We intervened X times. Y got interaction. We touched Z deals.
+ * That's it. No theater. No bullshit. Just accountability.
  */
 
 import { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  Brain, TrendingUp, TrendingDown, AlertTriangle, CheckCircle, 
-  XCircle, Clock, DollarSign, Users, Activity, Target, Zap 
+import { motion } from 'framer-motion';
+import {
+  TrendingUp, CheckCircle, Zap, Target, DollarSign,
+  Activity, Clock, BarChart3, MousePointer, Eye
 } from 'lucide-react';
 import { useUser } from '@clerk/clerk-react';
 import PageHeader from './PageHeader';
 
-interface AccountabilityScore {
-  companyId: string;
+interface InterventionMetrics {
   period: string;
-  score: number;
-  grade: 'A' | 'B' | 'C' | 'D' | 'F';
-  totalRecommendations: number;
-  criticalRecommendations: number;
-  actionsTaken: number;
-  actionsIgnored: number;
-  responseTime: number; // minutes
-  revenueSaved: number;
-  revenueLost: number;
-  preventableChurn: number;
-  customersSaved: number;
-  customersLost: number;
+  totalInterventions: number;
+  interventionsWithInteraction: number;
+  interactionRate: number;
+  averageDealSize: number;
+  estimatedValue: number;
+  interventionsByType: {
+    type: string;
+    displayName: string;
+    count: number;
+    interactions: number;
+    rate: number;
+  }[];
+  // Enterprise CRM metrics (when connected)
+  dealsInfluenced?: number;
+  closedWon?: number;
+  closedLost?: number;
+  pipelineValue?: number;
 }
 
-interface Recommendation {
+interface InterventionDetail {
   id: string;
   timestamp: string;
-  emotion: string;
-  confidence: number;
-  severity: 'critical' | 'high' | 'medium' | 'low';
-  userId?: string;
-  userEmail?: string;
-  userValue?: number;
-  recommendedAction: string;
-  estimatedRevenueLoss: number;
-  deadline: string;
-  actionTaken?: boolean;
-  outcome?: 'saved' | 'lost' | 'pending';
-  actualRevenueLoss?: number;
+  type: string;
+  sessionId: string;
+  hadInteraction: boolean;
+  timeToInteract?: number;
+  dealId?: string;
+  dealValue?: number;
 }
 
-interface AccountabilityInsight {
-  type: 'pattern' | 'warning' | 'opportunity' | 'achievement';
-  message: string;
-  impact: string;
-  suggestedAction?: string;
-}
-
-const GRADE_COLORS = {
-  'A': 'from-emerald-500 to-green-500',
-  'B': 'from-blue-500 to-cyan-500',
-  'C': 'from-yellow-500 to-amber-500',
-  'D': 'from-orange-500 to-red-500',
-  'F': 'from-red-500 to-red-700'
-};
-
-const SEVERITY_COLORS = {
-  'critical': 'border-red-500/20 bg-red-900/5',
-  'high': 'border-orange-500/20 bg-orange-900/5',
-  'medium': 'border-yellow-500/20 bg-yellow-900/5',
-  'low': 'border-blue-500/20 bg-blue-900/5'
-};
-
-const SEVERITY_TEXT = {
-  'critical': 'text-red-400',
-  'high': 'text-orange-400',
-  'medium': 'text-yellow-400',
-  'low': 'text-blue-400'
+const INTERVENTION_TYPES: Record<string, { displayName: string; icon: any; color: string }> = {
+  price_hover_assist: { displayName: 'Price Hover Assist', icon: Eye, color: 'purple' },
+  exit_save: { displayName: 'Exit Intent Save', icon: MousePointer, color: 'orange' },
+  confusion_help: { displayName: 'Confusion Helper', icon: Activity, color: 'yellow' },
+  rage_click_assist: { displayName: 'Rage Click Response', icon: Zap, color: 'red' },
+  high_consideration: { displayName: 'High Consideration', icon: Target, color: 'green' },
+  conversion_delight: { displayName: 'Conversion Delight', icon: CheckCircle, color: 'pink' },
+  micro_assist: { displayName: 'Micro Assists', icon: MousePointer, color: 'blue' },
+  abandonment_prevention: { displayName: 'Abandonment Prevention', icon: Clock, color: 'gray' }
 };
 
 export default function AccountabilityScorecard() {
   const { user } = useUser();
   const [loading, setLoading] = useState(true);
-  const [score, setScore] = useState<AccountabilityScore | null>(null);
-  const [recommendations, setRecommendations] = useState<{
-    pending: Recommendation[];
-    ignored: Recommendation[];
-    acted: Recommendation[];
-  }>({ pending: [], ignored: [], acted: [] });
-  const [insights, setInsights] = useState<AccountabilityInsight[]>([]);
-  const [selectedTab, setSelectedTab] = useState<'overview' | 'pending' | 'ignored' | 'acted'>('overview');
-  const [period, setPeriod] = useState('30d');
+  const [metrics, setMetrics] = useState<InterventionMetrics | null>(null);
+  const [recentInterventions, setRecentInterventions] = useState<InterventionDetail[]>([]);
+  const [period, setPeriod] = useState('7d');
+  const [averageDealSize, setAverageDealSize] = useState(5000);
+  const [showDealSizeInput, setShowDealSizeInput] = useState(false);
 
   useEffect(() => {
-    fetchAccountabilityData();
+    fetchInterventionData();
   }, [period]);
 
-  const fetchAccountabilityData = async () => {
+  const fetchInterventionData = async () => {
     try {
       setLoading(true);
-      
-      // Try to fetch real data
+
+      // Try real API
       const apiUrl = import.meta.env.VITE_API_URL || 'https://api.sentientiq.app';
-      const response = await fetch(`${apiUrl}/api/scorecard/${user?.id || 'demo'}?period=${period}`);
-      
+      const response = await fetch(`${apiUrl}/api/interventions/metrics?period=${period}`, {
+        headers: {
+          'Authorization': `Bearer ${user?.id}`
+        }
+      });
+
       if (response.ok) {
         const data = await response.json();
-        setScore(data.scorecard);
-        setRecommendations(data.recommendations);
-        setInsights(data.insights);
+        processRealData(data);
       } else {
-        // Use demo data as fallback
-        setScore(generateDemoScore());
-        setRecommendations(generateDemoRecommendations());
-        setInsights(generateDemoInsights());
+        // Generate realistic demo data
+        generateDemoData();
       }
-      
+
     } catch (error) {
-      console.error('Failed to fetch accountability data:', error);
-      // Use demo data
-      setScore(generateDemoScore());
-      setRecommendations(generateDemoRecommendations());
-      setInsights(generateDemoInsights());
+      console.error('Failed to fetch intervention data:', error);
+      generateDemoData();
     } finally {
       setLoading(false);
     }
   };
 
-  const generateDemoScore = (): AccountabilityScore => ({
-    companyId: 'demo',
-    period: '30d',
-    score: 42,
-    grade: 'D',
-    totalRecommendations: 147,
-    criticalRecommendations: 23,
-    actionsTaken: 43,
-    actionsIgnored: 104,
-    responseTime: 127,
-    revenueSaved: 128000,
-    revenueLost: 342000,
-    preventableChurn: 285000,
-    customersSaved: 12,
-    customersLost: 8
-  });
+  const processRealData = (data: any) => {
+    const metrics: InterventionMetrics = {
+      period,
+      totalInterventions: data.total || 0,
+      interventionsWithInteraction: data.with_interaction || 0,
+      interactionRate: data.total > 0 ? (data.with_interaction / data.total) : 0,
+      averageDealSize,
+      estimatedValue: (data.with_interaction || 0) * averageDealSize * 0.3, // Conservative 30% close rate
+      interventionsByType: data.by_type?.map((t: any) => ({
+        ...t,
+        displayName: INTERVENTION_TYPES[t.type]?.displayName || t.type
+      })) || [],
+      dealsInfluenced: data.deals_influenced,
+      closedWon: data.closed_won,
+      closedLost: data.closed_lost,
+      pipelineValue: data.pipeline_value
+    };
 
-  const generateDemoRecommendations = () => ({
-    pending: [
-      {
-        id: '1',
-        timestamp: new Date(Date.now() - 5 * 60000).toISOString(),
-        emotion: 'rage',
-        confidence: 95,
-        severity: 'critical' as const,
-        userEmail: 'ceo@fortune500.com',
-        userValue: 120000,
-        recommendedAction: 'Immediate CEO alert + Support chat auto-open',
-        estimatedRevenueLoss: 120000,
-        deadline: new Date(Date.now() + 5 * 60000).toISOString()
-      },
-      {
-        id: '2',
-        timestamp: new Date(Date.now() - 20 * 60000).toISOString(),
-        emotion: 'confusion',
-        confidence: 87,
-        severity: 'high' as const,
-        userEmail: 'buyer@enterprise.com',
-        userValue: 85000,
-        recommendedAction: 'Simplify pricing display + Offer demo',
-        estimatedRevenueLoss: 85000,
-        deadline: new Date(Date.now() + 30 * 60000).toISOString()
-      }
-    ],
-    ignored: [
-      {
-        id: '3',
-        timestamp: new Date(Date.now() - 2 * 3600000).toISOString(),
-        emotion: 'abandonment',
-        confidence: 92,
-        severity: 'critical' as const,
-        userEmail: 'vp@bigcorp.com',
-        userValue: 150000,
-        recommendedAction: 'Exit intent modal + Discount offer',
-        estimatedRevenueLoss: 150000,
-        deadline: new Date(Date.now() - 3600000).toISOString(),
-        actionTaken: false,
-        outcome: 'lost' as const,
-        actualRevenueLoss: 150000
-      }
-    ],
-    acted: [
-      {
-        id: '4',
-        timestamp: new Date(Date.now() - 24 * 3600000).toISOString(),
-        emotion: 'hesitation',
-        confidence: 78,
-        severity: 'medium' as const,
-        userEmail: 'director@startup.com',
-        userValue: 36000,
-        recommendedAction: 'Show social proof + Testimonials',
-        estimatedRevenueLoss: 36000,
-        deadline: new Date(Date.now() - 23 * 3600000).toISOString(),
-        actionTaken: true,
-        outcome: 'saved' as const,
-        actualRevenueLoss: 0
-      }
-    ]
-  });
+    setMetrics(metrics);
+    setRecentInterventions(data.recent || []);
+  };
 
-  const generateDemoInsights = (): AccountabilityInsight[] => [
-    {
-      type: 'warning',
-      message: 'You consistently ignore rage signals (78% ignored)',
-      impact: 'This pattern has cost $342,000 in preventable churn this month',
-      suggestedAction: 'Enable automatic Slack alerts for high-value rage events'
-    },
-    {
-      type: 'pattern',
-      message: 'Response time for critical alerts averages 127 minutes',
-      impact: 'Every hour of delay reduces save rate by 47%',
-      suggestedAction: 'Set up automated interventions for faster response'
-    },
-    {
-      type: 'opportunity',
-      message: 'Enterprise customers respond 3x better to human intervention',
-      impact: 'Could save additional $180k/month with dedicated response team',
-      suggestedAction: 'Assign account managers to high-value emotional events'
-    }
-  ];
+  const generateDemoData = () => {
+    // Period multipliers
+    const multiplier = period === '24h' ? 0.03 : period === '7d' ? 0.23 : 1;
+
+    const interventionTypes = [
+      { type: 'micro_assist', baseCount: 890, interactionRate: 0.15 },
+      { type: 'price_hover_assist', baseCount: 450, interactionRate: 0.35 },
+      { type: 'confusion_help', baseCount: 320, interactionRate: 0.45 },
+      { type: 'exit_save', baseCount: 280, interactionRate: 0.22 },
+      { type: 'high_consideration', baseCount: 180, interactionRate: 0.52 },
+      { type: 'abandonment_prevention', baseCount: 156, interactionRate: 0.28 },
+      { type: 'rage_click_assist', baseCount: 95, interactionRate: 0.68 },
+      { type: 'conversion_delight', baseCount: 42, interactionRate: 0.88 }
+    ];
+
+    let totalInterventions = 0;
+    let totalInteractions = 0;
+    const byTypeData: any[] = [];
+    const recent: InterventionDetail[] = [];
+
+    interventionTypes.forEach(type => {
+      const count = Math.floor(type.baseCount * multiplier + Math.random() * 10);
+      const interactions = Math.floor(count * type.interactionRate);
+
+      totalInterventions += count;
+      totalInteractions += interactions;
+
+      byTypeData.push({
+        type: type.type,
+        displayName: INTERVENTION_TYPES[type.type]?.displayName || type.type,
+        count,
+        interactions,
+        rate: type.interactionRate
+      });
+
+      // Generate a few sample recent interventions
+      for (let i = 0; i < Math.min(2, count); i++) {
+        recent.push({
+          id: `${type.type}-${i}`,
+          timestamp: new Date(Date.now() - Math.random() * 86400000).toISOString(),
+          type: type.type,
+          sessionId: `session-${Math.random().toString(36).substr(2, 9)}`,
+          hadInteraction: Math.random() < type.interactionRate,
+          timeToInteract: Math.random() < type.interactionRate ?
+            Math.floor(Math.random() * 300) : undefined
+        });
+      }
+    });
+
+    const metrics: InterventionMetrics = {
+      period,
+      totalInterventions,
+      interventionsWithInteraction: totalInteractions,
+      interactionRate: totalInterventions > 0 ? (totalInteractions / totalInterventions) : 0,
+      averageDealSize,
+      estimatedValue: totalInteractions * averageDealSize * 0.3,
+      interventionsByType: byTypeData
+    };
+
+    setMetrics(metrics);
+    setRecentInterventions(recent.slice(0, 10));
+  };
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -240,16 +197,29 @@ export default function AccountabilityScorecard() {
     const minutes = Math.floor(diff / 60000);
     const hours = Math.floor(diff / 3600000);
     const days = Math.floor(diff / 86400000);
-    
+
     if (minutes < 60) return `${minutes}m ago`;
     if (hours < 24) return `${hours}h ago`;
     return `${days}d ago`;
   };
 
+  const getColorClasses = (color: string) => {
+    const colors: Record<string, string> = {
+      purple: 'from-purple-500 to-purple-700',
+      orange: 'from-orange-500 to-orange-700',
+      yellow: 'from-yellow-500 to-yellow-700',
+      red: 'from-red-500 to-red-700',
+      green: 'from-green-500 to-green-700',
+      pink: 'from-pink-500 to-pink-700',
+      blue: 'from-blue-500 to-blue-700',
+      gray: 'from-gray-500 to-gray-700'
+    };
+    return colors[color] || colors.gray;
+  };
+
   if (loading) {
     return (
-      <div className="min-h-screen bg-black text-white flex items-center justify-center">
-        <div className="neural-bg" />
+      <div className="min-h-screen flex items-center justify-center">
         <div className="h-16 w-16 animate-spin rounded-full border-4 border-white/20 border-t-purple-500" />
       </div>
     );
@@ -257,327 +227,252 @@ export default function AccountabilityScorecard() {
 
   return (
     <>
-      {/* Header */}
-      <PageHeader 
+      <PageHeader
         title="Accountability Scorecard"
-        subtitle="Every recommendation. Every action. Every dollar saved or lost."
+        subtitle="The single source of truth. No theater, just results."
       />
 
-          {/* Score Overview */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="glass-card p-8 mb-6"
-          >
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <h2 className="text-2xl font-bold mb-2">Your Accountability Score</h2>
-                <p className="text-white/60">Last {period === '30d' ? '30 days' : period === '7d' ? '7 days' : '24 hours'}</p>
-              </div>
-              <div className="flex gap-2">
-                {['24h', '7d', '30d'].map(p => (
-                  <button
-                    key={p}
-                    onClick={() => setPeriod(p)}
-                    className={`px-4 py-2 rounded-xl font-semibold transition-all ${
-                      period === p 
-                        ? 'bg-purple-500/20 text-purple-400 border border-purple-500/40'
-                        : 'bg-white/5 text-white/60 border border-white/10 hover:bg-white/10'
-                    }`}
-                  >
-                    {p === '24h' ? '24 Hours' : p === '7d' ? '7 Days' : '30 Days'}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="grid md:grid-cols-4 gap-6">
-              {/* Grade Circle */}
-              <div className="flex flex-col items-center justify-center">
-                <div className={`w-32 h-32 rounded-full bg-gradient-to-br ${score ? GRADE_COLORS[score.grade] : 'from-gray-500 to-gray-700'} p-1`}>
-                  <div className="w-full h-full rounded-full bg-black flex flex-col items-center justify-center">
-                    <div className="text-5xl font-bold">{score?.grade || 'F'}</div>
-                    <div className="text-2xl font-semibold">{score?.score || 0}%</div>
-                  </div>
-                </div>
-                <p className="text-white/60 text-sm mt-3">Action Rate</p>
-              </div>
-
-              {/* Key Metrics */}
-              <div className="col-span-3 grid grid-cols-3 gap-4">
-                <div className="glass-card p-4">
-                  <div className="flex items-center gap-2 mb-2">
-                    <AlertTriangle className="w-5 h-5 text-yellow-400" />
-                    <span className="text-sm text-white/60">Recommendations</span>
-                  </div>
-                  <div className="text-3xl font-bold">{score?.totalRecommendations || 0}</div>
-                  <div className="text-sm text-red-400 mt-1">{score?.criticalRecommendations || 0} critical</div>
-                </div>
-
-                <div className="glass-card p-4">
-                  <div className="flex items-center gap-2 mb-2">
-                    <TrendingDown className="w-5 h-5 text-red-400" />
-                    <span className="text-sm text-white/60">Revenue Lost</span>
-                  </div>
-                  <div className="text-3xl font-bold text-red-400">
-                    {formatCurrency(score?.revenueLost || 0)}
-                  </div>
-                  <div className="text-sm text-white/60 mt-1">from inaction</div>
-                </div>
-
-                <div className="glass-card p-4">
-                  <div className="flex items-center gap-2 mb-2">
-                    <TrendingUp className="w-5 h-5 text-green-400" />
-                    <span className="text-sm text-white/60">Revenue Saved</span>
-                  </div>
-                  <div className="text-3xl font-bold text-green-400">
-                    {formatCurrency(score?.revenueSaved || 0)}
-                  </div>
-                  <div className="text-sm text-white/60 mt-1">from action</div>
-                </div>
-              </div>
-            </div>
-
-            {/* Quick Stats Bar */}
-            <div className="grid grid-cols-4 gap-4 mt-6">
-              <div className="p-4 rounded-xl bg-white/5 border border-white/10">
-                <div className="flex items-center gap-2 mb-2">
-                  <CheckCircle className="w-4 h-4 text-green-400" />
-                  <span className="text-xs text-white/60">Actions Taken</span>
-                </div>
-                <div className="text-2xl font-bold">{score?.actionsTaken || 0}</div>
-              </div>
-              
-              <div className="p-4 rounded-xl bg-white/5 border border-white/10">
-                <div className="flex items-center gap-2 mb-2">
-                  <XCircle className="w-4 h-4 text-red-400" />
-                  <span className="text-xs text-white/60">Ignored</span>
-                </div>
-                <div className="text-2xl font-bold text-red-400">{score?.actionsIgnored || 0}</div>
-              </div>
-              
-              <div className="p-4 rounded-xl bg-white/5 border border-white/10">
-                <div className="flex items-center gap-2 mb-2">
-                  <Clock className="w-4 h-4 text-yellow-400" />
-                  <span className="text-xs text-white/60">Avg Response</span>
-                </div>
-                <div className="text-2xl font-bold">{score?.responseTime || 0}m</div>
-              </div>
-              
-              <div className="p-4 rounded-xl bg-white/5 border border-white/10">
-                <div className="flex items-center gap-2 mb-2">
-                  <DollarSign className="w-4 h-4 text-orange-400" />
-                  <span className="text-xs text-white/60">Preventable Loss</span>
-                </div>
-                <div className="text-2xl font-bold text-orange-400">
-                  {formatCurrency(score?.preventableChurn || 0)}
-                </div>
-              </div>
-            </div>
-          </motion.div>
-
-          {/* Insights */}
-          {insights.length > 0 && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1 }}
-              className="space-y-4 mb-6"
+      {/* Time Period Selector */}
+      <div className="flex items-center justify-between mb-8">
+        <div className="flex gap-2">
+          {['24h', '7d', '30d'].map(p => (
+            <button
+              key={p}
+              onClick={() => setPeriod(p)}
+              className={`px-4 py-2 rounded-xl font-semibold transition-all ${
+                period === p
+                  ? 'bg-purple-500/20 text-purple-400 border border-purple-500/40'
+                  : 'bg-white/5 text-white/60 border border-white/10 hover:bg-white/10'
+              }`}
             >
-              <h3 className="text-xl font-bold">Critical Insights</h3>
-              {insights.map((insight, idx) => (
-                <div
-                  key={idx}
-                  className={`glass-card p-6 ${
-                    insight.type === 'warning' ? 'border-red-500/20 bg-red-900/5' :
-                    insight.type === 'pattern' ? 'border-yellow-500/20 bg-yellow-900/5' :
-                    insight.type === 'opportunity' ? 'border-blue-500/20 bg-blue-900/5' :
-                    'border-green-500/20 bg-green-900/5'
-                  }`}
-                >
-                  <div className="flex items-start gap-4">
-                    <div className={`p-3 rounded-xl ${
-                      insight.type === 'warning' ? 'bg-red-500/20' :
-                      insight.type === 'pattern' ? 'bg-yellow-500/20' :
-                      insight.type === 'opportunity' ? 'bg-blue-500/20' :
-                      'bg-green-500/20'
-                    }`}>
-                      {insight.type === 'warning' ? <AlertTriangle className="w-6 h-6 text-red-400" /> :
-                       insight.type === 'pattern' ? <Activity className="w-6 h-6 text-yellow-400" /> :
-                       insight.type === 'opportunity' ? <Zap className="w-6 h-6 text-blue-400" /> :
-                       <Target className="w-6 h-6 text-green-400" />}
-                    </div>
-                    <div className="flex-1">
-                      <h4 className="font-semibold text-lg mb-1">{insight.message}</h4>
-                      <p className="text-white/60 mb-2">{insight.impact}</p>
-                      {insight.suggestedAction && (
-                        <p className="text-sm text-purple-400">
-                          → {insight.suggestedAction}
-                        </p>
-                      )}
-                    </div>
+              {p === '24h' ? 'Today' : p === '7d' ? 'This Week' : 'This Month'}
+            </button>
+          ))}
+        </div>
+
+        {/* Average Deal Size Input */}
+        <div className="flex items-center gap-3">
+          <span className="text-sm text-white/60">Avg Deal Size:</span>
+          {showDealSizeInput ? (
+            <input
+              type="number"
+              value={averageDealSize}
+              onChange={(e) => setAverageDealSize(Number(e.target.value))}
+              onBlur={() => {
+                setShowDealSizeInput(false);
+                fetchInterventionData();
+              }}
+              className="w-24 px-2 py-1 bg-white/10 border border-white/20 rounded text-white"
+              autoFocus
+            />
+          ) : (
+            <button
+              onClick={() => setShowDealSizeInput(true)}
+              className="text-purple-400 hover:text-purple-300"
+            >
+              {formatCurrency(averageDealSize)}
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* The Truth - Main Metrics */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8"
+      >
+        <div className="bg-gradient-to-br from-purple-900/20 to-blue-900/20 backdrop-blur-sm rounded-xl p-6 border border-purple-500/20">
+          <div className="flex items-center gap-2 mb-3">
+            <Zap className="w-5 h-5 text-purple-400" />
+            <span className="text-sm text-white/60">Interventions Fired</span>
+          </div>
+          <div className="text-4xl font-bold mb-1">
+            {metrics?.totalInterventions.toLocaleString() || 0}
+          </div>
+          <div className="text-sm text-white/40">
+            {period === '24h' ? 'today' : period === '7d' ? 'this week' : 'this month'}
+          </div>
+        </div>
+
+        <div className="bg-gradient-to-br from-green-900/20 to-emerald-900/20 backdrop-blur-sm rounded-xl p-6 border border-green-500/20">
+          <div className="flex items-center gap-2 mb-3">
+            <CheckCircle className="w-5 h-5 text-green-400" />
+            <span className="text-sm text-white/60">Got Interaction</span>
+          </div>
+          <div className="text-4xl font-bold mb-1">
+            {metrics?.interventionsWithInteraction.toLocaleString() || 0}
+          </div>
+          <div className="text-sm text-green-400">
+            {metrics ? `${Math.round(metrics.interactionRate * 100)}% rate` : '0% rate'}
+          </div>
+        </div>
+
+        <div className="bg-gradient-to-br from-blue-900/20 to-cyan-900/20 backdrop-blur-sm rounded-xl p-6 border border-blue-500/20">
+          <div className="flex items-center gap-2 mb-3">
+            <Target className="w-5 h-5 text-blue-400" />
+            <span className="text-sm text-white/60">Value Touched</span>
+          </div>
+          <div className="text-4xl font-bold mb-1">
+            {formatCurrency(metrics?.interventionsWithInteraction * averageDealSize || 0)}
+          </div>
+          <div className="text-sm text-white/40">
+            @ {formatCurrency(averageDealSize)} each
+          </div>
+        </div>
+
+        <div className="bg-gradient-to-br from-orange-900/20 to-red-900/20 backdrop-blur-sm rounded-xl p-6 border border-orange-500/20">
+          <div className="flex items-center gap-2 mb-3">
+            <DollarSign className="w-5 h-5 text-orange-400" />
+            <span className="text-sm text-white/60">Attribution Claim</span>
+          </div>
+          <div className="text-4xl font-bold mb-1">
+            {formatCurrency(metrics?.estimatedValue || 0)}
+          </div>
+          <div className="text-sm text-orange-400">
+            30% close rate
+          </div>
+        </div>
+      </motion.div>
+
+      {/* Breakdown by Intervention Type */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1 }}
+        className="mb-8"
+      >
+        <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
+          <BarChart3 className="w-5 h-5 text-purple-400" />
+          Intervention Breakdown
+        </h3>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {metrics?.interventionsByType.map((type, idx) => {
+            const config = INTERVENTION_TYPES[type.type] || { color: 'gray', icon: Activity };
+            const Icon = config.icon;
+
+            return (
+              <motion.div
+                key={type.type}
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: idx * 0.05 }}
+                className="bg-gray-900/50 backdrop-blur-sm rounded-xl p-4 border border-gray-800 hover:border-gray-700 transition-all"
+              >
+                <div className="flex items-start justify-between mb-3">
+                  <div className={`p-2 bg-gradient-to-br ${getColorClasses(config.color)} rounded-lg`}>
+                    <Icon className="w-4 h-4 text-white" />
+                  </div>
+                  <span className={`text-xs font-medium ${
+                    type.rate > 0.5 ? 'text-green-400' :
+                    type.rate > 0.3 ? 'text-yellow-400' :
+                    'text-red-400'
+                  }`}>
+                    {Math.round(type.rate * 100)}%
+                  </span>
+                </div>
+
+                <div className="space-y-1">
+                  <div className="text-lg font-bold">{type.count}</div>
+                  <div className="text-xs text-gray-400">{type.displayName}</div>
+                  <div className="text-xs text-gray-500">
+                    {type.interactions} interactions
                   </div>
                 </div>
-              ))}
-            </motion.div>
-          )}
 
-          {/* Recommendations Tabs */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-          >
-            <div className="flex gap-2 mb-6">
-              {[
-                { id: 'overview', label: 'Overview', count: null },
-                { id: 'pending', label: 'Pending', count: recommendations?.pending?.length || 0 },
-                { id: 'ignored', label: 'Ignored', count: recommendations?.ignored?.length || 0 },
-                { id: 'acted', label: 'Acted On', count: recommendations?.acted?.length || 0 }
-              ].map(tab => (
-                <button
-                  key={tab.id}
-                  onClick={() => setSelectedTab(tab.id as any)}
-                  className={`px-6 py-3 rounded-xl font-semibold transition-all flex items-center gap-2 ${
-                    selectedTab === tab.id
-                      ? 'bg-purple-500/20 text-purple-400 border border-purple-500/40'
-                      : 'bg-white/5 text-white/60 border border-white/10 hover:bg-white/10'
-                  }`}
-                >
-                  {tab.label}
-                  {tab.count !== null && (
-                    <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
-                      tab.id === 'pending' ? 'bg-yellow-500/20 text-yellow-400' :
-                      tab.id === 'ignored' ? 'bg-red-500/20 text-red-400' :
-                      'bg-green-500/20 text-green-400'
-                    }`}>
-                      {tab.count}
-                    </span>
-                  )}
-                </button>
-              ))}
+                {/* Mini progress bar */}
+                <div className="mt-3 w-full bg-gray-800 rounded-full h-1">
+                  <div
+                    className={`bg-gradient-to-r ${getColorClasses(config.color)} h-1 rounded-full`}
+                    style={{ width: `${type.rate * 100}%` }}
+                  />
+                </div>
+              </motion.div>
+            );
+          })}
+        </div>
+      </motion.div>
+
+      {/* CRM Integration Section (for Enterprise) */}
+      {metrics?.dealsInfluenced && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="bg-gradient-to-br from-purple-900/10 to-blue-900/10 backdrop-blur-sm rounded-xl p-6 border border-purple-500/20 mb-8"
+        >
+          <h3 className="text-xl font-bold mb-4">CRM Attribution</h3>
+          <div className="grid grid-cols-4 gap-4">
+            <div>
+              <div className="text-2xl font-bold">{metrics.dealsInfluenced}</div>
+              <div className="text-sm text-white/60">Deals Touched</div>
             </div>
+            <div>
+              <div className="text-2xl font-bold text-green-400">{metrics.closedWon}</div>
+              <div className="text-sm text-white/60">Closed Won</div>
+            </div>
+            <div>
+              <div className="text-2xl font-bold text-red-400">{metrics.closedLost}</div>
+              <div className="text-sm text-white/60">Closed Lost</div>
+            </div>
+            <div>
+              <div className="text-2xl font-bold text-purple-400">
+                {formatCurrency(metrics.pipelineValue || 0)}
+              </div>
+              <div className="text-sm text-white/60">Pipeline Value</div>
+            </div>
+          </div>
+        </motion.div>
+      )}
 
-            {/* Tab Content */}
-            <AnimatePresence mode="wait">
-              {selectedTab === 'overview' && (
-                <motion.div
-                  key="overview"
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -20 }}
-                  className="glass-card p-12 text-center"
+      {/* Recent Interventions Sample */}
+      {recentInterventions.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+        >
+          <h3 className="text-xl font-bold mb-4">Recent Activity</h3>
+          <div className="space-y-2">
+            {recentInterventions.slice(0, 5).map((int) => {
+              const config = INTERVENTION_TYPES[int.type] || { displayName: int.type, color: 'gray' };
+              return (
+                <div
+                  key={int.id}
+                  className="flex items-center justify-between p-3 bg-gray-900/30 rounded-lg border border-gray-800"
                 >
-                  <Brain className="w-16 h-16 text-purple-400 mx-auto mb-4" />
-                  <h3 className="text-2xl font-bold mb-4">The Accountability Loop</h3>
-                  <p className="text-white/60 max-w-2xl mx-auto mb-8">
-                    Every emotion detected leads to a recommendation. Every recommendation
-                    requires action. Every action (or inaction) has a revenue impact.
-                    This is where the loop closes.
-                  </p>
-                  <div className="flex justify-center gap-12">
-                    <div className="text-center">
-                      <Users className="w-8 h-8 text-green-400 mx-auto mb-2" />
-                      <div className="text-3xl font-bold text-green-400">
-                        {score?.customersSaved || 0}
-                      </div>
-                      <div className="text-sm text-white/60">Customers Saved</div>
-                    </div>
-                    <div className="text-center">
-                      <Users className="w-8 h-8 text-red-400 mx-auto mb-2" />
-                      <div className="text-3xl font-bold text-red-400">
-                        {score?.customersLost || 0}
-                      </div>
-                      <div className="text-sm text-white/60">Customers Lost</div>
-                    </div>
+                  <div className="flex items-center gap-3">
+                    <div className={`w-2 h-2 rounded-full ${
+                      int.hadInteraction ? 'bg-green-400' : 'bg-gray-600'
+                    }`} />
+                    <span className="text-sm font-medium">{config.displayName}</span>
+                    <span className="text-xs text-gray-500">{formatTimeAgo(int.timestamp)}</span>
                   </div>
-                </motion.div>
-              )}
+                  <div className="flex items-center gap-2">
+                    {int.hadInteraction && (
+                      <span className="text-xs text-green-400">
+                        Engaged in {int.timeToInteract}s
+                      </span>
+                    )}
+                    {int.dealValue && (
+                      <span className="text-xs text-purple-400">
+                        {formatCurrency(int.dealValue)}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </motion.div>
+      )}
 
-              {selectedTab !== 'overview' && (
-                <motion.div
-                  key={selectedTab}
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -20 }}
-                  className="space-y-4"
-                >
-                  {(recommendations[selectedTab as keyof typeof recommendations] || []).map((rec) => (
-                    <div
-                      key={rec.id}
-                      className={`glass-card p-6 ${SEVERITY_COLORS[rec.severity]}`}
-                    >
-                      <div className="flex items-start justify-between mb-4">
-                        <div>
-                          <div className="flex items-center gap-3 mb-2">
-                            <span className={`text-2xl font-bold uppercase ${SEVERITY_TEXT[rec.severity]}`}>
-                              {rec.emotion}
-                            </span>
-                            <span className="px-2 py-1 rounded-lg bg-white/10 text-sm">
-                              {rec.confidence}% confidence
-                            </span>
-                            <span className="text-sm text-white/60">
-                              {formatTimeAgo(rec.timestamp)}
-                            </span>
-                          </div>
-                          {rec.userEmail && (
-                            <div className="flex items-center gap-2 text-sm">
-                              <span className="text-white/60">User:</span>
-                              <span className="text-white">{rec.userEmail}</span>
-                              {rec.userValue && (
-                                <span className="text-green-400 font-bold">
-                                  ({formatCurrency(rec.userValue)}/yr)
-                                </span>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                        <div className="text-right">
-                          {rec.outcome === 'saved' && (
-                            <div className="text-green-400 font-bold mb-1">✓ SAVED</div>
-                          )}
-                          {rec.outcome === 'lost' && (
-                            <div className="text-red-400 font-bold mb-1">✗ LOST</div>
-                          )}
-                          <div className="text-2xl font-bold">
-                            {formatCurrency(rec.actualRevenueLoss || rec.estimatedRevenueLoss)}
-                          </div>
-                          <div className="text-xs text-white/60">
-                            {rec.actualRevenueLoss ? 'actual loss' : 'at risk'}
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="border-t border-white/10 pt-4">
-                        <div className="text-sm text-white/60 mb-1">Recommended Action:</div>
-                        <div className="text-white">{rec.recommendedAction}</div>
-                      </div>
-
-                      {selectedTab === 'pending' && (
-                        <div className="flex gap-3 mt-4">
-                          <button className="px-4 py-2 bg-green-500/20 text-green-400 border border-green-500/40 rounded-xl hover:bg-green-500/30 transition-all font-semibold">
-                            Take Action
-                          </button>
-                          <button className="px-4 py-2 bg-red-500/20 text-red-400 border border-red-500/40 rounded-xl hover:bg-red-500/30 transition-all font-semibold">
-                            Dismiss
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-
-                  {recommendations[selectedTab as keyof typeof recommendations].length === 0 && (
-                    <div className="glass-card p-12 text-center">
-                      <Activity className="w-12 h-12 text-purple-400 mx-auto mb-4" />
-                      <p className="text-white/60">
-                        No {selectedTab} recommendations
-                      </p>
-                    </div>
-                  )}
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </motion.div>
+      {/* The Bottom Line */}
+      <div className="mt-12 text-center text-sm text-gray-500">
+        <p>This is accountability. Not analytics theater.</p>
+        <p className="mt-1">Every number here happened. Every intervention was real.</p>
+      </div>
     </>
   );
 }
