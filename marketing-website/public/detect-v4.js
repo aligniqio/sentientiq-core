@@ -446,9 +446,11 @@
 
       // POINTER MOVE (works for mouse/stylus/touch)
       let lastMoveTime = 0;
+      console.log('🔍 [TRACE] Adding pointermove listener');
       this.on(document, 'pointermove', (e) => {
         const now = Date.now();
         if (now - lastMoveTime < 16) return; // ~60fps throttle
+        console.log('🔍 [TRACE] Pointer move detected');
         const dt = Math.max(now - lastMoveTime, 16);
         const prev = this.behaviorDetector.moveHistory.at(-1);
         const dist = prev ? Math.hypot(e.clientX - prev.x, e.clientY - prev.y) : 0;
@@ -495,21 +497,43 @@
 
       const behaviors = [];
 
+      console.log('🔍 [TRACE] History lengths:', {
+        clicks: this.behaviorDetector.clickHistory.length,
+        moves: this.behaviorDetector.moveHistory.length,
+        scrolls: this.behaviorDetector.scrollHistory.length
+      });
+
       const clickBehavior = this.behaviorDetector.detectClickBehavior(this.behaviorDetector.clickHistory);
-      if (clickBehavior) behaviors.push(clickBehavior);
+      if (clickBehavior) {
+        console.log('🔍 [TRACE] Click behavior detected:', clickBehavior);
+        behaviors.push(clickBehavior);
+      }
 
       const moveBehavior = this.behaviorDetector.detectMoveBehavior(this.behaviorDetector.moveHistory);
-      if (moveBehavior) behaviors.push(moveBehavior);
+      if (moveBehavior) {
+        console.log('🔍 [TRACE] Move behavior detected:', moveBehavior);
+        behaviors.push(moveBehavior);
+      }
 
       const scrollBehavior = this.behaviorDetector.detectScrollBehavior(this.behaviorDetector.scrollHistory);
-      if (scrollBehavior) behaviors.push(scrollBehavior);
+      if (scrollBehavior) {
+        console.log('🔍 [TRACE] Scroll behavior detected:', scrollBehavior);
+        behaviors.push(scrollBehavior);
+      }
 
       const idleBehavior = this.behaviorDetector.detectIdleBehavior();
-      if (idleBehavior) behaviors.push(idleBehavior);
+      if (idleBehavior) {
+        console.log('🔍 [TRACE] Idle behavior detected:', idleBehavior);
+        behaviors.push(idleBehavior);
+      }
 
       const mouseOffBehavior = this.behaviorDetector.detectMouseOffCanvas();
-      if (mouseOffBehavior) behaviors.push(mouseOffBehavior);
+      if (mouseOffBehavior) {
+        console.log('🔍 [TRACE] Mouse off canvas detected:', mouseOffBehavior);
+        behaviors.push(mouseOffBehavior);
+      }
 
+      console.log('🔍 [TRACE] Total behaviors detected:', behaviors.length);
       for (const behavior of behaviors) {
         const context = this.behaviorDetector.getContext(behavior._source);
         const record = this.behaviorDetector.recordBehavior(behavior, context);
