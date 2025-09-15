@@ -3,6 +3,7 @@ import express, { Request, Response } from 'express';
 import cors from 'cors';
 import { z } from 'zod';
 import { callAnthropic } from './services/hybrid-llm.js';
+import { setupWebSocket, broadcastEmotion } from './websocket-handler.js';
 import {
   generalLimiter,
   debateLimiter,
@@ -99,6 +100,7 @@ const DEFAULT_PERSONAS = [
 
 // ---------- Server ----------
 const app = express();
+app.set('trust proxy', true);
 // Security middleware
 app.use(securityHeaders);
 // Allow ALL domains for emotional tracking (they need API keys anyway)
@@ -554,6 +556,16 @@ app.get('/api/features', featureFlagsHandler);
 // Core Emotional Analytics (always enabled)
 if (true) { // Emotion detection always on
   app.post('/api/emotional/event', emotionLimiter, express.json(), emotionalAnalyticsHandlers.recordEvent);
+
+  // WebSocket info endpoint for dashboard
+  app.get('/api/emotional/ws-info', (req: Request, res: Response) => {
+    res.json({
+      ws_url: 'wss://api.sentientiq.app/ws/emotions',
+      protocol: 'wss',
+      path: '/ws/emotions',
+      status: 'available'
+    });
+  });
   app.get('/api/emotional/patterns', emotionalAnalyticsHandlers.getPatterns);
   app.get('/api/emotional/heatmap', emotionalAnalyticsHandlers.getHeatmap);
   app.post('/api/emotional/predict', express.json(), emotionalAnalyticsHandlers.predictAction);
@@ -606,9 +618,12 @@ process.on('SIGINT', () => {
   process.exit(0);
 });
 
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`orchestrator listening on :${PORT}`);
   console.log(`✨ Emotional Intelligence Engine active`);
   console.log(`📊 SentientIQ Scorecard available at /api/scorecard`);
   console.log(`🎯 Marketing at the Speed of Emotion™`);
 });
+
+// Set up WebSocket server
+setupWebSocket(server);
