@@ -27,8 +27,9 @@
   const scriptUrl = scriptTag?.src || '';
   const urlParams = new URLSearchParams(scriptUrl.split('?')[1] || '');
 
-  const apiKey = scriptTag?.getAttribute('data-api-key') || urlParams.get('key') || 'sq_demo_v4';
-  const tenantIdAttr = scriptTag?.getAttribute('data-tenant-id') || urlParams.get('tenant') || 'unknown';
+  // Check for GTM-injected config first, then fallback to script attributes/params
+  const apiKey = window.SentientIQ?.apiKey || scriptTag?.getAttribute('data-api-key') || urlParams.get('key') || 'sq_demo_v4';
+  const tenantIdAttr = window.SentientIQ?.tenantId || scriptTag?.getAttribute('data-tenant-id') || urlParams.get('tenant') || 'unknown';
   const debugMode = (scriptTag?.getAttribute('data-debug') === 'true') || (urlParams.get('debug') === 'true');
   const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
@@ -563,12 +564,24 @@
           if (this.pending.length > 0) {
             const latestEvent = this.pending[this.pending.length - 1];
             try {
+              if (config.debug || config.apiKey === 'sq_demo_v4') {
+                console.log('📤 Sending emotion to backend:', latestEvent.emotion, latestEvent.tenant_id);
+              }
+
               fetch(config.apiEndpoint, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'X-API-Key': config.apiKey },
                 body: JSON.stringify(latestEvent),
                 keepalive: true
-              }).catch(() => {});
+              }).then(r => {
+                if (config.debug || config.apiKey === 'sq_demo_v4') {
+                  console.log('✅ Emotion sent successfully');
+                }
+              }).catch((e) => {
+                if (config.debug || config.apiKey === 'sq_demo_v4') {
+                  console.error('❌ Failed to send emotion:', e);
+                }
+              });
 
               // Clear sent event
               this.pending = [];
@@ -577,7 +590,10 @@
         }
       }
 
-      if (config.debug) console.log(`🎯 EMOTION: ${record.emotion} (${Math.round(record.confidence)}% via ${record.behavior})`);
+      // Always log in demo/debug mode
+      if (config.debug || config.apiKey === 'sq_demo_v4') {
+        console.log(`🎯 EMOTION: ${record.emotion} (${Math.round(record.confidence)}% via ${record.behavior})`);
+      }
 
       // Optional: pipe into simple intent brain
       if (config.intentBrain && typeof this.intentOnEmotion === 'function') {
