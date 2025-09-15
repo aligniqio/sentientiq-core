@@ -187,11 +187,20 @@
       // Sudden deceleration (>70% drop in velocity)
       if (avgPrevious > 10 && avgRecent < 3 && avgRecent < avgPrevious * 0.3) {
         const el = document.elementFromPoint(x, y);
+        const elText = (el?.textContent || '').toLowerCase();
+        const elClass = (el?.className || '').toLowerCase();
+
         record('sudden_stop', {
           x, y,
           v_before: avgPrevious,
           v_after: avgRecent,
-          el: el
+          target: `${elClass} ${elText.substring(0, 50)}`,
+          ctx: {
+            pricing: elText.includes('$') ||
+                    elClass.includes('price') ||
+                    elClass.includes('tier') ||
+                    elClass.includes('plan')
+          }
         });
       }
     }
@@ -273,6 +282,11 @@
 
     const velocity = (y - state.lastScroll.y) / (dt / 100);
 
+    // Detect smooth/auto scroll (consistent velocity = programmatic)
+    const isAutoScroll = state.lastScroll.v &&
+                        Math.abs(velocity) > 10 &&
+                        Math.abs(velocity - state.lastScroll.v) < 2;
+
     // Check what's visible in viewport - pricing elements?
     const viewportElements = document.elementsFromPoint(window.innerWidth / 2, window.innerHeight / 2);
     const visibleText = viewportElements.map(el => (el.textContent || '').toLowerCase()).join(' ');
@@ -304,6 +318,7 @@
         at_bottom: y > document.body.scrollHeight - window.innerHeight - 100,
         ctx: {
           pricing: isPricingVisible,
+          auto_scroll: isAutoScroll,  // Landing on pricing section
           // Track if user is going back and forth (comparison behavior)
           oscillating: state.lastScroll.v && Math.sign(velocity) !== Math.sign(state.lastScroll.v)
         }
