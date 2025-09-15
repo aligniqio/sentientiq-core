@@ -12,7 +12,7 @@ import Pricing from '../pages/pricing'
 import Billing from '../pages/billing'
 import UsageDashboard from '../pages/usage-dashboard'
 import SageInbox from '../pages/sage-inbox'
-import DynamicRecommendations from '../pages/dynamic-recommendations'
+import Actions from '../pages/actions'
 import AccountabilityScorecard from '../components/AccountabilityScorecard'
 import EmotionalLiveFeed from '../components/EmotionalLiveFeed'
 
@@ -144,14 +144,17 @@ function App() {
 
           {/* Auth page - explicit route */}
           <Route path="/auth" element={<Auth />} />
-          
+
           {/* Removed legacy routes - /start and /boardroom */}
 
-          <Route path="/recommendations" element={
+          {/* Redirect old recommendations route to new actions */}
+          <Route path="/recommendations" element={<Navigate to="/actions" replace />} />
+
+          <Route path="/actions" element={
             <>
               <SignedIn>
                 <Layout>
-                  <DynamicRecommendations />
+                  <Actions />
                 </Layout>
               </SignedIn>
               <SignedOut>
