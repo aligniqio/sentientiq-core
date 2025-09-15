@@ -103,7 +103,7 @@
     [BEHAVIORS.EXIT_INTENT]: { emotion: 'abandonment_risk', confidence: 85 },
     [BEHAVIORS.IDLE_LONG]: { emotion: 'abandonment_risk', confidence: 70 },
     [BEHAVIORS.ABANDONED]: { emotion: 'abandonment_risk', confidence: 95 },
-    [BEHAVIORS.MOUSE_OFF_SUSTAINED]: { emotion: 'abandonment_risk', confidence: 75 },
+    [BEHAVIORS.MOUSE_OFF_SUSTAINED]: { emotion: 'disinterest', confidence: 70 },
 
     [BEHAVIORS.FAST_SCROLL]: { emotion: 'scanning', confidence: 65 },
     [BEHAVIORS.SKIM_SCROLL]: { emotion: 'scanning', confidence: 75 },
@@ -111,7 +111,7 @@
     [BEHAVIORS.SINGLE_CLICK]: { emotion: 'engaged', confidence: 40 },
     [BEHAVIORS.DOUBLE_CLICK]: { emotion: 'interest', confidence: 50 },
 
-    [BEHAVIORS.MOUSE_OFF_BRIEF]: { emotion: 'distracted', confidence: 45 },
+    [BEHAVIORS.MOUSE_OFF_BRIEF]: { emotion: 'context_switching', confidence: 40 },
     [BEHAVIORS.IDLE_SHORT]: { emotion: 'reading', confidence: 50 }
   };
 
@@ -233,11 +233,16 @@
         return { type: BEHAVIORS.SHAKE, confidence: 85, _source: { kind:'move', x: recent.at(-1).x, y: recent.at(-1).y } };
       }
 
-      // Exit intent: sustained upward trend near top + brisk
+      // Exit intent: upward movement specifically toward browser tabs/address bar
       const last = recent.at(-1);
       const upwardStreak = recent.slice(-4).every((m,i,a) => i===0 || a[i].y < a[i-1].y);
-      if (last.y < 8 && upwardStreak && avgVelocity > 12 && !document.hidden) {
-        if (config.debug) console.log('🚪 Exit intent detected');
+      // Only trigger exit intent if moving upward toward browser chrome (tabs/address bar)
+      // Not when moving sideways off the viewport (VS Code interaction)
+      const centerThird = window.innerWidth / 3;
+      const isTowardBrowserChrome = last.x > centerThird && last.x < (window.innerWidth - centerThird);
+
+      if (last.y < 8 && upwardStreak && avgVelocity > 12 && isTowardBrowserChrome && !document.hidden) {
+        if (config.debug) console.log('🚪 Exit intent detected - moving toward browser chrome');
         return { type: BEHAVIORS.EXIT_INTENT, confidence: 85, _source: { kind:'move', x: last.x, y: last.y } };
       }
 
@@ -602,7 +607,7 @@
         const note = document.createElement('div');
         note.id = 'sentientiq-notification';
         note.style.cssText = `position:fixed;top:20px;right:20px;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:#fff;padding:16px 24px;border-radius:12px;box-shadow:0 10px 40px rgba(0,0,0,.2);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:14px;z-index:999999;animation:slideIn .3s ease-out;max-width:320px;`;
-        const emojiMap = { frustration:'😤', confusion:'🤔', interest:'👀', satisfaction:'😊', purchase_intent:'💳', abandonment_risk:'🚪', engaged:'✨', scanning:'👁️', reading:'📖', distracted:'💭', high_consideration:'🤑', conversion_delight:'🎉' };
+        const emojiMap = { frustration:'😤', confusion:'🤔', interest:'👀', satisfaction:'😊', purchase_intent:'💳', abandonment_risk:'🚪', engaged:'✨', scanning:'👁️', reading:'📖', distracted:'💭', high_consideration:'🤑', conversion_delight:'🎉', disinterest:'😑', context_switching:'🔄' };
         note.innerHTML = `
           <div style="display:flex;align-items:center;gap:12px;">
             <span style="font-size:24px;">${emojiMap[emotion] || '🎯'}</span>
@@ -633,7 +638,8 @@
           interest:+8, engaged:+6, purchase_intent:+15,
           high_consideration:+25, conversion_delight:+40,
           scanning:+3, reading:+2,
-          confusion:-6, frustration:-10, abandonment_risk:-15
+          confusion:-6, frustration:-10, abandonment_risk:-15,
+          disinterest:-8, context_switching:-2
         }[emotion] ?? 0;
         const ctx = (context?.element === 'PRICE_TIER') ? +10 : (context?.element === 'PRICE_ELEMENT') ? +6 : (context?.element === 'CTA_BUTTON') ? +4 : 0;
         add(boost + ctx);
