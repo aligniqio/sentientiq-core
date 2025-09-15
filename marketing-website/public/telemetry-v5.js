@@ -10,7 +10,7 @@
   // Configuration
   const scriptTag = document.currentScript || document.querySelector('script[src*="telemetry"]');
   const config = {
-    endpoint: window.SentientIQ?.apiEndpoint || 'https://api.sentientiq.app/api/telemetry/stream',
+    endpoint: (window.SentientIQ?.apiEndpoint ? window.SentientIQ.apiEndpoint + '/api/telemetry/stream' : 'https://api.sentientiq.app/api/telemetry/stream'),
     apiKey: window.SentientIQ?.apiKey || scriptTag?.getAttribute('data-api-key') || 'sq_demo_v5',
     tenantId: window.SentientIQ?.tenantId || scriptTag?.getAttribute('data-tenant-id') || 'unknown',
     sessionId: `sq_${Date.now()}_${Math.random().toString(36).slice(2,9)}`,
