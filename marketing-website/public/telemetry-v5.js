@@ -171,12 +171,40 @@
       if (el !== state.hoverElement) {
         state.hoverStart = now;
         state.hoverElement = el;
-      } else if (now - state.hoverStart > 2000) {
-        // Long hover detected
+      } else if (now - state.hoverStart > 500) {  // Reduced threshold for faster detection
+        // Detect element context
+        const elText = (el.textContent || '').toLowerCase();
+        const elClass = (el.className || '').toLowerCase();
+        const elId = (el.id || '').toLowerCase();
+        const target = `${elClass} ${elId} ${el.tagName.toLowerCase()}`;
+
+        // Detect price elements
+        const isPricing = elText.includes('$') ||
+                         elClass.includes('price') ||
+                         elClass.includes('cost') ||
+                         elId.includes('price') ||
+                         el.closest('[class*="price"], [id*="price"], [data-price]');
+
+        // Detect cart/checkout elements
+        const isCart = elClass.includes('cart') ||
+                      elId.includes('cart') ||
+                      el.closest('[class*="cart"], [id*="cart"]');
+
+        // Detect CTA buttons
+        const isCTA = el.tagName === 'BUTTON' ||
+                     el.tagName === 'A' ||
+                     elClass.includes('btn') ||
+                     elClass.includes('button');
+
         record('hover', {
           x, y,
           duration: now - state.hoverStart,
-          el: el
+          target: target,
+          ctx: {
+            pricing: isPricing,
+            cart: isCart,
+            cta: isCTA
+          }
         });
         state.hoverStart = now; // Reset to avoid spam
       }
