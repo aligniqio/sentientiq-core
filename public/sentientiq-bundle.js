@@ -8,17 +8,18 @@
   'use strict';
 
   // ============= CONFIGURATION FROM GTM VARIABLES =============
+  // Get config from GTM variables or window object (set by GTM script)
   const config = {
-    tenantId: '{{SentientIQ Tenant ID}}' || 'demo',
+    tenantId: window.SENTIENTIQ_TENANT_ID || '{{SentientIQ Tenant ID}}' || 'demo',
     enableTelemetry: '{{Enable Telemetry}}' !== 'false', // Default: true
-    enableInterventions: '{{Enable Interventions}}' === 'true', // Default: false, must opt-in
+    enableInterventions: window.SENTIENTIQ_ENABLE_INTERVENTIONS || '{{Enable Interventions}}' === 'true',
     apiEndpoint: '{{API Endpoint}}' || 'https://api.sentientiq.app',
-    debug: '{{Debug Mode}}' === 'true'
+    debug: window.SENTIENTIQ_DEBUG || '{{Debug Mode}}' === 'true'
   };
 
-  // Safety check - must have tenant ID
+  // Safety check - must have tenant ID (but not the GTM placeholder)
   if (!config.tenantId || config.tenantId === '{{SentientIQ Tenant ID}}') {
-    console.warn('SentientIQ: No Tenant ID configured in GTM');
+    console.warn('SentientIQ: No Tenant ID configured');
     return;
   }
 
