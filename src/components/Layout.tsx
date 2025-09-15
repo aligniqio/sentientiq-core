@@ -14,7 +14,10 @@ import {
   Settings,
   Brain,
   ChevronDown,
-  Code
+  Code,
+  Users,
+  Eye,
+  Check
 } from 'lucide-react';
 import { useSuperAdmin } from '../hooks/useSuperAdmin';
 
@@ -26,6 +29,13 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [systemExpanded, setSystemExpanded] = useState(false);
+  const [contextDropdownOpen, setContextDropdownOpen] = useState(false);
+  const [selectedContext, setSelectedContext] = useState<{
+    type: 'default' | 'tier' | 'tenant';
+    value: string;
+    label: string;
+  }>({ type: 'default', value: 'default', label: 'Default View' });
+
   const location = useLocation();
   const navigate = useNavigate();
   const { signOut } = useClerk();
@@ -33,6 +43,26 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
   // Use the same super admin check as the super-admin page
   const { isSuperAdmin } = useSuperAdmin();
+
+  // Mock tenant list - in production, fetch from API
+  const [tenants, setTenants] = useState<Array<{id: string, name: string, tier: string}>>([]);
+
+  useEffect(() => {
+    if (isSuperAdmin) {
+      // Fetch tenants for super admin
+      fetchTenants();
+    }
+  }, [isSuperAdmin]);
+
+  const fetchTenants = async () => {
+    // Mock data - replace with actual API call
+    setTenants([
+      { id: 'acme_corp', name: 'Acme Corp', tier: 'enterprise' },
+      { id: 'bobs_bikes', name: "Bob's Bikes", tier: 'starter' },
+      { id: 'tech_startup', name: 'TechStartup Inc', tier: 'growth' },
+      { id: 'mega_retail', name: 'MegaRetail', tier: 'scale' }
+    ]);
+  };
 
   // Auto-expand System menu if on a system page
   useEffect(() => {
@@ -267,6 +297,123 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       {/* Main Content - Standardized from Scorecard */}
       <main className={`relative z-10 ${!isMobile ? 'ml-64' : ''}`}>
         <div className="min-h-screen">
+          {/* Super Admin Context Switcher */}
+          {isSuperAdmin && (
+            <div className="sticky top-0 z-20 bg-black/80 backdrop-blur-xl border-b border-white/10">
+              <div className="mx-auto max-w-7xl px-6 py-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Eye className="w-4 h-4 text-purple-400" />
+                    <span className="text-sm text-gray-400">Viewing as:</span>
+                  </div>
+
+                  <div className="relative">
+                    <button
+                      onClick={() => setContextDropdownOpen(!contextDropdownOpen)}
+                      className="flex items-center gap-2 px-4 py-2 bg-purple-600/20 border border-purple-500/30 rounded-lg hover:bg-purple-600/30 transition-all"
+                    >
+                      <Users className="w-4 h-4" />
+                      <span className="text-sm font-medium">{selectedContext.label}</span>
+                      <ChevronDown className={`w-4 h-4 transition-transform ${contextDropdownOpen ? 'rotate-180' : ''}`} />
+                    </button>
+
+                    {/* Dropdown Menu */}
+                    <AnimatePresence>
+                      {contextDropdownOpen && (
+                        <motion.div
+                          initial={{ opacity: 0, y: -10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -10 }}
+                          className="absolute right-0 mt-2 w-80 bg-gray-900 border border-gray-800 rounded-lg shadow-xl overflow-hidden"
+                        >
+                          {/* Default View */}
+                          <button
+                            onClick={() => {
+                              setSelectedContext({ type: 'default', value: 'default', label: 'Default View' });
+                              setContextDropdownOpen(false);
+                              // Clear any context overrides
+                              localStorage.removeItem('sq_context_override');
+                            }}
+                            className="w-full px-4 py-3 text-left hover:bg-gray-800 transition-colors flex items-center justify-between"
+                          >
+                            <span className="text-sm">Default View</span>
+                            {selectedContext.type === 'default' && <Check className="w-4 h-4 text-green-400" />}
+                          </button>
+
+                          {/* Tier Views */}
+                          <div className="border-t border-gray-800">
+                            <div className="px-4 py-2 text-xs text-gray-500 uppercase tracking-wide">View as Tier</div>
+                            {['starter', 'growth', 'scale', 'enterprise'].map(tier => (
+                              <button
+                                key={tier}
+                                onClick={() => {
+                                  const label = `${tier.charAt(0).toUpperCase() + tier.slice(1)} Tier`;
+                                  setSelectedContext({ type: 'tier', value: tier, label });
+                                  setContextDropdownOpen(false);
+                                  // Set context override
+                                  localStorage.setItem('sq_context_override', JSON.stringify({ type: 'tier', value: tier }));
+                                }}
+                                className="w-full px-4 py-3 text-left hover:bg-gray-800 transition-colors flex items-center justify-between"
+                              >
+                                <div>
+                                  <div className="text-sm">{tier.charAt(0).toUpperCase() + tier.slice(1)}</div>
+                                  <div className="text-xs text-gray-500">
+                                    {tier === 'starter' && '$497/mo'}
+                                    {tier === 'growth' && '$1,997/mo'}
+                                    {tier === 'scale' && '$4,997/mo'}
+                                    {tier === 'enterprise' && 'Custom'}
+                                  </div>
+                                </div>
+                                {selectedContext.value === tier && selectedContext.type === 'tier' &&
+                                  <Check className="w-4 h-4 text-green-400" />}
+                              </button>
+                            ))}
+                          </div>
+
+                          {/* Tenant Views */}
+                          <div className="border-t border-gray-800">
+                            <div className="px-4 py-2 text-xs text-gray-500 uppercase tracking-wide">View as Tenant</div>
+                            {tenants.map(tenant => (
+                              <button
+                                key={tenant.id}
+                                onClick={() => {
+                                  setSelectedContext({ type: 'tenant', value: tenant.id, label: tenant.name });
+                                  setContextDropdownOpen(false);
+                                  // Set context override
+                                  localStorage.setItem('sq_context_override', JSON.stringify({ type: 'tenant', value: tenant.id }));
+                                }}
+                                className="w-full px-4 py-3 text-left hover:bg-gray-800 transition-colors flex items-center justify-between"
+                              >
+                                <div>
+                                  <div className="text-sm">{tenant.name}</div>
+                                  <div className="text-xs text-gray-500">{tenant.tier} tier</div>
+                                </div>
+                                {selectedContext.value === tenant.id && selectedContext.type === 'tenant' &&
+                                  <Check className="w-4 h-4 text-green-400" />}
+                              </button>
+                            ))}
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+
+                  {selectedContext.type !== 'default' && (
+                    <button
+                      onClick={() => {
+                        setSelectedContext({ type: 'default', value: 'default', label: 'Default View' });
+                        localStorage.removeItem('sq_context_override');
+                      }}
+                      className="text-xs text-gray-400 hover:text-white transition-colors"
+                    >
+                      Clear Override
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
           <div className="mx-auto max-w-7xl px-6 pt-12 pb-20">
             {children}
           </div>
