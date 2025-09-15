@@ -528,8 +528,54 @@
 
     saveCache(key, map) {
       try {
+        // Strip out actual DOM elements before caching (only keep selectors)
+        const cleanMap = {
+          pricing: map.pricing.map(item => ({
+            selector: item.selector,
+            confidence: item.confidence,
+            type: item.type,
+            value: item.value
+          })),
+          cart: map.cart.map(item => ({
+            selector: item.selector,
+            confidence: item.confidence,
+            type: item.type
+          })),
+          cta: map.cta.map(item => ({
+            selector: item.selector,
+            confidence: item.confidence,
+            type: item.type,
+            position: item.position
+          })),
+          forms: map.forms.map(item => ({
+            selector: item.selector,
+            confidence: item.confidence,
+            type: item.type,
+            fields: item.fields
+          })),
+          navigation: map.navigation.map(item => ({
+            selector: item.selector,
+            confidence: item.confidence,
+            type: item.type,
+            linkCount: item.linkCount
+          })),
+          demo: map.demo.map(item => ({
+            selector: item.selector,
+            confidence: item.confidence,
+            type: item.type
+          })),
+          testimonials: map.testimonials.map(item => ({
+            selector: item.selector,
+            confidence: item.confidence,
+            type: item.type
+          })),
+          metadata: map.metadata,
+          confidence: map.confidence,
+          warnings: map.warnings
+        };
+
         localStorage.setItem(key, JSON.stringify({
-          map: map,
+          map: cleanMap,
           timestamp: Date.now(),
           url: window.location.href
         }));
