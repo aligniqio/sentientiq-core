@@ -66,7 +66,8 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     icon: Settings,
     label: 'System',
     children: [
-      { path: '/system/implementation', icon: Code, label: 'Implementation' }
+      { path: '/system/implementation', icon: Code, label: 'Implementation' },
+      { path: '/system/configuration', icon: Zap, label: 'Interventions' }
     ]
   } : null;
 

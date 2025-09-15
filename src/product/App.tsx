@@ -22,6 +22,7 @@ import InvitesPage from './admin/InvitesPage'
 import SuperAdmin from '../pages/super-admin'
 import DebugSuperAdmin from '../pages/debug-super-admin'
 import SystemImplementation from '../pages/system/implementation'
+import SystemConfiguration from '../pages/system/configuration'
 
 // Candy Kit UI enhancements
 import { SenseiCandyProvider } from '../components/ui/SenseiCandy'
@@ -255,7 +256,21 @@ function App() {
               </SignedOut>
             </>
           } />
-          
+
+          {/* System Configuration - Interventions */}
+          <Route path="/system/configuration" element={
+            <>
+              <SignedIn>
+                <Layout>
+                  <SystemConfiguration />
+                </Layout>
+              </SignedIn>
+              <SignedOut>
+                <Navigate to="/auth" replace />
+              </SignedOut>
+            </>
+          } />
+
         </Routes>
     </Router>
     </SenseiCandyProvider>
