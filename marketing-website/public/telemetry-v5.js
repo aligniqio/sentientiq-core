@@ -377,6 +377,26 @@
     }
   }, { passive: true });
 
+  // Copy/paste detection (high intent signals)
+  document.addEventListener('copy', (e) => {
+    const selection = window.getSelection().toString();
+    if (selection) {
+      const isPriceText = selection.includes('$') ||
+                         selection.includes('price') ||
+                         selection.includes('month') ||
+                         selection.includes('year');
+
+      record('copy', {
+        length: selection.length,
+        ctx: {
+          pricing: isPriceText,
+          url: selection.includes('http'),
+          email: selection.includes('@')
+        }
+      });
+    }
+  }, { passive: true });
+
   // Form field interactions (critical for checkout/signup)
   let formStartTime = null;
   let currentField = null;
@@ -421,11 +441,33 @@
     }
   }, { passive: true });
 
-  // Visibility handling
+  // Visibility handling with rapid switching detection
+  let lastTabHidden = 0;
+  let tabSwitchCount = 0;
+
   document.addEventListener('visibilitychange', () => {
     state.suspended = document.hidden;
-    if (!document.hidden) {
-      record('tab_return', {});
+
+    if (document.hidden) {
+      lastTabHidden = Date.now();
+      record('tab_hidden', {});
+    } else {
+      const awayTime = Date.now() - lastTabHidden;
+
+      // Track rapid tab switching (comparison shopping behavior)
+      if (awayTime < 30000) {
+        tabSwitchCount++;
+      } else {
+        tabSwitchCount = 0;
+      }
+
+      record('tab_return', {
+        away_duration: awayTime,
+        ctx: {
+          quick_switch: awayTime < 5000,
+          comparison_pattern: tabSwitchCount > 2
+        }
+      });
     }
   });
 
