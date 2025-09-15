@@ -8,7 +8,7 @@ export default function Navbar() {
           <span className="font-semibold">Sentient<span className="gradient-text">IQ</span></span>
         </a>
         <nav className="hidden md:flex items-center gap-6 text-sm text-white/80">
-          <a href="/#how">How it works</a>
+          <a href="/how-it-works">How it works</a>
           <a href="/why-different">Why it's different</a>
           <a href="/#pricing">Pricing</a>
           <a href="/#faq">FAQ</a>
