@@ -22,6 +22,7 @@ import {
 import { enqueueDebate } from './queue/redis.js';
 import { createClient } from '@supabase/supabase-js';
 import { createClerkClient } from '@clerk/clerk-sdk-node';
+import interventionConfigRoutes from './api/intervention-config-api.js';
 import { 
   pickPersonas, 
   rivalPairs, 
@@ -596,6 +597,10 @@ app.get('/api/recommendations', generalLimiter, recommendationHandlers.getRecomm
 app.post('/api/recommendations/action', generalLimiter, express.json(), recommendationHandlers.trackAction);
 app.get('/api/scorecard', generalLimiter, recommendationHandlers.getScorecard);
 app.get('/api/cancellation-report', generalLimiter, recommendationHandlers.getCancellationReport);
+
+// ---------- INTERVENTION CONFIGURATION API ----------
+// UI-driven config builder with CDN publishing for GTM
+app.use('/api/interventions', interventionConfigRoutes);
 
 // Identity Resolution & Intervention API routes
 app.use('/api', generalLimiter, identityInterventionApi);

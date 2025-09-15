@@ -64,16 +64,24 @@ export function setupWebSocket(server: Server) {
 
 // Broadcast emotion to all connected clients
 export function broadcastEmotion(emotion: any) {
+  console.log(`📡 Broadcasting emotion: ${emotion.emotion} to ${wsClients.size} clients`);
+
   const message = JSON.stringify({
-    type: 'emotion',
-    data: emotion,
-    timestamp: new Date().toISOString()
+    type: 'event',
+    payload: {
+      ...emotion,
+      id: `${emotion.session_id}_${Date.now()}`, // Generate unique ID
+      timestamp: new Date().toISOString()
+    }
   });
 
   wsClients.forEach((client, id) => {
     try {
       if (client.ws.readyState === 1) { // WebSocket.OPEN
+        console.log(`📤 Sending to client ${id}`);
         client.ws.send(message);
+      } else {
+        console.log(`⚠️ Client ${id} not ready, state: ${client.ws.readyState}`);
       }
     } catch (error) {
       console.error(`Failed to send to client ${id}:`, error);
