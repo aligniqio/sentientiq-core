@@ -354,7 +354,7 @@ const EmotionalLiveFeed = () => {
       </div>
 
       {/* EVI and Active Users - Top Level Metrics */}
-      <div className="flex gap-4 mb-8">
+      <div className="w-full flex gap-4 mb-8">
         {/* Emotional Volatility Index - 80% width */}
         <div className="flex-1" style={{ maxWidth: '80%' }}>
           <EVIDisplay

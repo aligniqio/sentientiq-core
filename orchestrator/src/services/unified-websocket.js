@@ -12,7 +12,8 @@ class UnifiedWebSocketServer extends EventEmitter {
     this.wss = null;
     this.channels = {
       emotions: new Set(),      // Dashboard clients watching emotions
-      interventions: new Map()  // Marketing site clients receiving interventions
+      interventions: new Map(), // Marketing site clients receiving interventions
+      telemetry: new Map()      // Bundled script clients (telemetry + interventions in one)
     };
   }
 
@@ -37,6 +38,10 @@ class UnifiedWebSocketServer extends EventEmitter {
           break;
         case 'interventions':
           this.handleInterventionClient(ws, sessionId, tenantId);
+          break;
+        case 'telemetry':
+          // Bundled script - handles both telemetry and interventions
+          this.handleTelemetryClient(ws, sessionId, tenantId);
           break;
         default:
           ws.close(1008, 'Unknown channel');
@@ -131,10 +136,24 @@ class UnifiedWebSocketServer extends EventEmitter {
   handleClientMessage(sessionId, data) {
     switch(data.type) {
       case 'ping':
-        const client = this.channels.interventions.get(sessionId);
+        // Check both intervention and telemetry channels
+        const interventionClient = this.channels.interventions.get(sessionId);
+        const telemetryClient = this.channels.telemetry.get(sessionId);
+        const client = interventionClient || telemetryClient;
+
         if (client) {
           client.ws.send(JSON.stringify({ type: 'pong' }));
         }
+        break;
+
+      case 'telemetry':
+        // Handle telemetry data from bundled script
+        console.log(`📡 Telemetry received via WebSocket: ${data.events?.length || 0} events`);
+        this.emit('telemetry_received', {
+          sessionId,
+          tenantId: data.tenant_id,
+          events: data.events
+        });
         break;
 
       case 'intervention_shown':
@@ -150,6 +169,56 @@ class UnifiedWebSocketServer extends EventEmitter {
       default:
         console.log(`Unknown message type from ${sessionId}: ${data.type}`);
     }
+  }
+
+  handleTelemetryClient(ws, sessionId, tenantId) {
+    const client = {
+      ws,
+      sessionId,
+      tenantId,
+      type: 'telemetry',
+      connectedAt: new Date()
+    };
+
+    // Store by session ID for intervention delivery
+    this.channels.telemetry.set(sessionId, client);
+
+    // Send confirmation
+    ws.send(JSON.stringify({
+      type: 'connected',
+      channel: 'telemetry',
+      sessionId
+    }));
+
+    // Handle messages from bundled script
+    ws.on('message', (message) => {
+      try {
+        const data = JSON.parse(message);
+        this.handleClientMessage(sessionId, data);
+      } catch (error) {
+        console.error(`Failed to parse telemetry message from ${sessionId}:`, error);
+      }
+    });
+
+    // Handle disconnect
+    ws.on('close', () => {
+      console.log(`📉 Telemetry client disconnected: ${sessionId}`);
+      this.channels.telemetry.delete(sessionId);
+    });
+
+    ws.on('error', (error) => {
+      console.error(`Telemetry client error ${sessionId}:`, error);
+      this.channels.telemetry.delete(sessionId);
+    });
+
+    // Keep alive
+    const pingInterval = setInterval(() => {
+      if (ws.readyState === ws.OPEN) {
+        ws.ping();
+      } else {
+        clearInterval(pingInterval);
+      }
+    }, 30000);
   }
 
   // Broadcast emotion to all dashboard clients
@@ -176,15 +245,18 @@ class UnifiedWebSocketServer extends EventEmitter {
 
   // Send intervention to specific session
   sendIntervention(sessionId, interventionType) {
-    const client = this.channels.interventions.get(sessionId);
+    // Check both channels - telemetry channel handles both telemetry and interventions
+    const telemetryClient = this.channels.telemetry.get(sessionId);
+    const interventionClient = this.channels.interventions.get(sessionId);
+    const client = telemetryClient || interventionClient;
 
     if (client && client.ws.readyState === client.ws.OPEN) {
       client.ws.send(JSON.stringify({
         type: 'intervention',
-        intervention: interventionType,
+        intervention_type: interventionType,
         timestamp: new Date().toISOString()
       }));
-      console.log(`🎯 Sent ${interventionType} intervention to ${sessionId}`);
+      console.log(`🎯 Sent ${interventionType} intervention to ${sessionId} (${client.type} channel)`);
       return true;
     }
 
