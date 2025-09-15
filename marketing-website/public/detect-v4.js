@@ -550,7 +550,7 @@
       if (config.ui.showBanners) this.showNotification(record.emotion, Math.round(record.confidence));
 
       // Send to API with STRICT rate limiting (max 1 request per 5 seconds)
-      if (config.apiKey && config.apiKey !== 'sq_demo_v4') {
+      if (config.apiKey) {
         this.pending.push(event);
         if (this.pending.length > 50) this.pending.shift();
 
