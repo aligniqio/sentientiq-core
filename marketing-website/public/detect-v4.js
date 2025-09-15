@@ -675,6 +675,7 @@
     try { window.SentientIQInstance.destroy(); } catch {}
   }
   window.SentientIQInstance = new EmotionEngine();
+  window.SentientIQInstance.init();
 
   // Public API
   window.SentientIQ = {
