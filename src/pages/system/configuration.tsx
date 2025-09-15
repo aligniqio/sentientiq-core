@@ -34,6 +34,13 @@ interface ConfigState {
   freeTrialDays: number;
   roiMultiplier: string;
 
+  // Automotive-specific offers
+  cashBackAmount?: string;
+  aprOffer?: string;
+  testDriveIncentive?: string;
+  tradeInBonus?: string;
+  leaseSpecial?: string;
+
   // Channels
   supportUrl: string;
   calendarUrl: string;
@@ -46,7 +53,7 @@ interface ConfigState {
   enableConfusionHelp: boolean;
 
   // Template
-  template: 'saas' | 'ecommerce' | 'marketplace' | 'custom';
+  template: 'saas' | 'ecommerce' | 'automotive' | 'custom';
 }
 
 const SystemConfiguration: React.FC = () => {
@@ -300,7 +307,7 @@ const SystemConfiguration: React.FC = () => {
                 <div>
                   <label className="block text-sm font-medium mb-2">Template</label>
                   <div className="grid grid-cols-2 gap-4">
-                    {['saas', 'ecommerce', 'marketplace', 'custom'].map((t) => (
+                    {['saas', 'ecommerce', 'automotive', 'custom'].map((t) => (
                       <button
                         key={t}
                         onClick={() => setConfig(prev => ({ ...prev, template: t as any }))}
@@ -314,7 +321,7 @@ const SystemConfiguration: React.FC = () => {
                         <div className="text-xs text-gray-400 mt-1">
                           {t === 'saas' && 'B2B Software'}
                           {t === 'ecommerce' && 'Online Store'}
-                          {t === 'marketplace' && 'Multi-vendor'}
+                          {t === 'automotive' && 'Retail Auto'}
                           {t === 'custom' && 'Build your own'}
                         </div>
                       </button>
@@ -341,66 +348,144 @@ const SystemConfiguration: React.FC = () => {
               <h2 className="text-2xl font-bold mb-6">Configure Your Offers</h2>
 
               <div className="space-y-6">
-                <div>
-                  <label className="block text-sm font-medium mb-2">
-                    <DollarSign className="w-4 h-4 inline mr-1" />
-                    Discount Percentage
-                  </label>
-                  <div className="flex items-center space-x-4">
-                    <input
-                      type="range"
-                      min="5"
-                      max="50"
-                      value={config.discountPercent}
-                      onChange={(e) => setConfig(prev => ({ ...prev, discountPercent: parseInt(e.target.value) }))}
-                      className="flex-1"
-                    />
-                    <div className="w-20 text-center px-3 py-2 bg-black/50 border border-gray-700 rounded-lg">
-                      {config.discountPercent}%
+                {/* Automotive-specific offers */}
+                {config.template === 'automotive' ? (
+                  <>
+                    <div>
+                      <label className="block text-sm font-medium mb-2">
+                        <DollarSign className="w-4 h-4 inline mr-1" />
+                        Cash Back / Rebate Amount
+                      </label>
+                      <input
+                        type="text"
+                        value={config.cashBackAmount || '$1,000'}
+                        onChange={(e) => setConfig(prev => ({ ...prev, cashBackAmount: e.target.value }))}
+                        className="w-full px-4 py-3 bg-black/50 border border-gray-700 rounded-lg focus:border-purple-500 focus:outline-none"
+                        placeholder="$1,000"
+                      />
                     </div>
-                  </div>
-                </div>
 
-                <div>
-                  <label className="block text-sm font-medium mb-2">
-                    <Tag className="w-4 h-4 inline mr-1" />
-                    Discount Code
-                  </label>
-                  <input
-                    type="text"
-                    value={config.discountCode}
-                    onChange={(e) => setConfig(prev => ({ ...prev, discountCode: e.target.value.toUpperCase() }))}
-                    className="w-full px-4 py-3 bg-black/50 border border-gray-700 rounded-lg focus:border-purple-500 focus:outline-none font-mono"
-                    placeholder="SAVE20"
-                  />
-                </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-2">
+                        <Tag className="w-4 h-4 inline mr-1" />
+                        APR Financing Offer
+                      </label>
+                      <input
+                        type="text"
+                        value={config.aprOffer || '0% APR for 60 months'}
+                        onChange={(e) => setConfig(prev => ({ ...prev, aprOffer: e.target.value }))}
+                        className="w-full px-4 py-3 bg-black/50 border border-gray-700 rounded-lg focus:border-purple-500 focus:outline-none"
+                        placeholder="0% APR for 60 months"
+                      />
+                    </div>
 
-                <div>
-                  <label className="block text-sm font-medium mb-2">
-                    <Calendar className="w-4 h-4 inline mr-1" />
-                    Free Trial Days
-                  </label>
-                  <input
-                    type="number"
-                    value={config.freeTrialDays}
-                    onChange={(e) => setConfig(prev => ({ ...prev, freeTrialDays: parseInt(e.target.value) }))}
-                    className="w-full px-4 py-3 bg-black/50 border border-gray-700 rounded-lg focus:border-purple-500 focus:outline-none"
-                  />
-                </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-2">
+                        <Calendar className="w-4 h-4 inline mr-1" />
+                        Test Drive Incentive
+                      </label>
+                      <input
+                        type="text"
+                        value={config.testDriveIncentive || '$50 Gift Card for Test Drive'}
+                        onChange={(e) => setConfig(prev => ({ ...prev, testDriveIncentive: e.target.value }))}
+                        className="w-full px-4 py-3 bg-black/50 border border-gray-700 rounded-lg focus:border-purple-500 focus:outline-none"
+                        placeholder="$50 Gift Card for Test Drive"
+                      />
+                    </div>
 
-                <div>
-                  <label className="block text-sm font-medium mb-2">
-                    <TrendingUp className="w-4 h-4 inline mr-1" />
-                    ROI Multiplier
-                  </label>
-                  <input
-                    type="text"
-                    value={config.roiMultiplier}
-                    onChange={(e) => setConfig(prev => ({ ...prev, roiMultiplier: e.target.value }))}
-                    className="w-full px-4 py-3 bg-black/50 border border-gray-700 rounded-lg focus:border-purple-500 focus:outline-none"
-                    placeholder="3.2x"
-                  />
-                </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-2">
+                        <TrendingUp className="w-4 h-4 inline mr-1" />
+                        Trade-In Bonus
+                      </label>
+                      <input
+                        type="text"
+                        value={config.tradeInBonus || '$2,000 above KBB value'}
+                        onChange={(e) => setConfig(prev => ({ ...prev, tradeInBonus: e.target.value }))}
+                        className="w-full px-4 py-3 bg-black/50 border border-gray-700 rounded-lg focus:border-purple-500 focus:outline-none"
+                        placeholder="$2,000 above KBB value"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium mb-2">
+                        <DollarSign className="w-4 h-4 inline mr-1" />
+                        Lease Special
+                      </label>
+                      <input
+                        type="text"
+                        value={config.leaseSpecial || '$299/month, $0 down'}
+                        onChange={(e) => setConfig(prev => ({ ...prev, leaseSpecial: e.target.value }))}
+                        className="w-full px-4 py-3 bg-black/50 border border-gray-700 rounded-lg focus:border-purple-500 focus:outline-none"
+                        placeholder="$299/month, $0 down"
+                      />
+                    </div>
+                  </>
+                ) : (
+                  /* Default offers for other templates */
+                  <>
+                    <div>
+                      <label className="block text-sm font-medium mb-2">
+                        <DollarSign className="w-4 h-4 inline mr-1" />
+                        Discount Percentage
+                      </label>
+                      <div className="flex items-center space-x-4">
+                        <input
+                          type="range"
+                          min="5"
+                          max="50"
+                          value={config.discountPercent}
+                          onChange={(e) => setConfig(prev => ({ ...prev, discountPercent: parseInt(e.target.value) }))}
+                          className="flex-1"
+                        />
+                        <div className="w-20 text-center px-3 py-2 bg-black/50 border border-gray-700 rounded-lg">
+                          {config.discountPercent}%
+                        </div>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium mb-2">
+                        <Tag className="w-4 h-4 inline mr-1" />
+                        Discount Code
+                      </label>
+                      <input
+                        type="text"
+                        value={config.discountCode}
+                        onChange={(e) => setConfig(prev => ({ ...prev, discountCode: e.target.value.toUpperCase() }))}
+                        className="w-full px-4 py-3 bg-black/50 border border-gray-700 rounded-lg focus:border-purple-500 focus:outline-none font-mono"
+                        placeholder="SAVE20"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium mb-2">
+                        <Calendar className="w-4 h-4 inline mr-1" />
+                        Free Trial Days
+                      </label>
+                      <input
+                        type="number"
+                        value={config.freeTrialDays}
+                        onChange={(e) => setConfig(prev => ({ ...prev, freeTrialDays: parseInt(e.target.value) }))}
+                        className="w-full px-4 py-3 bg-black/50 border border-gray-700 rounded-lg focus:border-purple-500 focus:outline-none"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium mb-2">
+                        <TrendingUp className="w-4 h-4 inline mr-1" />
+                        ROI Multiplier
+                      </label>
+                      <input
+                        type="text"
+                        value={config.roiMultiplier}
+                        onChange={(e) => setConfig(prev => ({ ...prev, roiMultiplier: e.target.value }))}
+                        className="w-full px-4 py-3 bg-black/50 border border-gray-700 rounded-lg focus:border-purple-500 focus:outline-none"
+                        placeholder="3.2x"
+                      />
+                    </div>
+                  </>
+                )}
               </div>
 
               <div className="mt-8 flex justify-between">
@@ -430,42 +515,42 @@ const SystemConfiguration: React.FC = () => {
                 <div>
                   <label className="block text-sm font-medium mb-2">
                     <Globe className="w-4 h-4 inline mr-1" />
-                    Support/Calendar URL
+                    {config.template === 'automotive' ? 'Test Drive Scheduler' : 'Support/Calendar URL'}
                   </label>
                   <input
                     type="url"
                     value={config.supportUrl}
                     onChange={(e) => setConfig(prev => ({ ...prev, supportUrl: e.target.value }))}
                     className="w-full px-4 py-3 bg-black/50 border border-gray-700 rounded-lg focus:border-purple-500 focus:outline-none"
-                    placeholder="https://calendly.com/your-team"
+                    placeholder={config.template === 'automotive' ? "https://calendly.com/test-drive" : "https://calendly.com/your-team"}
                   />
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium mb-2">
                     <Video className="w-4 h-4 inline mr-1" />
-                    Demo Video URL
+                    {config.template === 'automotive' ? 'Vehicle Walkaround Video' : 'Demo Video URL'}
                   </label>
                   <input
                     type="url"
                     value={config.demoVideoUrl}
                     onChange={(e) => setConfig(prev => ({ ...prev, demoVideoUrl: e.target.value }))}
                     className="w-full px-4 py-3 bg-black/50 border border-gray-700 rounded-lg focus:border-purple-500 focus:outline-none"
-                    placeholder="https://youtube.com/watch?v=..."
+                    placeholder={config.template === 'automotive' ? "https://youtube.com/vehicle-tour" : "https://youtube.com/watch?v=..."}
                   />
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium mb-2">
                     <FileText className="w-4 h-4 inline mr-1" />
-                    Case Study URL
+                    {config.template === 'automotive' ? 'Customer Reviews/Testimonials' : 'Case Study URL'}
                   </label>
                   <input
                     type="url"
                     value={config.caseStudyUrl}
                     onChange={(e) => setConfig(prev => ({ ...prev, caseStudyUrl: e.target.value }))}
                     className="w-full px-4 py-3 bg-black/50 border border-gray-700 rounded-lg focus:border-purple-500 focus:outline-none"
-                    placeholder="https://yoursite.com/case-studies"
+                    placeholder={config.template === 'automotive' ? "https://dealership.com/reviews" : "https://yoursite.com/case-studies"}
                   />
                 </div>
               </div>
