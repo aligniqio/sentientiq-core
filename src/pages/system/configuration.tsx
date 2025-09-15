@@ -193,7 +193,6 @@ const SystemConfiguration: React.FC = () => {
       <PageHeader
         title="Intervention Configuration"
         subtitle="Set up your behavioral interventions in minutes"
-        icon={<Zap className="w-8 h-8" />}
       />
 
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
