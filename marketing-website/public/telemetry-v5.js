@@ -125,10 +125,38 @@
     const behavior = state.clickSequence.length >= 3 ? 'rage_click' :
                      timeSinceLastClick < 500 ? 'double_click' : 'click';
 
+    // Extract element context
+    const elText = (target.textContent || '').toLowerCase();
+    const elClass = (target.className || '').toLowerCase();
+    const elId = (target.id || '').toLowerCase();
+    const elHref = target.href || '';
+    const targetStr = `${elClass} ${elId} ${elText} ${elHref}`.toLowerCase();
+
+    // Detect context
+    const isPricing = targetStr.includes('price') ||
+                     targetStr.includes('pricing') ||
+                     targetStr.includes('plan') ||
+                     targetStr.includes('cost') ||
+                     target.closest('[class*="price"], [id*="price"], [href*="price"]');
+
+    const isCart = targetStr.includes('cart') ||
+                  targetStr.includes('checkout') ||
+                  target.closest('[class*="cart"], [id*="cart"]');
+
+    const isCTA = target.tagName === 'BUTTON' ||
+                 target.tagName === 'A' ||
+                 elClass.includes('btn') ||
+                 elClass.includes('button');
+
     record(behavior, {
       x, y,
       count: state.clickSequence.length,
-      el: target
+      target: targetStr.substring(0, 100), // Limit length
+      ctx: {
+        pricing: isPricing,
+        cart: isCart,
+        cta: isCTA
+      }
     });
 
     state.lastClick = { x, y, t: now };
