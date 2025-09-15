@@ -395,12 +395,35 @@
     on(el, evt, fn, opts) { el.addEventListener(evt, fn, opts); this.bound.push(() => el.removeEventListener(evt, fn, opts)); }
     destroy() { this.bound.forEach(fn => fn()); this.behaviorDetector.clearIdleTimer(); if (this._interval) clearInterval(this._interval); }
 
+    async loadTenantConfig() {
+      try {
+        if (!config.tenantId || config.tenantId === 'unknown') return;
+
+        const response = await fetch(`${config.apiEndpoint.replace('/event', '')}/config/${config.tenantId}`);
+        if (response.ok) {
+          const data = await response.json();
+          window.SentientIQ = window.SentientIQ || {};
+          window.SentientIQ.tenantConfig = data;
+
+          if (config.debug) {
+            console.log(`🏢 Tenant: ${config.tenantId} (${data.tier} tier)`);
+            console.log(`✨ Features:`, Object.keys(data.features).filter(k => data.features[k]));
+          }
+        }
+      } catch (e) {
+        if (config.debug) console.warn('Failed to load tenant config:', e);
+      }
+    }
+
     init() {
       if (config.debug) {
         console.log('🚀 SentientIQ v4.1 initialized');
         console.log('📊 Behavioral Taxonomy Engine active');
         console.log('🔑 API Key:', (config.apiKey||'').toString().substring(0, 20) + '...');
       }
+
+      // Load tenant configuration for tier-based routing
+      this.loadTenantConfig();
 
       if (config.ui.showBanners) this.showInitBanner();
       this.initListeners();
@@ -645,7 +668,55 @@
         add(boost + ctx);
         const action = tick(); if (!action) return;
         if (config.debug) console.log('🧭 Intent action:', action, 'score=', Math.round(score));
-        // hook for userland: window.SentientIQ?.actions?.[action]?.();
+
+        // Tenant-aware routing
+        const tenantConfig = window.SentientIQ?.tenantConfig;
+
+        if (tenantConfig?.tier === 'scale' || tenantConfig?.tier === 'enterprise') {
+          // Scale/Enterprise: Send to backend for full processing
+          fetch(`${config.apiEndpoint.replace('/event', '')}/trigger`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-API-Key': config.apiKey,
+              'X-Tenant-ID': config.tenantId
+            },
+            body: JSON.stringify({
+              action,
+              emotion,
+              behavior,
+              context,
+              sessionId: config.sessionId,
+              pageUrl: location.href,
+              confidence: score
+            }),
+            keepalive: true
+          }).catch(() => {});
+        } else if (tenantConfig?.tier === 'growth') {
+          // Growth: Hybrid - both UI and backend
+          window.SentientIQ?.actions?.[action]?.(); // UI intervention
+          fetch(`${config.apiEndpoint.replace('/event', '')}/trigger`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-API-Key': config.apiKey,
+              'X-Tenant-ID': config.tenantId
+            },
+            body: JSON.stringify({
+              action,
+              emotion,
+              behavior,
+              context,
+              sessionId: config.sessionId,
+              pageUrl: location.href,
+              confidence: score
+            }),
+            keepalive: true
+          }).catch(() => {});
+        } else {
+          // Starter: UI only
+          window.SentientIQ?.actions?.[action]?.();
+        }
       };
       this.intentBrainEnabled = true;
     }
