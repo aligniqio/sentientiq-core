@@ -261,10 +261,10 @@
       }
 
       // Velocity buckets (require minimum movement distance to avoid noise)
-      const totalDistance = history.reduce((sum, p, i) => {
+      const totalDistance = moves.reduce((sum, p, i) => {
         if (i === 0) return 0;
-        const dx = p.x - history[i-1].x;
-        const dy = p.y - history[i-1].y;
+        const dx = p.x - moves[i-1].x;
+        const dy = p.y - moves[i-1].y;
         return sum + Math.sqrt(dx*dx + dy*dy);
       }, 0);
 
