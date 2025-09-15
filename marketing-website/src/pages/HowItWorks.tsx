@@ -1,28 +1,25 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import SEO from '@/components/SEO';
 import NeuralBackground from '@/components/NeuralBackground';
 import NavBar from '@/components/NavBar';
 import Footer from '@/components/Footer';
 import { motion, AnimatePresence } from 'framer-motion';
 
-export default function HowItWorks() {
-  const [activeTab, setActiveTab] = useState('overview');
-  const [codeExample, setCodeExample] = useState('telemetry');
-  const [liveMetric, setLiveMetric] = useState(0);
+type CodeExample = {
+  title: string;
+  code: string;
+  description: string;
+};
 
-  const siteUrl = (import.meta as any)?.env?.VITE_SITE_URL ||
-    (typeof window !== 'undefined' ? window.location.origin : 'https://sentientiq.ai');
+type CodeExamples = {
+  telemetry: CodeExample;
+  siteMapper: CodeExample;
+  processor: CodeExample;
+  integration: CodeExample;
+};
 
-  // Simulate real-time metrics
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setLiveMetric(prev => (prev + Math.random() * 10) % 100);
-    }, 2000);
-    return () => clearInterval(interval);
-  }, []);
-
-  const codeExamples = {
-    telemetry: {
+const codeExamples: CodeExamples = {
+  telemetry: {
       title: "Real-Time Behavioral Telemetry",
       code: `// Actual production code from telemetry-v5.js
 const captureMouseVelocity = (e) => {
@@ -112,8 +109,23 @@ async function resolveVisitor(email) {
   };
 }`,
       description: "Sub-second identity resolution across all your systems"
-    }
-  };
+  }
+};
+
+export default function HowItWorks() {
+  const [codeExample, setCodeExample] = useState<keyof CodeExamples>('telemetry');
+  const [liveMetric, setLiveMetric] = useState(0);
+
+  const siteUrl = (import.meta as any)?.env?.VITE_SITE_URL ||
+    (typeof window !== 'undefined' ? window.location.origin : 'https://sentientiq.ai');
+
+  // Simulate real-time metrics
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setLiveMetric(prev => (prev + Math.random() * 10) % 100);
+    }, 2000);
+    return () => clearInterval(interval);
+  }, []);
 
   return (
     <>
@@ -216,19 +228,46 @@ async function resolveVisitor(email) {
               {/* Technical Deep Dive Tabs */}
               <div className="glass-card p-8">
                 <div className="flex flex-wrap gap-2 mb-8 justify-center">
-                  {Object.keys(codeExamples).map(key => (
-                    <button
-                      key={key}
-                      onClick={() => setCodeExample(key)}
-                      className={`px-4 py-2 rounded-lg transition-all ${
-                        codeExample === key
-                          ? 'bg-gradient-to-r from-purple-600 to-blue-600'
-                          : 'glass-card hover:bg-white/10'
-                      }`}
-                    >
-                      {codeExamples[key].title}
-                    </button>
-                  ))}
+                  <button
+                    onClick={() => setCodeExample('telemetry')}
+                    className={`px-4 py-2 rounded-lg transition-all ${
+                      codeExample === 'telemetry'
+                        ? 'bg-gradient-to-r from-purple-600 to-blue-600'
+                        : 'glass-card hover:bg-white/10'
+                    }`}
+                  >
+                    Real-Time Behavioral Telemetry
+                  </button>
+                  <button
+                    onClick={() => setCodeExample('siteMapper')}
+                    className={`px-4 py-2 rounded-lg transition-all ${
+                      codeExample === 'siteMapper'
+                        ? 'bg-gradient-to-r from-purple-600 to-blue-600'
+                        : 'glass-card hover:bg-white/10'
+                    }`}
+                  >
+                    Automatic Site Structure Discovery
+                  </button>
+                  <button
+                    onClick={() => setCodeExample('processor')}
+                    className={`px-4 py-2 rounded-lg transition-all ${
+                      codeExample === 'processor'
+                        ? 'bg-gradient-to-r from-purple-600 to-blue-600'
+                        : 'glass-card hover:bg-white/10'
+                    }`}
+                  >
+                    Pattern Learning & Intervention Engine
+                  </button>
+                  <button
+                    onClick={() => setCodeExample('integration')}
+                    className={`px-4 py-2 rounded-lg transition-all ${
+                      codeExample === 'integration'
+                        ? 'bg-gradient-to-r from-purple-600 to-blue-600'
+                        : 'glass-card hover:bg-white/10'
+                    }`}
+                  >
+                    CRM & Identity Resolution
+                  </button>
                 </div>
 
                 <AnimatePresence mode="wait">
@@ -239,15 +278,24 @@ async function resolveVisitor(email) {
                     exit={{ opacity: 0, y: -20 }}
                   >
                     <h3 className="text-2xl font-bold mb-4">
-                      {codeExamples[codeExample].title}
+                      {codeExample === 'telemetry' ? codeExamples.telemetry.title :
+                       codeExample === 'siteMapper' ? codeExamples.siteMapper.title :
+                       codeExample === 'processor' ? codeExamples.processor.title :
+                       codeExamples.integration.title}
                     </h3>
                     <p className="text-white/70 mb-6">
-                      {codeExamples[codeExample].description}
+                      {codeExample === 'telemetry' ? codeExamples.telemetry.description :
+                       codeExample === 'siteMapper' ? codeExamples.siteMapper.description :
+                       codeExample === 'processor' ? codeExamples.processor.description :
+                       codeExamples.integration.description}
                     </p>
                     <div className="bg-black/50 rounded-lg p-6 overflow-x-auto">
                       <pre className="text-sm font-mono">
                         <code className="language-javascript">
-                          {codeExamples[codeExample].code}
+                          {codeExample === 'telemetry' ? codeExamples.telemetry.code :
+                           codeExample === 'siteMapper' ? codeExamples.siteMapper.code :
+                           codeExample === 'processor' ? codeExamples.processor.code :
+                           codeExamples.integration.code}
                         </code>
                       </pre>
                     </div>

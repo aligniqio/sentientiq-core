@@ -128,9 +128,9 @@ export default function IdentityReveal() {
         <div className="grid md:grid-cols-3 gap-6 mt-12">
           <div className="glass-card p-6 text-center">
             <div className="text-4xl mb-3">🎯</div>
-            <h3 className="font-semibold mb-2">User Identity Link</h3>
+            <h3 className="font-semibold mb-2">Emotion Tracking</h3>
             <p className="text-sm text-white/60">
-              Connect emotions to YOUR CRM records, auth system, and lifetime value
+              Track what every visitor feels with behavioral physics and ML
             </p>
           </div>
           <div className="glass-card p-6 text-center">
@@ -142,9 +142,9 @@ export default function IdentityReveal() {
           </div>
           <div className="glass-card p-6 text-center">
             <div className="text-4xl mb-3">🔄</div>
-            <h3 className="font-semibold mb-2">CRM Integration</h3>
+            <h3 className="font-semibold mb-2">Identity Resolution</h3>
             <p className="text-sm text-white/60">
-              Emotions sync to Salesforce & HubSpot. Your team knows before they call.
+              Connect emotions to real users. Know WHO feels WHAT. (Growth+)
             </p>
           </div>
         </div>
@@ -191,7 +191,7 @@ export default function IdentityReveal() {
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-green-400">✓</span>
-                  <span>Sync with YOUR CRM data (real customer value)</span>
+                  <span>Sync with CRM data for deal values (Growth tier+)</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-green-400">✓</span>

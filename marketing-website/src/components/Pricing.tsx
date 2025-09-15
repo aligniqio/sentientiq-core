@@ -60,14 +60,14 @@ export default function Pricing() {
       name: 'Starter',
       price: '$497',
       period: '/month',
-      tagline: 'Track emotions for YOUR identified users',
+      tagline: 'Understand what visitors feel',
       features: [
-        'Connect to YOUR user data (auth, CRM)',
-        'Detect 12 emotions with 95% confidence',
-        'Basic interventions (email, Slack alerts)',
-        'Weekly accountability scorecard',
-        'What you saved vs. what you lost',
-        'Up to 10,000 identified sessions/mo'
+        'Emotional tracking script',
+        'Real-time emotion detection',
+        'Behavioral pattern analysis',
+        'Dashboard & reporting',
+        'Email alerts for critical events',
+        'Up to 10,000 sessions/mo'
       ],
       cta: 'Start Today',
       priceId: import.meta.env.VITE_STRIPE_STARTER_PRICE_ID as string,
@@ -77,15 +77,15 @@ export default function Pricing() {
       name: 'Growth',
       price: '$1,997',
       period: '/month',
-      tagline: 'Intervene before they leave',
+      tagline: 'Know WHO feels WHAT',
       features: [
         'Everything in Starter, plus:',
-        'CRM sync (Salesforce, HubSpot)',
-        'Automated interventions by value tier',
-        'Custom webhook endpoints',
-        'Real-time Slack/email alerts',
-        'Revenue attribution tracking',
-        'Up to 100,000 identified sessions/mo'
+        'CRM integration (HubSpot, Salesforce)',
+        'Identity resolution & enrichment',
+        'Automated interventions',
+        'Deal value tracking',
+        'Slack/webhook alerts',
+        'Up to 100,000 sessions/mo'
       ],
       cta: 'Start Today',
       priceId: import.meta.env.VITE_STRIPE_GROWTH_PRICE_ID as string,
@@ -95,15 +95,15 @@ export default function Pricing() {
       name: 'Scale',
       price: '$4,997',
       period: '/month',
-      tagline: 'Your emotional data moat',
+      tagline: 'Your emotional intelligence moat',
       features: [
         'Everything in Growth, plus:',
-        'Unlimited identified sessions',
+        'Unlimited sessions',
         'Custom intervention rules',
-        'API access for your stack',
-        'Cross-domain tracking',
+        'Full API access',
+        'Multi-domain tracking',
         'Dedicated success manager',
-        'Quarterly ROI analysis'
+        'Quarterly business reviews'
       ],
       cta: 'Start Today',
       priceId: import.meta.env.VITE_STRIPE_SCALE_PRICE_ID as string,
@@ -115,8 +115,8 @@ export default function Pricing() {
       period: '',
       tagline: 'Your rules. Your infrastructure.',
       features: [
-        'Self-hosted deployment option',
-        'Custom emotion models',
+        'Self-hosted option',
+        'Custom ML models',
         'White-label capability',
         'Multi-brand support',
         'SLA with 99.99% uptime',
@@ -133,9 +133,9 @@ export default function Pricing() {
     <section id="pricing" className="section py-20">
       <div className="text-center">
         <p className="kicker">Transparent Pricing</p>
-        <h2 className="mt-2 text-4xl font-bold">What it costs. What you get. No games.</h2>
+        <h2 className="mt-2 text-4xl font-bold">Start with emotions. Scale with identity.</h2>
         <p className="mt-4 text-lg text-white/70 max-w-2xl mx-auto">
-          Every tier includes identity resolution, interventions, and accountability scoring.
+          Every tier gets the core emotion engine. Growth adds WHO is feeling it.
           No hidden fees. No seat limits. No "Contact Sales" for basic pricing.
         </p>
       </div>

@@ -166,15 +166,6 @@ export default function AccountabilityProof() {
           </div>
         </div>
         
-        {/* CTA */}
-        <div className="text-center mt-12">
-          <a href="/scorecard" className="btn-primary text-lg px-8 py-4">
-            See Your Accountability Score
-          </a>
-          <p className="text-sm text-white/40 mt-4">
-            No judgment. Just math.
-          </p>
-        </div>
       </div>
     </section>
   );

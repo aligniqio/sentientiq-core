@@ -14,8 +14,8 @@ export default function Navbar() {
           <a href="/#faq">FAQ</a>
         </nav>
         <div className="flex items-center gap-3">
-          <a className="btn-ghost" href="https://sentientiq.app/login">Sign in</a>
-          <a className="btn-primary" href="mailto:info@sentientiq.ai?subject=Get%20Started%20with%20SentientIQ">Get Started</a>
+          <a className="btn-ghost" href="https://sentientiq.app/auth">Sign in</a>
+          <a className="btn-primary" href="#pricing">Get Started</a>
         </div>
       </div>
     </header>
