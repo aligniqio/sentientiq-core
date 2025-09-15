@@ -27,7 +27,7 @@ export interface EmotionalEvent {
   tenant_id?: string; // Added for RLS
   session_id: string;
   user_id?: string;
-  timestamp: Date;
+  timestamp: Date | string;
   emotion: string;
   confidence: number;
   intensity: number;
@@ -58,7 +58,7 @@ export class EmotionalAnalytics {
     try {
       // Always record to Event Lake for EVI analytics (primary data store)
       const eventLakeRecord: EventLakeRecord = {
-        timestamp: event.timestamp.toISOString(),
+        timestamp: typeof event.timestamp === 'string' ? event.timestamp : new Date(event.timestamp).toISOString(),
         userId: event.user_id || 'anonymous',
         companyId: event.tenant_id || 'DEMO_TENANT',
         sessionId: event.session_id,
