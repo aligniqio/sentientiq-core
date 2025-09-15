@@ -649,6 +649,15 @@
     const comparison = document.createElement('div');
     comparison.className = 'sq-intervention sq-comparison';
     comparison.innerHTML = `
+      <div class="sq-modal-overlay" style="
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0,0,0,0.5);
+        z-index: 9999;
+      "></div>
       <div style="
         position: fixed;
         top: 50%;
@@ -661,17 +670,42 @@
         max-width: 500px;
         z-index: 10000;
       ">
-        <h3>Why Choose Us?</h3>
-        <table style="width: 100%; margin: 20px 0;">
+        <button class="sq-close" style="
+          position: absolute;
+          top: 10px;
+          right: 10px;
+          background: none;
+          border: none;
+          font-size: 24px;
+          cursor: pointer;
+          color: #666;
+        ">&times;</button>
+        <h3 style="color: #333;">Why Choose Us?</h3>
+        <table style="width: 100%; margin: 20px 0; color: #333;">
           <tr>
-            <th></th>
-            <th style="color: #4CAF50;">Us ✓</th>
-            <th style="color: #999;">Competitor A</th>
-            <th style="color: #999;">Competitor B</th>
+            <th style="text-align: left; padding: 8px;"></th>
+            <th style="color: #4CAF50; padding: 8px;">Us ✓</th>
+            <th style="color: #999; padding: 8px;">Competitor A</th>
+            <th style="color: #999; padding: 8px;">Competitor B</th>
           </tr>
-          <tr><td>24/7 Support</td><td>✓</td><td>✗</td><td>✗</td></tr>
-          <tr><td>Free Updates</td><td>✓</td><td>✗</td><td>✓</td></tr>
-          <tr><td>No Setup Fee</td><td>✓</td><td>✗</td><td>✗</td></tr>
+          <tr style="background: #f8f9fa;">
+            <td style="padding: 8px;">Real-time Emotions</td>
+            <td style="padding: 8px; text-align: center;">✓</td>
+            <td style="padding: 8px; text-align: center;">✗</td>
+            <td style="padding: 8px; text-align: center;">✗</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px;">Pattern Learning</td>
+            <td style="padding: 8px; text-align: center;">✓</td>
+            <td style="padding: 8px; text-align: center;">✗</td>
+            <td style="padding: 8px; text-align: center;">✓</td>
+          </tr>
+          <tr style="background: #f8f9fa;">
+            <td style="padding: 8px;">Auto Interventions</td>
+            <td style="padding: 8px; text-align: center;">✓</td>
+            <td style="padding: 8px; text-align: center;">✗</td>
+            <td style="padding: 8px; text-align: center;">✗</td>
+          </tr>
         </table>
         <button style="
           background: #4CAF50;
@@ -686,10 +720,26 @@
     `;
     document.body.appendChild(comparison);
 
-    comparison.querySelector('button').onclick = () => {
+    // Close button
+    comparison.querySelector('.sq-close').onclick = () => {
       comparison.remove();
-      trackInteraction('comparison_chart', true);
+      trackInteraction('comparison_chart', false);
     };
+
+    // Overlay click to close
+    comparison.querySelector('.sq-modal-overlay').onclick = () => {
+      comparison.remove();
+      trackInteraction('comparison_chart', false);
+    };
+
+    // CTA button
+    const ctaButton = comparison.querySelectorAll('button')[1]; // Second button is the CTA
+    if (ctaButton) {
+      ctaButton.onclick = () => {
+        comparison.remove();
+        trackInteraction('comparison_chart', true);
+      };
+    }
   }
 
   function showLimitedOffer() {

@@ -681,6 +681,15 @@ export class BehaviorProcessor {
       });
     }
 
+    // TIER COMPARISON WITHOUT DECISION = needs help
+    if (recent.includes('tier_comparison') && !recent.includes('click')) {
+      patterns.push({
+        type: 'pricing_analysis_paralysis',
+        intervention: 'value_popup',
+        priority: 'HIGH'
+      });
+    }
+
     // FEAR-BASED PATTERNS - The real human emotions
 
     // Financial anxiety (multiple money-related hesitations)

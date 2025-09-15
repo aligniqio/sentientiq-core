@@ -265,6 +265,23 @@
     const dt = now - state.lastMove.t;
     if (dt < 50) return; // Throttle to 20Hz
 
+    // Detect if mouse is at viewport edge (more aggressive detection)
+    const edgeThreshold = 5;
+    if (x <= edgeThreshold || y <= edgeThreshold ||
+        x >= window.innerWidth - edgeThreshold ||
+        y >= window.innerHeight - edgeThreshold) {
+
+      // Check if we haven't already fired exit recently
+      if (!state.mouseOffCanvas) {
+        handleMouseLeave({
+          clientX: x,
+          clientY: y,
+          type: 'edge_detection'
+        });
+      }
+      return;
+    }
+
     const distance = Math.hypot(x - state.lastMove.x, y - state.lastMove.y);
     const velocity = distance / (dt / 100);
 
@@ -513,8 +530,8 @@
   document.addEventListener('pointermove', e => processMove(e.clientX, e.clientY), { passive: true });
   window.addEventListener('scroll', processScroll, { passive: true });
 
-  // Mouse leave/enter
-  window.addEventListener('pointerleave', (e) => {
+  // Mouse leave/enter - use both for compatibility
+  const handleMouseLeave = (e) => {
     const now = Date.now();
 
     // Check if user interacted with pricing in last 5 seconds
@@ -546,7 +563,12 @@
     state.hoverStart = null;
     state.velocityHistory = [];
     state.exitDirection = null;
-  }, { passive: true });
+  };
+
+  // Try multiple event types for better compatibility
+  window.addEventListener('pointerleave', handleMouseLeave, { passive: true });
+  window.addEventListener('mouseleave', handleMouseLeave, { passive: true });
+  document.addEventListener('mouseleave', handleMouseLeave, { passive: true });
 
   window.addEventListener('pointerenter', () => {
     if (state.mouseOffCanvas) {
