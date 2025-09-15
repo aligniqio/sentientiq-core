@@ -377,6 +377,50 @@
     }
   }, { passive: true });
 
+  // Form field interactions (critical for checkout/signup)
+  let formStartTime = null;
+  let currentField = null;
+
+  document.addEventListener('focusin', (e) => {
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') {
+      const fieldType = e.target.type || e.target.tagName.toLowerCase();
+      const fieldName = e.target.name || e.target.id || fieldType;
+
+      currentField = fieldName;
+      formStartTime = Date.now();
+
+      record('field_focus', {
+        field: fieldName,
+        type: fieldType,
+        ctx: {
+          checkout: fieldName.includes('card') || fieldName.includes('payment') || fieldName.includes('cvv'),
+          email: fieldType === 'email' || fieldName.includes('email'),
+          pricing: e.target.closest('[class*="price"], [id*="price"], form[action*="checkout"]') !== null
+        }
+      });
+    }
+  }, { passive: true });
+
+  document.addEventListener('focusout', (e) => {
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') {
+      const timeSpent = formStartTime ? Date.now() - formStartTime : 0;
+      const hasValue = e.target.value && e.target.value.length > 0;
+
+      record('field_blur', {
+        field: currentField,
+        duration: timeSpent,
+        filled: hasValue,
+        ctx: {
+          abandoned: !hasValue && timeSpent > 1000, // Focused but left empty
+          checkout: currentField?.includes('card') || currentField?.includes('payment')
+        }
+      });
+
+      formStartTime = null;
+      currentField = null;
+    }
+  }, { passive: true });
+
   // Visibility handling
   document.addEventListener('visibilitychange', () => {
     state.suspended = document.hidden;
