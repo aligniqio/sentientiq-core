@@ -410,7 +410,8 @@ const EmotionalLiveFeed = () => {
     if (!user) return;
 
     const connectInterventionWs = () => {
-      const ws = new WebSocket('wss://api.sentientiq.app/ws?channel=interventions');
+      const tenantId = window.location.hostname === 'localhost' ? user.id : 'demo';
+      const ws = new WebSocket(`wss://api.sentientiq.app/ws?channel=interventions&tenant_id=${tenantId}`);
 
       ws.onmessage = (event) => {
         const data = JSON.parse(event.data);
