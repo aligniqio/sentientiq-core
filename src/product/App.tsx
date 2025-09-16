@@ -11,7 +11,6 @@ import Settings from '../pages/settings'
 import Pricing from '../pages/pricing'
 import Billing from '../pages/billing'
 import EmotionalLiveFeed from '../components/EmotionalLiveFeed'
-import InterventionIntelligence from '../pages/intervention'
 
 // Admin pages
 import TenantsPage from './admin/TenantsPage'
@@ -131,19 +130,6 @@ function App() {
           {/* Redirect old emotional-dashboard route */}
           <Route path="/emotional-dashboard" element={<Navigate to="/pulse" replace />} />
 
-          {/* Intervention Intelligence - THE CROWN JEWEL */}
-          <Route path="/intervention" element={
-            <>
-              <SignedIn>
-                <Layout>
-                  <InterventionIntelligence />
-                </Layout>
-              </SignedIn>
-              <SignedOut>
-                <Navigate to="/auth" replace />
-              </SignedOut>
-            </>
-          } />
 
           {/* Admin routes */}
           <Route path="/admin/tenants" element={

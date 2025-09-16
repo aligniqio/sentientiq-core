@@ -7,10 +7,9 @@
 import { useEffect, useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useUser } from '@clerk/clerk-react';
-import { Users, AlertCircle, Zap, Brain, Lightbulb, TrendingUp, Target } from 'lucide-react';
+import { Users, AlertCircle, Zap, Brain, Lightbulb, TrendingUp, Target, ArrowRight, MousePointer, Eye, Activity } from 'lucide-react';
 import PageHeader from './PageHeader';
 import EVIDisplay from './EVIDisplay';
-import InterventionIntelligence from './InterventionIntelligence';
 
 interface EmotionalEvent {
   id: string;
@@ -31,6 +30,23 @@ interface EmotionalStats {
   interventionRate: number;
   activeUsers: number;
   volatilityIndex?: number;
+}
+
+interface InterventionEvent {
+  id: string;
+  timestamp: number;
+  sessionId: string;
+  type: 'behavior' | 'emotion' | 'decision' | 'intervention' | 'interaction';
+  stage: 'telemetry' | 'processor' | 'engine' | 'websocket' | 'choreographer' | 'renderer';
+  data: {
+    event?: string;
+    emotion?: string;
+    confidence?: number;
+    interventionType?: string;
+    timing?: any;
+    result?: 'shown' | 'clicked' | 'dismissed' | 'converted';
+  };
+  correlationId?: string;
 }
 
 interface InterventionMetrics {
@@ -207,10 +223,12 @@ const EmotionalLiveFeed = () => {
   const [isConnected, setIsConnected] = useState(false);
   const [lastEtag, setLastEtag] = useState<string | null>(null);
   const [connectionType, setConnectionType] = useState<'websocket' | 'polling'>('polling');
-  const [tenantInsights, setTenantInsights] = useState<any>(null);
   const [interventionMetrics, setInterventionMetrics] = useState<InterventionMetrics | null>(null);
+  const [interventionEvents, setInterventionEvents] = useState<InterventionEvent[]>([]);
+  const [activeInterventions, setActiveInterventions] = useState<Map<string, any>>(new Map());
   const pollingInterval = useRef<NodeJS.Timeout>();
   const ws = useRef<WebSocket | null>(null);
+  const interventionWs = useRef<WebSocket | null>(null);
 
   // Hybrid connection: WebSocket with NATS JetStream backing, polling fallback
   useEffect(() => {
@@ -387,33 +405,111 @@ const EmotionalLiveFeed = () => {
     };
   }, [user, lastEtag]);
 
-  // Fetch tenant insights periodically
+  // Connect to Intervention WebSocket
   useEffect(() => {
     if (!user) return;
 
-    const fetchInsights = async () => {
-      try {
-        const response = await fetch(
-          `${import.meta.env.VITE_API_URL || 'https://api.sentientiq.app'}/api/emotional/tenant-insights/${user.id}`
-        );
+    const connectInterventionWs = () => {
+      const ws = new WebSocket('wss://api.sentientiq.app/ws?channel=interventions');
 
-        if (response.ok) {
-          const data = await response.json();
-          setTenantInsights(data);
-        }
-      } catch (error) {
-        console.error('Error fetching tenant insights:', error);
+      ws.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        handleIncomingInterventionEvent(data);
+      };
+
+      ws.onerror = (error) => {
+        console.error('Intervention WebSocket error:', error);
+      };
+
+      ws.onclose = () => {
+        setTimeout(connectInterventionWs, 3000);
+      };
+
+      interventionWs.current = ws;
+    };
+
+    const handleIncomingInterventionEvent = (data: any) => {
+      const event: InterventionEvent = {
+        id: `${data.sessionId || 'unknown'}_${Date.now()}`,
+        timestamp: Date.now(),
+        sessionId: data.sessionId || data.session_id,
+        type: mapInterventionEventType(data.type),
+        stage: mapInterventionEventStage(data.component || data.type),
+        data: data.payload || data,
+        correlationId: data.correlationId
+      };
+
+      setInterventionEvents(prev => [event, ...prev].slice(0, 50));
+
+      // Track active interventions
+      if (event.type === 'intervention') {
+        setActiveInterventions(prev => {
+          const next = new Map(prev);
+          next.set(event.sessionId, event);
+          return next;
+        });
+      }
+
+      if (event.data.result === 'converted' || event.data.result === 'dismissed') {
+        setActiveInterventions(prev => {
+          const next = new Map(prev);
+          next.delete(event.sessionId);
+          return next;
+        });
       }
     };
 
-    // Initial fetch
-    fetchInsights();
+    const mapInterventionEventType = (type: string): InterventionEvent['type'] => {
+      if (type?.includes('behavior')) return 'behavior';
+      if (type?.includes('emotion')) return 'emotion';
+      if (type?.includes('decision')) return 'decision';
+      if (type?.includes('interaction')) return 'interaction';
+      if (type?.includes('intervention')) return 'intervention';
+      return 'behavior';
+    };
 
-    // Refresh every 30 seconds
-    const interval = setInterval(fetchInsights, 30000);
+    const mapInterventionEventStage = (component: string): InterventionEvent['stage'] => {
+      if (component?.includes('telemetry')) return 'telemetry';
+      if (component?.includes('processor')) return 'processor';
+      if (component?.includes('engine')) return 'engine';
+      if (component?.includes('websocket')) return 'websocket';
+      if (component?.includes('choreographer')) return 'choreographer';
+      if (component?.includes('renderer')) return 'renderer';
+      return 'telemetry';
+    };
 
-    return () => clearInterval(interval);
+    connectInterventionWs();
+
+    return () => {
+      if (interventionWs.current) {
+        interventionWs.current.close();
+      }
+    };
   }, [user]);
+
+  // Helper functions for intervention events
+  const getInterventionEventColor = (type: InterventionEvent['type']) => {
+    switch (type) {
+      case 'behavior': return 'from-blue-500/20 to-blue-600/20 border-blue-500/30';
+      case 'emotion': return 'from-purple-500/20 to-purple-600/20 border-purple-500/30';
+      case 'decision': return 'from-yellow-500/20 to-yellow-600/20 border-yellow-500/30';
+      case 'intervention': return 'from-green-500/20 to-green-600/20 border-green-500/30';
+      case 'interaction': return 'from-pink-500/20 to-pink-600/20 border-pink-500/30';
+      default: return 'from-gray-500/20 to-gray-600/20 border-gray-500/30';
+    }
+  };
+
+  const getStageIcon = (stage: InterventionEvent['stage']) => {
+    switch (stage) {
+      case 'telemetry': return <MousePointer className="w-4 h-4 text-blue-400" />;
+      case 'processor': return <Brain className="w-4 h-4 text-purple-400" />;
+      case 'engine': return <Activity className="w-4 h-4 text-yellow-400" />;
+      case 'websocket': return <Zap className="w-4 h-4 text-green-400" />;
+      case 'choreographer': return <Eye className="w-4 h-4 text-pink-400" />;
+      case 'renderer': return <Target className="w-4 h-4 text-cyan-400" />;
+      default: return <Activity className="w-4 h-4 text-gray-400" />;
+    }
+  };
 
   // Listen for detect.js events on the current page (if instrumented)
   useEffect(() => {
@@ -489,98 +585,6 @@ const EmotionalLiveFeed = () => {
         </motion.div>
       </div>
 
-      {/* Intelligent Shopping Pattern Assessment */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="glass-card p-6 mb-8"
-      >
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-bold text-white">Shopping Pattern Intelligence</h2>
-          <div className="flex items-center gap-2">
-            <Brain className="w-5 h-5 text-purple-400" />
-            <span className="text-sm text-white/60">AI Analysis</span>
-          </div>
-        </div>
-
-        {/* INTERVENTION INTELLIGENCE - THE CROWN JEWEL */}
-        <div className="mb-8">
-          <InterventionIntelligence
-            events={events}
-            stats={stats}
-            interventionMetrics={interventionMetrics}
-          />
-        </div>
-
-        {/* Original Pattern Insights */}
-        <div className="space-y-4">
-          {tenantInsights && tenantInsights.insights.length > 0 ? (
-            tenantInsights.insights.map((insight: any, index: number) => (
-              <motion.div
-                key={insight.id}
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: index * 0.1 }}
-                className="p-4 bg-white/5 rounded-xl border border-white/10"
-              >
-                <div className="flex items-start justify-between mb-2">
-                  <h3 className="font-semibold text-white">{insight.headline}</h3>
-                  <span className={`text-xs px-2 py-1 rounded-full ${
-                    insight.impact_score > 80 ? 'bg-red-500/20 text-red-400' :
-                    insight.impact_score > 60 ? 'bg-amber-500/20 text-amber-400' :
-                    'bg-blue-500/20 text-blue-400'
-                  }`}>
-                    Impact: {insight.impact_score}
-                  </span>
-                </div>
-                <p className="text-sm text-white/70 mb-3">{insight.description}</p>
-                {insight.recommendation && (
-                  <div className="p-3 bg-purple-500/10 rounded-lg border border-purple-500/20">
-                    <div className="flex items-center gap-2 mb-1">
-                      <Lightbulb className="w-4 h-4 text-purple-400" />
-                      <span className="text-xs font-semibold text-purple-400">RECOMMENDATION</span>
-                    </div>
-                    <p className="text-sm text-white/80">{insight.recommendation}</p>
-                  </div>
-                )}
-              </motion.div>
-            ))
-          ) : (
-            <div className="text-center py-8 text-white/40">
-              <Brain className="w-12 h-12 mx-auto mb-4 text-white/20" />
-              <p className="text-lg mb-2">Pattern learning in progress...</p>
-              <p className="text-sm">
-                As visitors browse your site, we'll identify emotional patterns that lead to conversions or abandonment.
-              </p>
-            </div>
-          )}
-        </div>
-
-        {/* Pattern Statistics */}
-        {tenantInsights && tenantInsights.stats && (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6 pt-6 border-t border-white/10">
-            <div className="text-center">
-              <div className="text-2xl font-bold text-white">{tenantInsights.stats.total_patterns_learned || 0}</div>
-              <div className="text-xs text-white/60">Patterns Learned</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-green-400">{tenantInsights.stats.conversion_patterns || 0}</div>
-              <div className="text-xs text-white/60">Success Paths</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-red-400">{tenantInsights.stats.abandonment_patterns || 0}</div>
-              <div className="text-xs text-white/60">Abandonment Paths</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-purple-400">
-                {tenantInsights.stats.overall_conversion_rate ?
-                  `${tenantInsights.stats.overall_conversion_rate.toFixed(1)}%` : '—'}
-              </div>
-              <div className="text-xs text-white/60">Conversion Rate</div>
-            </div>
-          </div>
-        )}
-      </motion.div>
 
       {/* Intervention Effectiveness Dashboard */}
       {interventionMetrics && (
@@ -809,6 +813,253 @@ const EmotionalLiveFeed = () => {
           <div className="mt-4 pt-4 border-t border-white/10 text-center">
             <p className="text-xs text-white/40">
               Showing last {events.length} events • Powered by Emotional Volatility Index™
+            </p>
+          </div>
+        )}
+      </motion.div>
+
+      {/* Intervention Intelligence Flow - Real-time Metrics */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.5 }}
+        className="glass-card p-6 mt-8"
+      >
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-xl font-bold text-white">Intelligence Flow Architecture</h2>
+          <div className="flex items-center gap-2">
+            <Brain className="w-4 h-4 text-purple-400" />
+            <span className="text-sm text-white/60">Real-time Choreography</span>
+          </div>
+        </div>
+
+        {/* Flow Pipeline */}
+        <div className="grid grid-cols-2 md:grid-cols-6 gap-3 mb-6">
+          {[
+            { name: 'Telemetry', icon: MousePointer, color: 'from-blue-500 to-blue-600', count: interventionEvents.filter(e => e.stage === 'telemetry').length },
+            { name: 'Processor', icon: Brain, color: 'from-purple-500 to-purple-600', count: interventionEvents.filter(e => e.stage === 'processor').length },
+            { name: 'Engine', icon: Zap, color: 'from-orange-500 to-orange-600', count: interventionEvents.filter(e => e.stage === 'engine').length },
+            { name: 'WebSocket', icon: Activity, color: 'from-green-500 to-green-600', count: interventionEvents.filter(e => e.stage === 'websocket').length },
+            { name: 'Choreographer', icon: Eye, color: 'from-pink-500 to-pink-600', count: interventionEvents.filter(e => e.stage === 'choreographer').length },
+            { name: 'Renderer', icon: Target, color: 'from-yellow-500 to-yellow-600', count: interventionEvents.filter(e => e.stage === 'renderer').length }
+          ].map((stage, index) => {
+            const Icon = stage.icon;
+            return (
+              <motion.div
+                key={stage.name}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.05 }}
+                className={`p-4 rounded-xl bg-gradient-to-br ${stage.color} bg-opacity-20 backdrop-blur-md border border-white/20 relative`}
+              >
+                <Icon className="w-6 h-6 mb-2 text-white" />
+                <div className="text-xs font-medium text-white">{stage.name}</div>
+                <div className="text-lg font-bold text-white">{stage.count}</div>
+                {stage.count > 0 && (
+                  <div className="absolute top-1 right-1 w-2 h-2 bg-green-400 rounded-full animate-pulse" />
+                )}
+              </motion.div>
+            );
+          })}
+        </div>
+
+        {/* Real Data Flow Examples */}
+        <div className="space-y-3 mb-6">
+          <h3 className="text-sm font-semibold text-white/80">Recent Intervention Paths</h3>
+          {interventionEvents
+            .filter(e => e.type === 'intervention' && e.data.interventionType)
+            .slice(0, 3)
+            .map((event, idx) => (
+              <motion.div
+                key={event.id}
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.1 * idx }}
+                className="p-3 rounded-lg bg-gradient-to-r from-blue-500/10 to-purple-500/10 border border-white/10"
+              >
+                <div className="text-xs font-mono text-blue-400 mb-1">
+                  {event.data.event || 'behavior'} → {event.data.emotion || 'detected'} → {event.data.interventionType || 'intervention'} → {event.data.result || 'processing'}
+                </div>
+                <div className="text-xs text-gray-400">
+                  Session {event.sessionId.substring(0, 8)} • {new Date(event.timestamp).toLocaleTimeString()}
+                  {event.data.confidence && ` • ${event.data.confidence.toFixed(0)}% confidence`}
+                </div>
+              </motion.div>
+            ))
+          }
+          {interventionEvents.filter(e => e.type === 'intervention').length === 0 && (
+            <div className="p-3 rounded-lg bg-white/5 border border-white/10">
+              <div className="text-xs text-gray-400">Waiting for intervention data...</div>
+            </div>
+          )}
+        </div>
+
+        {/* Live Metrics */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          {[
+            {
+              label: 'Active Sessions',
+              value: activeInterventions.size.toString(),
+              color: activeInterventions.size > 0 ? 'text-green-400' : 'text-white'
+            },
+            {
+              label: 'Events/Min',
+              value: Math.round(interventionEvents.filter(e =>
+                Date.now() - e.timestamp < 60000
+              ).length).toString(),
+              color: 'text-blue-400'
+            },
+            {
+              label: 'Success Rate',
+              value: interventionEvents.length > 0
+                ? `${Math.round(interventionEvents.filter(e => e.data.result === 'converted').length / interventionEvents.length * 100)}%`
+                : '—',
+              color: 'text-purple-400'
+            },
+            {
+              label: 'Avg Latency',
+              value: interventionEvents.length > 0
+                ? (() => {
+                    const recentEvents = interventionEvents.slice(0, 10);
+                    const latencies = recentEvents.map(e => {
+                      const prevEvent = interventionEvents.find(
+                        pe => pe.correlationId === e.correlationId && pe.timestamp < e.timestamp
+                      );
+                      return prevEvent ? e.timestamp - prevEvent.timestamp : 100;
+                    });
+                    const avgLatency = latencies.reduce((a, b) => a + b, 0) / latencies.length;
+                    return `${Math.round(avgLatency)}ms`;
+                  })()
+                : '—',
+              color: 'text-yellow-400'
+            }
+          ].map((metric, index) => (
+            <motion.div
+              key={metric.label}
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.3 + index * 0.05 }}
+              className="p-3 rounded-lg bg-gradient-to-br from-white/5 to-white/10 backdrop-blur-md border border-white/20"
+            >
+              <div className="text-xs text-gray-400 mb-1">{metric.label}</div>
+              <div className={`text-xl font-bold ${metric.color}`}>{metric.value}</div>
+            </motion.div>
+          ))}
+        </div>
+      </motion.div>
+
+      {/* Active Interventions - Matching the Live Emotional Feed styling */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.5 }}
+        className="glass-card p-6 mt-8"
+      >
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-xl font-bold text-white">Active Interventions</h2>
+          <div className="flex items-center gap-2">
+            <Activity className="w-4 h-4 text-purple-400" />
+            <span className="text-sm text-white/60">Live Monitoring</span>
+          </div>
+        </div>
+
+        {/* Active Intervention Cards */}
+        {activeInterventions.size > 0 && (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            {Array.from(activeInterventions.values()).slice(0, 6).map(intervention => (
+              <motion.div
+                key={intervention.sessionId}
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.9 }}
+                className="p-4 rounded-xl bg-gradient-to-br from-green-500/10 to-green-600/10 backdrop-blur-md border border-green-500/30"
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-mono text-green-400">
+                    {intervention.sessionId.substring(0, 8)}...
+                  </span>
+                  <Zap className="w-4 h-4 text-green-400 animate-pulse" />
+                </div>
+                <div className="text-lg font-medium text-white">
+                  {intervention.data.interventionType || 'Unknown'}
+                </div>
+                <div className="text-sm text-gray-400">
+                  {intervention.data.emotion && `Emotion: ${intervention.data.emotion}`}
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        )}
+
+        {/* Intelligence Stream */}
+        <div className="mb-4">
+          <h3 className="text-lg font-semibold text-white/80 mb-3">Intelligence Stream</h3>
+        </div>
+
+        <div className="space-y-3 max-h-[400px] overflow-y-auto">
+          <AnimatePresence mode="popLayout">
+            {interventionEvents.length === 0 ? (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="text-center py-12 text-white/40"
+              >
+                <Brain className="w-12 h-12 mx-auto mb-4 text-white/20" />
+                <p className="text-lg mb-2">Monitoring behavioral patterns...</p>
+                <p className="text-sm">
+                  Interventions will appear here as they're triggered by user behavior
+                </p>
+              </motion.div>
+            ) : (
+              interventionEvents.map((event, index) => (
+                <motion.div
+                  key={event.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  transition={{ delay: index * 0.02 }}
+                  className={`flex items-center gap-4 p-4 rounded-xl bg-gradient-to-r ${getInterventionEventColor(event.type)} backdrop-blur-md border`}
+                >
+                  {/* Stage Icon */}
+                  <div className="p-2 rounded-lg bg-white/10">
+                    {getStageIcon(event.stage)}
+                  </div>
+
+                  {/* Event Details */}
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium text-white/80 capitalize">{event.stage}</span>
+                      <ArrowRight className="w-3 h-3 text-gray-400" />
+                      <span className="text-sm font-bold text-white capitalize">{event.type}</span>
+                      {event.correlationId && (
+                        <span className="text-xs font-mono text-gray-400">
+                          [{event.correlationId.substring(0, 8)}]
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="text-sm text-gray-300 mt-1">
+                      {event.data.event && <span>Event: {event.data.event} </span>}
+                      {event.data.emotion && <span>Emotion: {event.data.emotion} ({event.data.confidence?.toFixed(2)}) </span>}
+                      {event.data.interventionType && <span>Intervention: {event.data.interventionType} </span>}
+                      {event.data.result && <span className="font-bold text-yellow-400">{event.data.result}</span>}
+                    </div>
+                  </div>
+
+                  {/* Timestamp */}
+                  <div className="text-xs text-white/40">
+                    {new Date(event.timestamp).toLocaleTimeString()}
+                  </div>
+                </motion.div>
+              ))
+            )}
+          </AnimatePresence>
+        </div>
+
+        {interventionEvents.length > 0 && (
+          <div className="mt-4 pt-4 border-t border-white/10 text-center">
+            <p className="text-xs text-white/40">
+              Showing last {interventionEvents.length} intervention events • Real-time choreography
             </p>
           </div>
         )}
