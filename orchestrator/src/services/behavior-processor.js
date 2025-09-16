@@ -439,8 +439,10 @@ export class BehaviorProcessor {
     if (patterns.length > 0) {
       session.patterns = patterns;
       console.log(`🎯 Patterns detected for ${sessionId}:`, patterns.map(p => p.type));
+    }
 
-      // Send emotional state to intervention engine for decision
+    // Send emotional state to intervention engine if we have any diagnoses
+    if (diagnosed.length > 0) {
       this.sendToInterventionEngine(sessionId, diagnosed, session);
     }
 
@@ -471,7 +473,10 @@ export class BehaviorProcessor {
     }
 
     const mapping = this.behaviorMap[event.type];
-    if (!mapping) return null;
+    if (!mapping) {
+      console.log(`⚠️ No behavior mapping for event type: ${event.type}`);
+      return null;
+    }
 
     // Handle dynamic mappings (functions)
     let emotion;
@@ -479,6 +484,10 @@ export class BehaviorProcessor {
       emotion = mapping(event);
     } else {
       emotion = { ...mapping };
+    }
+
+    if (!emotion) {
+      console.log(`⚠️ No emotion diagnosed for event type: ${event.type}, ctx:`, event.ctx);
     }
 
     // Reduce confidence for price-related emotions in warming period

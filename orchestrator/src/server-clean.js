@@ -252,8 +252,8 @@ app.post('/api/track-discount', async (req, res) => {
         status: 'active'
       });
 
-    // Update intervention metrics
-    behaviorProcessor.trackInteraction(intervention, 'generated', { discount_code: code });
+    // Log discount generation (trackInteraction removed in refactor)
+    console.log(`💰 Discount code generated: ${code} for intervention: ${intervention}`);
 
     res.json({ success: true, code });
   } catch (error) {
