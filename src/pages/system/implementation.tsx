@@ -504,22 +504,29 @@ export default function SystemImplementation() {
         <div className="flex items-start gap-4">
           <Clock className="w-5 h-5 text-yellow-400 mt-1" />
           <div>
-            <h3 className="font-semibold text-white mb-2">Manual Installation (Without Template)</h3>
-            <p className="text-white/60 text-sm mb-3">
-              If you can't use the template gallery, create a Custom HTML tag with:
-            </p>
-            <div className="bg-black/50 rounded-lg p-4 font-mono text-xs border border-yellow-500/20">
-              <code className="text-yellow-400">
-                {'<script>'}<br/>
-                {'  (function() {'}<br/>
-                {'    var s = document.createElement("script");'}<br/>
-                {'    s.src = "https://cdn.sentientiq.app/interventions-v4.js";'}<br/>
-                {'    s.setAttribute("data-api-key", "'}{primaryApiKey}{'");'}<br/>
-                {'    s.setAttribute("data-tenant-id", "'}{localStorage.getItem('tenantId') || 'YOUR_TENANT_ID'}{'");'}<br/>
-                {'    document.head.appendChild(s);'}<br/>
-                {'  })();'}<br/>
-                {'</script>'}
-              </code>
+            <h3 className="font-semibold text-white mb-2">Common Issues & Solutions</h3>
+            <div className="space-y-3 text-sm">
+              <div className="flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 text-yellow-400 mt-0.5" />
+                <div>
+                  <p className="text-white/80 font-medium">Not seeing data?</p>
+                  <p className="text-white/60">Make sure you published your GTM container after adding the tag.</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 text-yellow-400 mt-0.5" />
+                <div>
+                  <p className="text-white/80 font-medium">Tag not firing?</p>
+                  <p className="text-white/60">Use GTM Preview mode to check if the tag is triggered on your pages.</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-2">
+                <CheckCircle className="w-4 h-4 text-green-400 mt-0.5" />
+                <div>
+                  <p className="text-white/80 font-medium">Working correctly?</p>
+                  <p className="text-white/60">You'll see "SentientIQ Telemetry initialized" in your browser console.</p>
+                </div>
+              </div>
             </div>
           </div>
         </div>
