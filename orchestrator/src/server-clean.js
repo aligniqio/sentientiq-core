@@ -78,7 +78,14 @@ app.post('/api/telemetry/stream', async (req, res) => {
     for (const pattern of patterns) {
       console.log(`🎯 Pattern detected: ${pattern.type} → ${pattern.intervention}`);
 
-      const sent = unifiedWS.sendIntervention(session_id, pattern.intervention);
+      // Pass emotional context from the processor
+      const emotionalContext = {
+        emotion: emotions[emotions.length - 1]?.emotion || 'unknown',
+        confidence: emotions[emotions.length - 1]?.confidence || 0,
+        frustration: emotions[emotions.length - 1]?.context?.frustration || 0,
+        urgency: emotions[emotions.length - 1]?.context?.urgency || 0
+      };
+      const sent = unifiedWS.sendIntervention(session_id, pattern.intervention, emotionalContext);
 
       if (sent) {
         await supabase
@@ -143,8 +150,15 @@ app.post('/api/emotional/event', async (req, res) => {
     if (intervention) {
       console.log(`🎯 Pattern matched! Triggering ${intervention} for ${session_id}`);
 
-      // Send intervention to the specific session
-      const sent = unifiedWS.sendIntervention(session_id, intervention);
+      // Send intervention to the specific session with emotional context
+      const emotionalContext = {
+        emotion,
+        confidence,
+        frustration: metadata?.frustration || 0,
+        urgency: metadata?.urgency || 0,
+        anxiety: metadata?.anxiety || 0
+      };
+      const sent = unifiedWS.sendIntervention(session_id, intervention, emotionalContext);
 
       if (sent) {
         // Record intervention trigger

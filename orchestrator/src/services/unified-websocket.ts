@@ -260,20 +260,48 @@ class UnifiedWebSocketServer extends EventEmitter {
     console.log(`📡 Broadcasted emotion to ${sent} dashboard clients`);
   }
 
-  // Send intervention to specific session
-  sendIntervention(sessionId: string, interventionType: string): boolean {
+  // Send intervention to specific session with rich context
+  sendIntervention(sessionId: string, interventionType: string, context: any = {}): boolean {
     // Check both channels - telemetry channel handles both telemetry and interventions
     const telemetryClient = this.channels.telemetry.get(sessionId);
     const interventionClient = this.channels.interventions.get(sessionId);
     const client = telemetryClient || interventionClient;
 
     if (client && client.ws.readyState === client.ws.OPEN) {
+      // Generate correlation ID for tracking
+      const correlationId = `int-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+      // Get intervention content
+      const interventionContent = this.getInterventionContent(interventionType, context);
+
       client.ws.send(JSON.stringify({
         type: 'intervention',
         intervention_type: interventionType,
-        timestamp: new Date().toISOString()
+        interventionType, // Both formats for compatibility
+        correlationId,
+        timestamp: new Date().toISOString(),
+        template: interventionContent.template,
+        timing: interventionContent.timing,
+        content: interventionContent.content,
+        discount: interventionContent.discount,
+        context: {
+          emotion: context.emotion,
+          confidence: context.confidence,
+          frustration: context.frustration,
+          urgency: context.urgency
+        }
       }));
-      console.log(`🎯 Sent ${interventionType} intervention to ${sessionId} (${client.type} channel)`);
+
+      console.log(`🎯 Sent ${interventionType} intervention to ${sessionId} (${client.type} channel) - ${correlationId}`);
+
+      // Emit for diagnostics
+      this.emit('intervention_sent', {
+        sessionId,
+        interventionType,
+        correlationId,
+        timestamp: Date.now()
+      });
+
       return true;
     }
 
@@ -288,6 +316,113 @@ class UnifiedWebSocketServer extends EventEmitter {
       interventions: this.channels.interventions.size,
       total: this.channels.emotions.size + this.channels.interventions.size
     };
+  }
+
+  private getInterventionContent(type: string, context: any = {}): any {
+    const interventions: Record<string, any> = {
+      'value_proposition': {
+        template: 'value_highlight',
+        timing: { delay: 500, duration: 15000, persistence: 'until-scroll' },
+        content: {
+          headline: 'Still Considering Your Options?',
+          body: 'Here\'s why thousands choose us: ✓ 30-day guarantee ✓ Free shipping ✓ 24/7 support',
+          cta: 'See Why We\'re Different'
+        },
+        discount: 0
+      },
+
+      'discount_offer': {
+        template: 'discount_modal',
+        timing: { delay: 0, duration: 0, persistence: 'sticky' },
+        content: {
+          headline: 'Wait! Here\'s Something Special',
+          body: `We noticed you've been carefully considering. Here's an exclusive ${context.discount || 15}% off just for you.`,
+          cta: 'Claim My Discount'
+        },
+        discount: context.discount || 15
+      },
+
+      'trust_signal': {
+        template: 'trust_badges',
+        timing: { delay: 1000, duration: 10000, persistence: 'timed' },
+        content: {
+          headline: '🔒 Shop with Confidence',
+          body: 'SSL Secured • Money-Back Guarantee • 50,000+ Happy Customers',
+          cta: 'Continue Securely'
+        },
+        discount: 0
+      },
+
+      'urgency_scarcity': {
+        template: 'urgency_banner',
+        timing: { delay: 0, duration: 20000, persistence: 'until-interaction' },
+        content: {
+          headline: '⏰ Limited Time Offer',
+          body: 'Only 3 items left at this price! Sale ends in 2 hours.',
+          cta: 'Secure My Order'
+        },
+        discount: 0
+      },
+
+      'social_proof': {
+        template: 'social_toast',
+        timing: { delay: 2000, duration: 8000, persistence: 'timed' },
+        content: {
+          headline: '🔥 Trending Now',
+          body: '12 people are viewing this • 5 purchased in the last hour',
+          cta: ''
+        },
+        discount: 0
+      },
+
+      'help_offer': {
+        template: 'help_floating',
+        timing: { delay: 3000, duration: 0, persistence: 'sticky' },
+        content: {
+          headline: 'Need Help Deciding?',
+          body: 'Our product experts are here to help you find the perfect fit.',
+          cta: 'Chat with Expert'
+        },
+        discount: 0
+      },
+
+      'comparison_table': {
+        template: 'comparison_modal',
+        timing: { delay: 1000, duration: 0, persistence: 'sticky' },
+        content: {
+          headline: 'See How We Compare',
+          body: 'We\'ve done the research for you. See why we\'re the #1 choice.',
+          cta: 'View Comparison'
+        },
+        discount: 0
+      },
+
+      'exit_rescue': {
+        template: 'exit_modal',
+        timing: { delay: 0, duration: 0, persistence: 'sticky' },
+        content: {
+          headline: 'Before You Go...',
+          body: 'We\'d hate to see you leave empty-handed. How about 20% off your entire order?',
+          cta: 'Yes, I\'ll Take It!'
+        },
+        discount: 20
+      }
+    };
+
+    // Get base intervention or default
+    const intervention = interventions[type] || interventions['trust_signal'];
+
+    // Adjust based on emotional context
+    if (context.frustration > 0.7) {
+      intervention.content.headline = 'Let Us Help You';
+      intervention.timing.delay = 0; // Immediate help
+    }
+
+    if (context.urgency > 0.8) {
+      intervention.timing.persistence = 'sticky'; // Don't let high-urgency interventions disappear
+    }
+
+    return intervention;
   }
 }
 
