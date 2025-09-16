@@ -1,7 +1,8 @@
 import React from 'react';
 import { TemplateGallery } from '../../components/TemplateGallery';
-import { Activity } from 'lucide-react';
+import PageHeader from '../../components/PageHeader';
 import { useUser } from '@clerk/clerk-react';
+import { motion } from 'framer-motion';
 
 export const Configuration: React.FC = () => {
   const { user } = useUser();
@@ -11,29 +12,39 @@ export const Configuration: React.FC = () => {
   const tenantId = user?.id || 'demo';
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-900 via-gray-800 to-gray-900">
-      <div className="container mx-auto px-4 py-8">
-        {/* Page Header */}
-        <div className="mb-8">
-          <div className="flex items-center gap-3 mb-4">
-            <Activity className="w-8 h-8 text-cyan-400" />
-            <h1 className="text-3xl font-bold bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent">
-              Intervention Configuration
-            </h1>
-          </div>
-          <p className="text-gray-400">
-            Select and customize intervention templates for your business
-          </p>
-        </div>
+    <div className="min-h-screen">
+      <PageHeader
+        title="Intervention Configuration"
+        subtitle="Select and customize intervention templates for your marketing campaigns"
+      />
 
-        {/* Template Gallery */}
-        <TemplateGallery
-          tenantId={tenantId}
-          currentTier={currentTier}
-          onTemplateSelect={(template) => {
-            console.log('Template selected:', template);
-          }}
-        />
+      <div className="pb-20">
+        {/* Glassmorphic container for Template Gallery */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="glass-card p-8"
+        >
+          <TemplateGallery
+            tenantId={tenantId}
+            currentTier={currentTier}
+            onTemplateSelect={(template) => {
+              console.log('Template selected:', template);
+            }}
+          />
+        </motion.div>
+
+        {/* Philosophy Footer - matching the intervention page style */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.5 }}
+          className="mt-12 text-center text-gray-400"
+        >
+          <p className="text-sm">
+            Transparency in intelligence. No hidden magic.
+          </p>
+        </motion.div>
       </div>
     </div>
   );
