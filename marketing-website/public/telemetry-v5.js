@@ -507,9 +507,6 @@
 
   // Send telemetry to backend
   function flush() {
-    if (config.debug) {
-      console.log(`🔄 Flush timer fired. Buffer length: ${buffer.length}, suspended: ${state.suspended}, mouseOffCanvas: ${state.mouseOffCanvas}`);
-    }
     if (buffer.length === 0) return;
 
     const batch = buffer.splice(0, config.batchSize);
