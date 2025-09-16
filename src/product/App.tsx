@@ -10,7 +10,6 @@ import Auth from '../pages/auth'
 import Settings from '../pages/settings'
 import Pricing from '../pages/pricing'
 import Billing from '../pages/billing'
-import UsageDashboard from '../pages/usage-dashboard'
 import SageInbox from '../pages/sage-inbox'
 import EmotionalLiveFeed from '../components/EmotionalLiveFeed'
 
@@ -123,22 +122,6 @@ function App() {
             }
           />
 
-          {/* Usage Dashboard */}
-          <Route
-            path="/usage-dashboard"
-            element={
-              <>
-                <SignedIn>
-                  <Layout>
-                    <UsageDashboard />
-                  </Layout>
-                </SignedIn>
-                <SignedOut>
-                  <Navigate to="/auth" replace />
-                </SignedOut>
-              </>
-            }
-          />
 
           {/* Auth page - explicit route */}
           <Route path="/auth" element={<Auth />} />
@@ -146,8 +129,8 @@ function App() {
           {/* Removed legacy routes - /start and /boardroom */}
 
 
-          {/* Emotional Live Feed - Real-time Emotional Intelligence from ANY website */}
-          <Route path="/emotional-dashboard" element={
+          {/* Pulse - Real-time visitor emotional pulse */}
+          <Route path="/pulse" element={
             <>
               <SignedIn>
                 <Layout>
@@ -159,7 +142,10 @@ function App() {
               </SignedOut>
             </>
           } />
-          
+
+          {/* Redirect old emotional-dashboard route */}
+          <Route path="/emotional-dashboard" element={<Navigate to="/pulse" replace />} />
+
           {/* Admin routes */}
           <Route path="/admin/tenants" element={
             <>

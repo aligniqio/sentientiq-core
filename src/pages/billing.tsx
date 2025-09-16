@@ -118,9 +118,9 @@ export default function Billing() {
   // Admin and Super Admin view
   return (
     <>
-      <PageHeader 
-        title={isSuperAdmin ? "Super Admin Dashboard" : "Billing & Subscription"}
-        subtitle={isSuperAdmin ? "SentientIQ Corporate - Enterprise" : "Manage your organization's subscription"}
+      <PageHeader
+        title="Billing & Usage"
+        subtitle="Manage your organization's subscription"
       />
 
       <div className="grid gap-6 lg:grid-cols-3">

@@ -81,8 +81,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   }, []);
   
   const menuItems = [
-    { path: '/emotional-dashboard', icon: Activity, label: 'Emotions', public: false },
-    { path: '/usage-dashboard', icon: Activity, label: 'Usage', public: false },
+    { path: '/pulse', icon: Activity, label: 'Pulse', public: false },
     { path: '/billing', icon: Shield, label: 'Billing', public: false },
     ...(isSuperAdmin ? [
       { path: '/super-admin', icon: Crown, label: 'Super Admin', public: false }
@@ -95,7 +94,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     label: 'System',
     children: [
       { path: '/system/implementation', icon: Code, label: 'Implementation' },
-      { path: '/system/configuration', icon: Zap, label: 'Interventions' }
+      { path: '/system/configuration', icon: Zap, label: 'Configuration' }
     ]
   } : null;
 

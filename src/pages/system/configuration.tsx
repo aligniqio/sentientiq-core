@@ -208,7 +208,7 @@ const SystemConfiguration: React.FC = () => {
         subtitle="Set up your behavioral interventions in minutes"
       />
 
-      <div className="px-4 sm:px-6 lg:px-8 py-8 max-w-7xl mx-auto">
+      <div className="px-4 sm:px-6 lg:px-8 py-8">
 
         {/* Progress Steps */}
         <div className="flex items-center justify-between mb-12">
@@ -216,7 +216,7 @@ const SystemConfiguration: React.FC = () => {
             <div key={s} className="flex items-center">
               <motion.div
                 className={`w-10 h-10 rounded-full flex items-center justify-center border-2 ${
-                  step === s ? 'border-purple-500 bg-purple-500/20' :
+                  step === s ? 'border-blue-500 bg-blue-500/20' :
                   index < ['brand', 'offers', 'channels', 'interventions', 'review'].indexOf(step)
                     ? 'border-green-500 bg-green-500/20'
                     : 'border-gray-700 bg-gray-900'
@@ -226,7 +226,7 @@ const SystemConfiguration: React.FC = () => {
                 {index < ['brand', 'offers', 'channels', 'interventions', 'review'].indexOf(step) ? (
                   <Check className="w-5 h-5 text-green-400" />
                 ) : (
-                  <span className={step === s ? 'text-purple-400' : 'text-gray-500'}>{index + 1}</span>
+                  <span className={step === s ? 'text-blue-400' : 'text-gray-500'}>{index + 1}</span>
                 )}
               </motion.div>
               {index < 4 && (
@@ -254,7 +254,7 @@ const SystemConfiguration: React.FC = () => {
                     type="text"
                     value={config.companyName}
                     onChange={(e) => setConfig(prev => ({ ...prev, companyName: e.target.value }))}
-                    className="w-full px-4 py-3 bg-black/50 border border-gray-700 rounded-lg focus:border-purple-500 focus:outline-none"
+                    className="w-full px-4 py-3 bg-black/50 border border-gray-700 rounded-lg focus:border-blue-500 focus:outline-none"
                     placeholder="Your Company"
                   />
                 </div>
@@ -265,7 +265,7 @@ const SystemConfiguration: React.FC = () => {
                     {config.logoUrl && (
                       <img src={config.logoUrl} alt="Logo" className="w-16 h-16 rounded-lg object-cover" />
                     )}
-                    <label className="px-4 py-2 bg-purple-600 rounded-lg hover:bg-purple-700 cursor-pointer transition-colors">
+                    <label className="px-4 py-2 bg-blue-600 rounded-lg hover:bg-blue-700 cursor-pointer transition-colors">
                       <Upload className="w-4 h-4 inline mr-2" />
                       Upload Logo
                       <input type="file" accept="image/*" onChange={handleLogoUpload} className="hidden" />
@@ -319,7 +319,7 @@ const SystemConfiguration: React.FC = () => {
                         onClick={() => setConfig(prev => ({ ...prev, template: t as any }))}
                         className={`p-4 rounded-lg border-2 transition-all ${
                           config.template === t
-                            ? 'border-purple-500 bg-purple-500/10'
+                            ? 'border-blue-500 bg-blue-500/10'
                             : 'border-gray-700 hover:border-gray-600'
                         }`}
                       >
@@ -339,7 +339,7 @@ const SystemConfiguration: React.FC = () => {
               <div className="mt-8 flex justify-end">
                 <button
                   onClick={() => setStep('offers')}
-                  className="px-6 py-3 bg-purple-600 rounded-lg hover:bg-purple-700 transition-colors flex items-center"
+                  className="px-6 py-3 bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors flex items-center"
                 >
                   Next: Configure Offers
                   <ArrowRight className="w-4 h-4 ml-2" />
@@ -367,7 +367,7 @@ const SystemConfiguration: React.FC = () => {
                         type="text"
                         value={config.customOffer1Title || 'Your Main Offer'}
                         onChange={(e) => setConfig(prev => ({ ...prev, customOffer1Title: e.target.value }))}
-                        className="w-full px-4 py-3 bg-black/50 border border-gray-700 rounded-lg focus:border-purple-500 focus:outline-none"
+                        className="w-full px-4 py-3 bg-black/50 border border-gray-700 rounded-lg focus:border-blue-500 focus:outline-none"
                         placeholder="e.g., Free Consultation, 50% Off First Month"
                       />
                     </div>
@@ -381,7 +381,7 @@ const SystemConfiguration: React.FC = () => {
                         type="text"
                         value={config.customOffer1Value || ''}
                         onChange={(e) => setConfig(prev => ({ ...prev, customOffer1Value: e.target.value }))}
-                        className="w-full px-4 py-3 bg-black/50 border border-gray-700 rounded-lg focus:border-purple-500 focus:outline-none"
+                        className="w-full px-4 py-3 bg-black/50 border border-gray-700 rounded-lg focus:border-blue-500 focus:outline-none"
                         placeholder="e.g., $500 value, 2 hours free, Save $1,000"
                       />
                     </div>
@@ -395,7 +395,7 @@ const SystemConfiguration: React.FC = () => {
                         type="text"
                         value={config.customOffer2Title || 'Your Secondary Offer'}
                         onChange={(e) => setConfig(prev => ({ ...prev, customOffer2Title: e.target.value }))}
-                        className="w-full px-4 py-3 bg-black/50 border border-gray-700 rounded-lg focus:border-purple-500 focus:outline-none"
+                        className="w-full px-4 py-3 bg-black/50 border border-gray-700 rounded-lg focus:border-blue-500 focus:outline-none"
                         placeholder="e.g., Money-Back Guarantee, Free Shipping"
                       />
                     </div>
@@ -409,7 +409,7 @@ const SystemConfiguration: React.FC = () => {
                         type="text"
                         value={config.customCTA || 'Get Started'}
                         onChange={(e) => setConfig(prev => ({ ...prev, customCTA: e.target.value }))}
-                        className="w-full px-4 py-3 bg-black/50 border border-gray-700 rounded-lg focus:border-purple-500 focus:outline-none"
+                        className="w-full px-4 py-3 bg-black/50 border border-gray-700 rounded-lg focus:border-blue-500 focus:outline-none"
                         placeholder="e.g., Book Now, Start Free, Get Quote"
                       />
                     </div>
@@ -423,7 +423,7 @@ const SystemConfiguration: React.FC = () => {
                         type="text"
                         value={config.customUrgency || ''}
                         onChange={(e) => setConfig(prev => ({ ...prev, customUrgency: e.target.value }))}
-                        className="w-full px-4 py-3 bg-black/50 border border-gray-700 rounded-lg focus:border-purple-500 focus:outline-none"
+                        className="w-full px-4 py-3 bg-black/50 border border-gray-700 rounded-lg focus:border-blue-500 focus:outline-none"
                         placeholder="e.g., Limited spots available, Offer ends Friday"
                       />
                     </div>
@@ -439,7 +439,7 @@ const SystemConfiguration: React.FC = () => {
                         type="text"
                         value={config.cashBackAmount || '$1,000'}
                         onChange={(e) => setConfig(prev => ({ ...prev, cashBackAmount: e.target.value }))}
-                        className="w-full px-4 py-3 bg-black/50 border border-gray-700 rounded-lg focus:border-purple-500 focus:outline-none"
+                        className="w-full px-4 py-3 bg-black/50 border border-gray-700 rounded-lg focus:border-blue-500 focus:outline-none"
                         placeholder="$1,000"
                       />
                     </div>
@@ -453,7 +453,7 @@ const SystemConfiguration: React.FC = () => {
                         type="text"
                         value={config.aprOffer || '0% APR for 60 months'}
                         onChange={(e) => setConfig(prev => ({ ...prev, aprOffer: e.target.value }))}
-                        className="w-full px-4 py-3 bg-black/50 border border-gray-700 rounded-lg focus:border-purple-500 focus:outline-none"
+                        className="w-full px-4 py-3 bg-black/50 border border-gray-700 rounded-lg focus:border-blue-500 focus:outline-none"
                         placeholder="0% APR for 60 months"
                       />
                     </div>
@@ -467,7 +467,7 @@ const SystemConfiguration: React.FC = () => {
                         type="text"
                         value={config.testDriveIncentive || '$50 Gift Card for Test Drive'}
                         onChange={(e) => setConfig(prev => ({ ...prev, testDriveIncentive: e.target.value }))}
-                        className="w-full px-4 py-3 bg-black/50 border border-gray-700 rounded-lg focus:border-purple-500 focus:outline-none"
+                        className="w-full px-4 py-3 bg-black/50 border border-gray-700 rounded-lg focus:border-blue-500 focus:outline-none"
                         placeholder="$50 Gift Card for Test Drive"
                       />
                     </div>
@@ -481,7 +481,7 @@ const SystemConfiguration: React.FC = () => {
                         type="text"
                         value={config.tradeInBonus || '$2,000 above KBB value'}
                         onChange={(e) => setConfig(prev => ({ ...prev, tradeInBonus: e.target.value }))}
-                        className="w-full px-4 py-3 bg-black/50 border border-gray-700 rounded-lg focus:border-purple-500 focus:outline-none"
+                        className="w-full px-4 py-3 bg-black/50 border border-gray-700 rounded-lg focus:border-blue-500 focus:outline-none"
                         placeholder="$2,000 above KBB value"
                       />
                     </div>
@@ -495,7 +495,7 @@ const SystemConfiguration: React.FC = () => {
                         type="text"
                         value={config.leaseSpecial || '$299/month, $0 down'}
                         onChange={(e) => setConfig(prev => ({ ...prev, leaseSpecial: e.target.value }))}
-                        className="w-full px-4 py-3 bg-black/50 border border-gray-700 rounded-lg focus:border-purple-500 focus:outline-none"
+                        className="w-full px-4 py-3 bg-black/50 border border-gray-700 rounded-lg focus:border-blue-500 focus:outline-none"
                         placeholder="$299/month, $0 down"
                       />
                     </div>
@@ -532,7 +532,7 @@ const SystemConfiguration: React.FC = () => {
                         type="text"
                         value={config.discountCode}
                         onChange={(e) => setConfig(prev => ({ ...prev, discountCode: e.target.value.toUpperCase() }))}
-                        className="w-full px-4 py-3 bg-black/50 border border-gray-700 rounded-lg focus:border-purple-500 focus:outline-none font-mono"
+                        className="w-full px-4 py-3 bg-black/50 border border-gray-700 rounded-lg focus:border-blue-500 focus:outline-none font-mono"
                         placeholder="SAVE20"
                       />
                     </div>
@@ -546,7 +546,7 @@ const SystemConfiguration: React.FC = () => {
                         type="number"
                         value={config.freeTrialDays}
                         onChange={(e) => setConfig(prev => ({ ...prev, freeTrialDays: parseInt(e.target.value) }))}
-                        className="w-full px-4 py-3 bg-black/50 border border-gray-700 rounded-lg focus:border-purple-500 focus:outline-none"
+                        className="w-full px-4 py-3 bg-black/50 border border-gray-700 rounded-lg focus:border-blue-500 focus:outline-none"
                       />
                     </div>
 
@@ -559,7 +559,7 @@ const SystemConfiguration: React.FC = () => {
                         type="text"
                         value={config.roiMultiplier}
                         onChange={(e) => setConfig(prev => ({ ...prev, roiMultiplier: e.target.value }))}
-                        className="w-full px-4 py-3 bg-black/50 border border-gray-700 rounded-lg focus:border-purple-500 focus:outline-none"
+                        className="w-full px-4 py-3 bg-black/50 border border-gray-700 rounded-lg focus:border-blue-500 focus:outline-none"
                         placeholder="3.2x"
                       />
                     </div>
@@ -576,7 +576,7 @@ const SystemConfiguration: React.FC = () => {
                 </button>
                 <button
                   onClick={() => setStep('channels')}
-                  className="px-6 py-3 bg-purple-600 rounded-lg hover:bg-purple-700 transition-colors flex items-center"
+                  className="px-6 py-3 bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors flex items-center"
                 >
                   Next: Set Channels
                   <ArrowRight className="w-4 h-4 ml-2" />
@@ -600,7 +600,7 @@ const SystemConfiguration: React.FC = () => {
                     type="url"
                     value={config.supportUrl}
                     onChange={(e) => setConfig(prev => ({ ...prev, supportUrl: e.target.value }))}
-                    className="w-full px-4 py-3 bg-black/50 border border-gray-700 rounded-lg focus:border-purple-500 focus:outline-none"
+                    className="w-full px-4 py-3 bg-black/50 border border-gray-700 rounded-lg focus:border-blue-500 focus:outline-none"
                     placeholder={config.template === 'automotive' ? "https://calendly.com/test-drive" : "https://calendly.com/your-team"}
                   />
                 </div>
@@ -614,7 +614,7 @@ const SystemConfiguration: React.FC = () => {
                     type="url"
                     value={config.demoVideoUrl}
                     onChange={(e) => setConfig(prev => ({ ...prev, demoVideoUrl: e.target.value }))}
-                    className="w-full px-4 py-3 bg-black/50 border border-gray-700 rounded-lg focus:border-purple-500 focus:outline-none"
+                    className="w-full px-4 py-3 bg-black/50 border border-gray-700 rounded-lg focus:border-blue-500 focus:outline-none"
                     placeholder={config.template === 'automotive' ? "https://youtube.com/vehicle-tour" : "https://youtube.com/watch?v=..."}
                   />
                 </div>
@@ -628,7 +628,7 @@ const SystemConfiguration: React.FC = () => {
                     type="url"
                     value={config.caseStudyUrl}
                     onChange={(e) => setConfig(prev => ({ ...prev, caseStudyUrl: e.target.value }))}
-                    className="w-full px-4 py-3 bg-black/50 border border-gray-700 rounded-lg focus:border-purple-500 focus:outline-none"
+                    className="w-full px-4 py-3 bg-black/50 border border-gray-700 rounded-lg focus:border-blue-500 focus:outline-none"
                     placeholder={config.template === 'automotive' ? "https://dealership.com/reviews" : "https://yoursite.com/case-studies"}
                   />
                 </div>
@@ -643,7 +643,7 @@ const SystemConfiguration: React.FC = () => {
                 </button>
                 <button
                   onClick={() => setStep('crm')}
-                  className="px-6 py-3 bg-purple-600 rounded-lg hover:bg-purple-700 transition-colors flex items-center"
+                  className="px-6 py-3 bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors flex items-center"
                 >
                   Next: Choose Interventions
                   <ArrowRight className="w-4 h-4 ml-2" />
@@ -674,7 +674,7 @@ const SystemConfiguration: React.FC = () => {
                       onClick={() => setConfig(prev => ({ ...prev, crmProvider: crm.id as any }))}
                       className={`p-4 rounded-lg border-2 transition-all text-left ${
                         config.crmProvider === crm.id
-                          ? 'border-purple-500 bg-purple-500/10'
+                          ? 'border-blue-500 bg-blue-500/10'
                           : 'border-gray-700 hover:border-gray-600'
                       }`}
                     >
@@ -694,7 +694,7 @@ const SystemConfiguration: React.FC = () => {
                       type="password"
                       value={config.crmApiKey || ''}
                       onChange={(e) => setConfig(prev => ({ ...prev, crmApiKey: e.target.value }))}
-                      className="w-full px-4 py-3 bg-black/50 border border-gray-700 rounded-lg focus:border-purple-500 focus:outline-none"
+                      className="w-full px-4 py-3 bg-black/50 border border-gray-700 rounded-lg focus:border-blue-500 focus:outline-none"
                       placeholder={config.crmProvider === 'hubspot'
                         ? 'pat-na1-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'
                         : 'Your Salesforce JWT or API Key'
@@ -726,7 +726,7 @@ const SystemConfiguration: React.FC = () => {
 
                 {/* What Gets Synced */}
                 {config.crmProvider !== 'none' && (
-                  <div className="p-4 bg-gradient-to-r from-purple-900/20 to-blue-900/20 rounded-lg border border-purple-500/30">
+                  <div className="p-4 bg-gradient-to-r from-blue-900/20 to-blue-900/20 rounded-lg border border-blue-500/30">
                     <h3 className="font-medium mb-3">What Gets Synced:</h3>
                     <ul className="space-y-2 text-sm text-gray-300">
                       <li className="flex items-center">
@@ -759,7 +759,7 @@ const SystemConfiguration: React.FC = () => {
                 </button>
                 <button
                   onClick={() => setStep('interventions')}
-                  className="px-6 py-3 bg-purple-600 rounded-lg hover:bg-purple-700 transition-colors flex items-center"
+                  className="px-6 py-3 bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors flex items-center"
                 >
                   Next: Configure Interventions
                   <ArrowRight className="w-4 h-4 ml-2" />
@@ -788,7 +788,7 @@ const SystemConfiguration: React.FC = () => {
                         type="checkbox"
                         checked={config.enablePriceHoverAssist}
                         onChange={(e) => setConfig(prev => ({ ...prev, enablePriceHoverAssist: e.target.checked }))}
-                        className="w-4 h-4 text-purple-600 rounded"
+                        className="w-4 h-4 text-blue-600 rounded"
                       />
                     </label>
                     <label className="flex items-center justify-between p-3 bg-black/30 rounded-lg hover:bg-black/40 cursor-pointer">
@@ -800,7 +800,7 @@ const SystemConfiguration: React.FC = () => {
                         type="checkbox"
                         checked={true}
                         disabled
-                        className="w-4 h-4 text-purple-600 rounded"
+                        className="w-4 h-4 text-blue-600 rounded"
                       />
                     </label>
                   </div>
@@ -819,7 +819,7 @@ const SystemConfiguration: React.FC = () => {
                         type="checkbox"
                         checked={config.enableExitSave}
                         onChange={(e) => setConfig(prev => ({ ...prev, enableExitSave: e.target.checked }))}
-                        className="w-4 h-4 text-purple-600 rounded"
+                        className="w-4 h-4 text-blue-600 rounded"
                       />
                     </label>
                     <label className="flex items-center justify-between p-3 bg-black/30 rounded-lg hover:bg-black/40 cursor-pointer">
@@ -831,7 +831,7 @@ const SystemConfiguration: React.FC = () => {
                         type="checkbox"
                         checked={true}
                         disabled
-                        className="w-4 h-4 text-purple-600 rounded"
+                        className="w-4 h-4 text-blue-600 rounded"
                       />
                     </label>
                   </div>
@@ -850,7 +850,7 @@ const SystemConfiguration: React.FC = () => {
                         type="checkbox"
                         checked={config.enableConfusionHelp}
                         onChange={(e) => setConfig(prev => ({ ...prev, enableConfusionHelp: e.target.checked }))}
-                        className="w-4 h-4 text-purple-600 rounded"
+                        className="w-4 h-4 text-blue-600 rounded"
                       />
                     </label>
                     <label className="flex items-center justify-between p-3 bg-black/30 rounded-lg hover:bg-black/40 cursor-pointer">
@@ -862,15 +862,15 @@ const SystemConfiguration: React.FC = () => {
                         type="checkbox"
                         checked={true}
                         disabled
-                        className="w-4 h-4 text-purple-600 rounded"
+                        className="w-4 h-4 text-blue-600 rounded"
                       />
                     </label>
                   </div>
                 </div>
 
                 {/* Rage Click Response */}
-                <div className="p-4 bg-gradient-to-r from-purple-900/20 to-pink-900/20 rounded-lg border border-purple-500/30">
-                  <h3 className="font-medium text-purple-400 mb-3">😤 Rage Click Response</h3>
+                <div className="p-4 bg-gradient-to-r from-blue-900/20 to-indigo-900/20 rounded-lg border border-blue-500/30">
+                  <h3 className="font-medium text-blue-400 mb-3">😤 Rage Click Response</h3>
                   <div className="space-y-3">
                     <label className="flex items-center justify-between p-3 bg-black/30 rounded-lg hover:bg-black/40 cursor-pointer">
                       <div>
@@ -881,7 +881,7 @@ const SystemConfiguration: React.FC = () => {
                         type="checkbox"
                         checked={true}
                         disabled
-                        className="w-4 h-4 text-purple-600 rounded"
+                        className="w-4 h-4 text-blue-600 rounded"
                       />
                     </label>
                     <label className="flex items-center justify-between p-3 bg-black/30 rounded-lg hover:bg-black/40 cursor-pointer">
@@ -893,7 +893,7 @@ const SystemConfiguration: React.FC = () => {
                         type="checkbox"
                         checked={true}
                         disabled
-                        className="w-4 h-4 text-purple-600 rounded"
+                        className="w-4 h-4 text-blue-600 rounded"
                       />
                     </label>
                   </div>
@@ -901,10 +901,10 @@ const SystemConfiguration: React.FC = () => {
               </div>
 
               {/* Tier Features */}
-              <div className="mt-8 p-4 bg-gradient-to-r from-purple-900/20 to-blue-900/20 rounded-lg border border-purple-500/30">
+              <div className="mt-8 p-4 bg-gradient-to-r from-blue-900/20 to-blue-900/20 rounded-lg border border-blue-500/30">
                 <div className="flex items-center justify-between mb-3">
                   <h3 className="font-medium">Your {tier.charAt(0).toUpperCase() + tier.slice(1)} Plan Includes:</h3>
-                  <Shield className="w-5 h-5 text-purple-400" />
+                  <Shield className="w-5 h-5 text-blue-400" />
                 </div>
                 <div className="space-y-2">
                   {getTierFeatures().map((feature, index) => (
@@ -926,7 +926,7 @@ const SystemConfiguration: React.FC = () => {
                 <button
                   onClick={handlePublish}
                   disabled={isPublishing}
-                  className="px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 rounded-lg hover:from-purple-700 hover:to-blue-700 transition-all flex items-center disabled:opacity-50"
+                  className="px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-600 rounded-lg hover:from-blue-700 hover:to-blue-700 transition-all flex items-center disabled:opacity-50"
                 >
                   {isPublishing ? (
                     <>
@@ -994,7 +994,7 @@ const SystemConfiguration: React.FC = () => {
                       href={`https://preview.sentientiq.ai/${tenantId}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="px-4 py-2 bg-purple-600 rounded-lg hover:bg-purple-700 transition-colors"
+                      className="px-4 py-2 bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
                     >
                       Open Preview
                     </a>
@@ -1020,12 +1020,12 @@ const SystemConfiguration: React.FC = () => {
         {/* Help Text */}
         <div className="mt-8 text-center text-sm text-gray-500">
           Need help? Check out our{' '}
-          <a href="/docs/interventions" className="text-purple-400 hover:text-purple-300">
+          <a href="/docs/interventions" className="text-blue-400 hover:text-blue-300">
             implementation guide
           </a>
           , ask Sage{' '}
           or{' '}
-          <a href="mailto:support@sentientiq.ai" className="text-purple-400 hover:text-purple-300">
+          <a href="mailto:support@sentientiq.ai" className="text-blue-400 hover:text-blue-300">
             contact support
           </a>
         </div>
