@@ -323,7 +323,6 @@ export const InterventionConfigurator: React.FC = () => {
     }
   };
 
-
   return (
     <div className="space-y-8">
       {/* Hero Section - Set the tone */}
@@ -342,13 +341,113 @@ export const InterventionConfigurator: React.FC = () => {
 
       {/* Main Configuration */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Left: Controls */}
+        {/* Left: Intervention Types */}
         <div className="space-y-6">
-          {/* Brand Section */}
           <motion.div
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.1 }}
+            className="glass-card p-6 space-y-4"
+          >
+            <h3 className="font-semibold text-white flex items-center gap-2">
+              <Zap className="w-4 h-4 text-purple-400" />
+              Intervention Types
+            </h3>
+
+            <div className="space-y-3">
+              {INTERVENTION_TYPES.map(type => {
+                const intervention = config.interventions[type.id];
+                return (
+                  <div
+                    key={type.id}
+                    className={`p-4 rounded-lg border transition-all cursor-pointer ${
+                      selectedIntervention === type.id
+                        ? 'bg-white/20 border-cyan-400'
+                        : 'bg-white/10 border-white/20 hover:bg-white/15'
+                    }`}
+                    onClick={() => setSelectedIntervention(type.id)}
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-xl">{type.icon}</span>
+                          <h4 className="font-medium text-white">{type.name}</h4>
+                        </div>
+                        <p className="text-xs text-white/60 mb-2">{type.description}</p>
+                        <p className="text-xs text-cyan-400">Triggers on: {type.emotion}</p>
+                      </div>
+                      <input
+                        type="checkbox"
+                        checked={intervention.enabled}
+                        onChange={(e) => {
+                          e.stopPropagation();
+                          updateIntervention('enabled', e.target.checked);
+                        }}
+                        className="mt-1"
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </motion.div>
+        </div>
+
+        {/* Right: Preview & Configuration */}
+        <div className="space-y-6">
+          {/* Live Preview */}
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.2 }}
+            className="glass-card p-6"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-semibold text-white flex items-center gap-2">
+                <Eye className="w-4 h-4 text-green-400" />
+                Live Preview
+              </h3>
+              <button
+                onClick={() => setIsLivePreview(!isLivePreview)}
+                className="text-sm text-white/70 hover:text-white flex items-center gap-2"
+              >
+                <RefreshCw className="w-3 h-3" />
+                Refresh
+              </button>
+            </div>
+
+            <div
+              ref={previewRef}
+              className="bg-gray-900/50 rounded-lg p-8 min-h-[200px] flex items-center justify-center"
+            >
+              <AnimatePresence mode="wait">
+                <LivePreview key={JSON.stringify(config)} />
+              </AnimatePresence>
+            </div>
+
+            {/* Save Button */}
+            <motion.button
+              whileTap={{ scale: 0.95 }}
+              onClick={saveConfiguration}
+              disabled={saving}
+              className="w-full mt-6 px-6 py-3 bg-gradient-to-r from-cyan-500 to-blue-500 text-white font-semibold rounded-lg hover:from-cyan-600 hover:to-blue-600 disabled:opacity-50 transition-all"
+            >
+              {saving ? (
+                <span className="flex items-center justify-center gap-2">
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                  Saving...
+                </span>
+              ) : (
+                'Save Configuration'
+              )}
+            </motion.button>
+          </motion.div>
+
+          {/* Visual Identity */}
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.3 }}
             className="glass-card p-6 space-y-4"
           >
             <h3 className="font-semibold text-white flex items-center gap-2">
@@ -454,62 +553,12 @@ export const InterventionConfigurator: React.FC = () => {
             </div>
           </motion.div>
 
-          {/* Intervention Types Selector */}
-          <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.2 }}
-            className="glass-card p-6 space-y-4"
-          >
-            <h3 className="font-semibold text-white flex items-center gap-2">
-              <Zap className="w-4 h-4 text-purple-400" />
-              Intervention Types
-            </h3>
-
-            <div className="space-y-3">
-              {INTERVENTION_TYPES.map(type => {
-                const intervention = config.interventions[type.id];
-                return (
-                  <div
-                    key={type.id}
-                    className={`p-4 rounded-lg border transition-all cursor-pointer ${
-                      selectedIntervention === type.id
-                        ? 'bg-white/20 border-cyan-400'
-                        : 'bg-white/10 border-white/20 hover:bg-white/15'
-                    }`}
-                    onClick={() => setSelectedIntervention(type.id)}
-                  >
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="text-xl">{type.icon}</span>
-                          <h4 className="font-medium text-white">{type.name}</h4>
-                        </div>
-                        <p className="text-xs text-white/60 mb-2">{type.description}</p>
-                        <p className="text-xs text-cyan-400">Triggers on: {type.emotion}</p>
-                      </div>
-                      <input
-                        type="checkbox"
-                        checked={intervention.enabled}
-                        onChange={(e) => {
-                          e.stopPropagation();
-                          updateIntervention('enabled', e.target.checked);
-                        }}
-                        className="mt-1"
-                      />
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </motion.div>
-
           {/* Content Editor for Selected Intervention */}
           <motion.div
             key={selectedIntervention}
-            initial={{ opacity: 0, x: -20 }}
+            initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.3 }}
+            transition={{ delay: 0.4 }}
             className="glass-card p-6 space-y-4"
           >
             <h3 className="font-semibold text-white flex items-center gap-2">
@@ -626,59 +675,6 @@ export const InterventionConfigurator: React.FC = () => {
                 </select>
               </div>
             </div>
-          </motion.div>
-
-        </div>
-
-        {/* Right: Preview & Export */}
-        <div className="space-y-6">
-          {/* Live Preview */}
-          <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.2 }}
-            className="glass-card p-6 sticky top-6"
-          >
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-semibold text-white flex items-center gap-2">
-                <Eye className="w-4 h-4 text-green-400" />
-                Live Preview
-              </h3>
-              <button
-                onClick={() => setIsLivePreview(!isLivePreview)}
-                className="text-sm text-white/70 hover:text-white flex items-center gap-2"
-              >
-                <RefreshCw className="w-3 h-3" />
-                Refresh
-              </button>
-            </div>
-
-            <div
-              ref={previewRef}
-              className="bg-gray-900/50 rounded-lg p-8 min-h-[200px] flex items-center justify-center"
-            >
-              <AnimatePresence mode="wait">
-                <LivePreview key={JSON.stringify(config)} />
-              </AnimatePresence>
-            </div>
-
-
-            {/* Save Button */}
-            <motion.button
-              whileTap={{ scale: 0.95 }}
-              onClick={saveConfiguration}
-              disabled={saving}
-              className="w-full mt-6 px-6 py-3 bg-gradient-to-r from-cyan-500 to-blue-500 text-white font-semibold rounded-lg hover:from-cyan-600 hover:to-blue-600 disabled:opacity-50 transition-all"
-            >
-              {saving ? (
-                <span className="flex items-center justify-center gap-2">
-                  <RefreshCw className="w-4 h-4 animate-spin" />
-                  Saving...
-                </span>
-              ) : (
-                'Save Configuration'
-              )}
-            </motion.button>
           </motion.div>
         </div>
       </div>
