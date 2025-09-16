@@ -1,749 +1,677 @@
 /**
- * SentientIQ Telemetry v5.0 - Hybrid Approach
- * Lean behavioral telemetry collector - no emotion diagnosis
- * Now with intelligent site mapping
+ * SentientIQ Telemetry v6
+ * The complete intervention intelligence stack
+ * This is where behavior becomes emotion becomes intervention becomes conversion
  */
 
 (function() {
   'use strict';
 
-  // Configuration
-  const scriptTag = document.currentScript || document.querySelector('script[src*="telemetry"]');
-  const sessionId = `sq_${Date.now()}_${Math.random().toString(36).slice(2,9)}`;
-  const tenantId = window.SentientIQ?.tenantId || scriptTag?.getAttribute('data-tenant-id') || 'unknown';
-
-  // Store session ID and tenant ID in sessionStorage for intervention-receiver to use
-  sessionStorage.setItem('sq_session_id', sessionId);
-  localStorage.setItem('tenantId', tenantId);
-
-  const config = {
-    endpoint: (window.SentientIQ?.apiEndpoint ? window.SentientIQ.apiEndpoint + '/api/telemetry/stream' : 'https://api.sentientiq.app/api/telemetry/stream'),
-    apiKey: window.SentientIQ?.apiKey || scriptTag?.getAttribute('data-api-key') || 'sq_demo_v5',
-    tenantId: tenantId,
-    sessionId: sessionId,
-    batchSize: 20,
-    flushInterval: 1000, // Send every second
-    debug: scriptTag?.getAttribute('data-debug') === 'true',
-    useMapping: scriptTag?.getAttribute('data-use-mapping') !== 'false' // Default true
+  // Import our modules (in production these would be bundled)
+  const modules = {
+    choreographer: '/intervention-choreographer.js',
+    renderer: '/intervention-renderer.js',
+    diagnostics: '/intervention-diagnostics.js'
   };
 
-  // Site map storage
-  let siteMap = null;
+  class SentientIQTelemetry {
+    constructor() {
+      this.config = window.SentientIQ || {};
+      this.sessionId = this.generateSessionId();
+      this.tenantId = this.config.tenantId || document.querySelector('script[data-tenant-id]')?.dataset.tenantId;
+      this.apiEndpoint = this.config.apiEndpoint || 'https://api.sentientiq.app';
+      this.wsEndpoint = this.apiEndpoint.replace('http', 'ws') + '/ws';
 
-  // Telemetry buffer
-  const buffer = [];
-  let lastFlush = Date.now();
-  let flushTimer = null;
+      this.ws = null;
+      this.reconnectAttempts = 0;
+      this.maxReconnectAttempts = 5;
+      this.reconnectDelay = 1000;
 
-  // State tracking
-  const sessionStart = Date.now();
-  const state = {
-    lastClick: { x: 0, y: 0, t: 0 },
-    lastMove: { x: 0, y: 0, t: 0, v: 0 },
-    lastScroll: { y: 0, t: 0 },
-    clickSequence: [],
-    hoverStart: null,
-    hoverElement: null,
-    mouseOffCanvas: false,
-    suspended: false,
-    velocityHistory: [], // Track velocity for deceleration detection
-    exitDirection: null, // Track where mouse left viewport
-    erraticHistory: [], // Track erratic movements over pricing
-    lastDirectionChange: 0, // Track zigzag patterns
-    lastPricingInteraction: 0 // Track when user last interacted with pricing
-  };
+      // Component instances (will be loaded dynamically)
+      this.choreographer = null;
+      this.renderer = null;
+      this.diagnostics = null;
 
-  // Record telemetry event
-  function record(type, data) {
-    if (config.debug && type !== 'move') { // Don't spam console with move events
-      console.log(`📝 Record called: ${type}`);
+      // Telemetry batch
+      this.eventQueue = [];
+      this.batchSize = 10;
+      this.batchInterval = 2000;
+
+      // Tenant branding (will be fetched)
+      this.tenantBranding = null;
+
+      this.init();
     }
 
-    if (state.suspended || state.mouseOffCanvas) {
-      if (config.debug) {
-        console.log(`⛔ Event blocked: ${type}, suspended: ${state.suspended}, mouseOffCanvas: ${state.mouseOffCanvas}`);
+    generateSessionId() {
+      const stored = sessionStorage.getItem('sentientiq_session');
+      if (stored) return stored;
+
+      const id = 'siq_' + Date.now() + '_' + Math.random().toString(36).substring(2);
+      sessionStorage.setItem('sentientiq_session', id);
+      return id;
+    }
+
+    async init() {
+      try {
+        console.log('🚀 SentientIQ Telemetry v6 initializing...');
+
+        // Load diagnostics first for error catching
+        await this.loadDiagnostics();
+
+        // Fetch tenant configuration
+        await this.fetchTenantConfig();
+
+        // Load choreographer and renderer
+        await this.loadChoreographer();
+        await this.loadRenderer();
+
+        // Connect to WebSocket
+        this.connectWebSocket();
+
+        // Start telemetry collection
+        this.startTelemetryCollection();
+
+        // Set up batch processing
+        this.startBatchProcessor();
+
+        // Log successful init
+        this.diagnostics?.log('choreographer', 'initialized', {
+          sessionId: this.sessionId,
+          tenantId: this.tenantId,
+          endpoint: this.apiEndpoint
+        }, 'info');
+
+        console.log('✅ SentientIQ ready');
+
+      } catch (error) {
+        console.error('Failed to initialize SentientIQ:', error);
+        this.diagnostics?.log('choreographer', 'init_failed', error, 'critical');
       }
-      return; // HALT when mouse is off canvas
     }
 
-    const now = Date.now();
-    const sessionAge = now - sessionStart;
-
-    const event = {
-      t: now,
-      type,
-      ...data,
-      session_age: sessionAge,  // How long user has been on page
-      url: window.location.href,
-      vp: { w: window.innerWidth, h: window.innerHeight } // viewport
-    };
-
-    // Add element context if available
-    if (data.el) {
-      const el = typeof data.el === 'string' ? document.querySelector(data.el) : data.el;
-      if (el) {
-        event.ctx = getElementContext(el);
-        delete event.el; // Don't send the element itself
+    async loadDiagnostics() {
+      // In production, this would be bundled
+      // For now, create inline
+      if (typeof window.InterventionDiagnostics !== 'undefined') {
+        this.diagnostics = window.InterventionDiagnostics.getInstance();
+        return;
       }
-    }
 
-    buffer.push(event);
+      // Inline minimal diagnostics
+      this.diagnostics = {
+        log: (component, event, data, level = 'info', correlationId) => {
+          const emoji = {
+            processor: '🧠',
+            engine: '⚙️',
+            websocket: '📡',
+            choreographer: '🎭',
+            renderer: '🎨'
+          };
 
-    // Auto-flush if buffer is full
-    if (buffer.length >= config.batchSize) {
-      flush();
-    }
-  }
+          const style = {
+            debug: 'color: gray',
+            info: 'color: blue',
+            warn: 'color: orange',
+            error: 'color: red',
+            critical: 'background: red; color: white; padding: 2px'
+          };
 
-  // Initialize site mapping
-  function initializeSiteMapping() {
-    if (!config.useMapping) return;
-
-    // Only load site mapper on marketing site (.ai domain)
-    const isMarketingSite = window.location.hostname.includes('sentientiq.ai') ||
-                            window.location.hostname === 'localhost';
-
-    if (isMarketingSite) {
-      // Load site mapper if available (from GTM)
-      if (window.SentientIQSiteMapper) {
-        siteMap = window.SentientIQSiteMapper.init();
-        if (config.debug) {
-          console.log('📍 Site map loaded:', siteMap);
-          if (siteMap.warnings?.length > 0) {
-            console.warn('⚠️ Site map warnings:', siteMap.warnings);
-          }
+          console.log(
+            `%c${emoji[component]} ${component}:${event}`,
+            style[level],
+            data
+          );
         }
-      }
-      // No fallback loading - site mapper only comes from GTM on .ai domain
-    } else {
-      if (config.debug) {
-        console.log('📍 Site mapper not needed on app domain');
-      }
-    }
-  }
-
-  // Check if element matches any mapped selector
-  function checkMappedElement(el) {
-    if (!siteMap) return null;
-
-    const result = {
-      isPricing: false,
-      isCart: false,
-      isCTA: false,
-      isDemo: false,
-      isForm: false,
-      confidence: 0,
-      type: null
-    };
-
-    // Check each category
-    for (const category of ['pricing', 'cart', 'cta', 'demo', 'forms']) {
-      if (!siteMap[category]) continue;
-
-      for (const item of siteMap[category]) {
-        try {
-          // Check if element matches selector or is child of selector
-          if (el.matches(item.selector) || el.closest(item.selector)) {
-            switch (category) {
-              case 'pricing':
-                result.isPricing = true;
-                result.type = item.type;
-                break;
-              case 'cart':
-                result.isCart = true;
-                result.type = item.type;
-                break;
-              case 'cta':
-                result.isCTA = true;
-                result.type = item.type;
-                break;
-              case 'demo':
-                result.isDemo = true;
-                result.type = item.type;
-                break;
-              case 'forms':
-                result.isForm = true;
-                result.type = item.type;
-                break;
-            }
-            result.confidence = Math.max(result.confidence, item.confidence || 70);
-          }
-        } catch (e) {
-          // Invalid selector, skip
-        }
-      }
+      };
     }
 
-    return result.confidence > 0 ? result : null;
-  }
-
-  // Get element context (what user is interacting with)
-  function getElementContext(el) {
-    const ctx = {};
-
-    // Skip heavy context analysis on dashboard/app pages
-    if (window.location.hostname.includes('app') ||
-        window.location.hostname.includes('dashboard') ||
-        window.location.pathname.includes('/dashboard')) {
-      ctx.tag = el.tagName?.toLowerCase();
-      ctx.text = el.textContent?.slice(0, 50);
-      return ctx;
-    }
-
-    // First check mapped elements for high confidence
-    const mapped = checkMappedElement(el);
-    if (mapped) {
-      Object.assign(ctx, {
-        pricing: mapped.isPricing,
-        cart: mapped.isCart,
-        cta: mapped.isCTA,
-        demo: mapped.isDemo,
-        form: mapped.isForm,
-        mapped_type: mapped.type,
-        confidence: mapped.confidence
-      });
-    }
-
-    // Fallback to heuristic detection if not mapped or low confidence
-    if (!mapped || mapped.confidence < 70) {
-      // Element type
-      if (el.tagName) ctx.tag = el.tagName.toLowerCase();
-
-      // Special elements
-      if (el.href) ctx.href = el.href;
-      if (el.classList.contains('price') || el.classList.contains('pricing')) ctx.pricing = true;
-      if (el.type === 'submit' || el.role === 'button') ctx.cta = true;
-
-      // Cart/checkout detection
-      const cartIndicators = ['cart', 'basket', 'checkout', 'payment', 'shipping', 'billing'];
-      const elementText = (el.textContent + ' ' + el.className + ' ' + el.id).toLowerCase();
-      if (cartIndicators.some(indicator => elementText.includes(indicator))) {
-        ctx.cart = true;
-        // Detect specific cart stage
-        if (elementText.includes('checkout') || elementText.includes('payment')) ctx.stage = 'checkout';
-        else if (elementText.includes('shipping')) ctx.stage = 'shipping';
-        else if (elementText.includes('billing')) ctx.stage = 'billing';
-        else ctx.stage = 'cart';
+    async loadChoreographer() {
+      // In production, this would be bundled
+      // For now, create inline version with core functionality
+      if (typeof window.InterventionChoreographer !== 'undefined') {
+        this.choreographer = window.InterventionChoreographer.getInstance();
+        return;
       }
 
-      // Form field detection (critical for checkout forms)
-      if (el.tagName === 'INPUT' || el.tagName === 'SELECT') {
-        ctx.form = true;
-        ctx.fieldType = el.type;
-        ctx.fieldName = el.name || el.id;
-      }
-    }
+      // Inline choreographer
+      this.choreographer = {
+        mouseTrail: [],
+        hoverTimers: new Map(),
 
-    // Always include text content
-    const text = el.textContent?.trim().slice(0, 50);
-    if (text) ctx.text = text;
-
-    // Data attributes
-    if (el.dataset.sqRole) ctx.role = el.dataset.sqRole;
-
-    return ctx;
-  }
-
-  // Detect click patterns
-  function processClick(x, y, target) {
-    const now = Date.now();
-    const timeSinceLastClick = now - state.lastClick.t;
-    const distance = Math.hypot(x - state.lastClick.x, y - state.lastClick.y);
-
-    // Track click sequence for rage detection
-    if (timeSinceLastClick < 1000 && distance < 50) {
-      state.clickSequence.push({ x, y, t: now });
-    } else {
-      state.clickSequence = [{ x, y, t: now }];
-    }
-
-    // Record behavior, not emotion
-    const behavior = state.clickSequence.length >= 3 ? 'rage_click' :
-                     timeSinceLastClick < 500 ? 'double_click' : 'click';
-
-    // Get full context using site map
-    const fullContext = getElementContext(target);
-
-    // Build target string for debugging
-    const elText = (target.textContent || '').toLowerCase();
-    const elClass = (target.className || '').toLowerCase();
-    const targetStr = `${elClass} ${elText}`.substring(0, 100);
-
-    record(behavior, {
-      x, y,
-      count: state.clickSequence.length,
-      target: targetStr,
-      ctx: fullContext
-    });
-
-    state.lastClick = { x, y, t: now };
-  }
-
-  // Detect movement patterns
-  function processMove(x, y) {
-    // Stop processing if mouse is off canvas
-    if (state.mouseOffCanvas) return;
-
-    const now = Date.now();
-    const dt = now - state.lastMove.t;
-    if (dt < 50) return; // Throttle to 20Hz
-
-    // Detect if mouse is at viewport edge (more aggressive detection)
-    const edgeThreshold = 5;
-    if (x <= edgeThreshold || y <= edgeThreshold ||
-        x >= window.innerWidth - edgeThreshold ||
-        y >= window.innerHeight - edgeThreshold) {
-
-      // Check if we haven't already fired exit recently
-      if (!state.mouseOffCanvas) {
-        handleMouseLeave({
-          clientX: x,
-          clientY: y,
-          type: 'edge_detection'
-        });
-      }
-      return;
-    }
-
-    const distance = Math.hypot(x - state.lastMove.x, y - state.lastMove.y);
-    const velocity = distance / (dt / 100);
-
-    // Track velocity history for deceleration detection
-    state.velocityHistory.push({ v: velocity, t: now });
-    if (state.velocityHistory.length > 10) state.velocityHistory.shift();
-
-    // Detect erratic behavior (rapid direction changes)
-    if (state.lastMove.x !== 0 && state.lastMove.y !== 0) {
-      const dx = x - state.lastMove.x;
-      const dy = y - state.lastMove.y;
-      const lastDx = state.lastMove.dx || 0;
-      const lastDy = state.lastMove.dy || 0;
-
-      // Check for direction reversal
-      const directionChange = (dx * lastDx < 0) || (dy * lastDy < 0);
-
-      if (directionChange && velocity > 5) {
-        state.lastDirectionChange = now;
-        state.erraticHistory.push({ t: now, v: velocity });
-
-        // Keep only recent history (last 2 seconds)
-        state.erraticHistory = state.erraticHistory.filter(h => now - h.t < 2000);
-
-        // If 3+ direction changes in 2 seconds with high velocity = erratic
-        if (state.erraticHistory.length >= 3) {
-          const el = document.elementFromPoint(x, y);
-          const elText = (el?.textContent || '').toLowerCase();
-          const elClass = (el?.className || '').toLowerCase();
-
-          const isPricingContext = elText.includes('$') ||
-                                  elClass.includes('price') ||
-                                  elClass.includes('tier') ||
-                                  elClass.includes('plan');
-
-          if (isPricingContext) {
-            record('erratic_movement', {
-              x, y,
-              changes: state.erraticHistory.length,
-              avg_velocity: state.erraticHistory.reduce((sum, h) => sum + h.v, 0) / state.erraticHistory.length,
-              target: `${elClass} ${elText.substring(0, 50)}`,
-              ctx: { pricing: true }
+        init: () => {
+          // Mouse tracking
+          document.addEventListener('mousemove', (e) => {
+            this.choreographer.mouseTrail.push({
+              x: e.clientX,
+              y: e.clientY,
+              t: Date.now()
             });
-            state.erraticHistory = []; // Reset after recording
-          }
+
+            if (this.choreographer.mouseTrail.length > 50) {
+              this.choreographer.mouseTrail.shift();
+            }
+
+            // Check for deceleration
+            if (this.choreographer.mouseTrail.length > 2) {
+              const recent = this.choreographer.mouseTrail.slice(-3);
+              const v1 = this.calculateVelocity(recent[0], recent[1]);
+              const v2 = this.calculateVelocity(recent[1], recent[2]);
+              const deceleration = v2 - v1;
+
+              if (deceleration < -100) {
+                this.recordBehavior('mouse_deceleration', {
+                  velocity: v2,
+                  deceleration,
+                  position: { x: e.clientX, y: e.clientY }
+                });
+              }
+            }
+          });
+
+          // Hover tracking on key elements
+          const trackables = ['[data-price]', '.pricing-tier', '.add-to-cart', 'button'];
+          trackables.forEach(selector => {
+            document.querySelectorAll(selector).forEach(element => {
+              element.addEventListener('mouseenter', () => {
+                const key = element.id || element.className;
+                this.choreographer.hoverTimers.set(key, Date.now());
+              });
+
+              element.addEventListener('mouseleave', () => {
+                const key = element.id || element.className;
+                const start = this.choreographer.hoverTimers.get(key);
+                if (start) {
+                  const duration = Date.now() - start;
+                  if (duration > 2000) {
+                    this.recordBehavior('significant_hover', {
+                      element: key,
+                      duration
+                    });
+                  }
+                  this.choreographer.hoverTimers.delete(key);
+                }
+              });
+            });
+          });
+
+          // Exit intent
+          document.addEventListener('mouseout', (e) => {
+            if (e.clientY <= 0) {
+              this.recordBehavior('exit_intent', {
+                mousePosition: { x: e.clientX, y: e.clientY }
+              });
+            }
+          });
+
+          // Scroll tracking
+          let lastScroll = 0;
+          window.addEventListener('scroll', () => {
+            const currentScroll = window.pageYOffset;
+            const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+            const scrollDepth = (currentScroll / docHeight) * 100;
+            const scrollVelocity = Math.abs(currentScroll - lastScroll);
+
+            if (scrollVelocity > 200) {
+              this.recordBehavior('rage_scroll', {
+                velocity: scrollVelocity,
+                depth: scrollDepth
+              });
+            }
+
+            lastScroll = currentScroll;
+          });
         }
-      }
+      };
 
-      state.lastMove.dx = dx;
-      state.lastMove.dy = dy;
+      this.choreographer.init();
     }
 
-    // Detect sudden deceleration (sticker shock indicator)
-    if (state.velocityHistory.length >= 3) {
-      const recent = state.velocityHistory.slice(-3);
-      const avgRecent = recent.reduce((sum, h) => sum + h.v, 0) / 3;
-      const avgPrevious = state.lastMove.v || avgRecent;
+    async loadRenderer() {
+      // In production, this would be bundled
+      if (typeof window.InterventionRenderer !== 'undefined') {
+        this.renderer = window.InterventionRenderer.getInstance();
+        return;
+      }
 
-      // Sudden deceleration (>70% drop in velocity)
-      if (avgPrevious > 10 && avgRecent < 3 && avgRecent < avgPrevious * 0.3) {
-        const el = document.elementFromPoint(x, y);
-        const elText = (el?.textContent || '').toLowerCase();
-        const elClass = (el?.className || '').toLowerCase();
+      // Inline renderer
+      this.renderer = {
+        activeInterventions: new Map(),
 
-        record('sudden_stop', {
-          x, y,
-          v_before: avgPrevious,
-          v_after: avgRecent,
-          target: `${elClass} ${elText.substring(0, 50)}`,
-          ctx: {
-            pricing: elText.includes('$') ||
-                    elClass.includes('price') ||
-                    elClass.includes('tier') ||
-                    elClass.includes('plan')
+        render: (intervention) => {
+          const id = 'intervention-' + Date.now();
+
+          // Create wrapper
+          const wrapper = document.createElement('div');
+          wrapper.id = id;
+          wrapper.className = `sentientiq-intervention sentientiq-${intervention.type}`;
+
+          // Style based on type
+          const styles = {
+            modal: `
+              position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+              display: flex; align-items: center; justify-content: center;
+              z-index: 999999; animation: fadeIn 0.3s;
+            `,
+            banner: `
+              position: fixed; top: 0; left: 0; right: 0;
+              background: linear-gradient(90deg, #667eea, #764ba2);
+              color: white; padding: 16px; text-align: center;
+              z-index: 999998; animation: slideDown 0.3s;
+            `,
+            toast: `
+              position: fixed; bottom: 20px; right: 20px;
+              background: white; border-radius: 8px; padding: 16px;
+              box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+              z-index: 999997; animation: slideIn 0.3s;
+            `
+          };
+
+          wrapper.style.cssText = styles[intervention.type] || styles.toast;
+
+          // Create content
+          wrapper.innerHTML = `
+            <div class="sentientiq-content">
+              <h3>${intervention.content.headline}</h3>
+              <p>${intervention.content.body}</p>
+              <button class="sentientiq-cta">${intervention.content.cta}</button>
+              ${intervention.type === 'modal' ? '<button class="sentientiq-close">×</button>' : ''}
+            </div>
+          `;
+
+          // Add to page
+          document.body.appendChild(wrapper);
+
+          // Attach handlers
+          wrapper.querySelector('.sentientiq-cta')?.addEventListener('click', () => {
+            this.handleInteraction(id, intervention);
+          });
+
+          wrapper.querySelector('.sentientiq-close')?.addEventListener('click', () => {
+            this.dismissIntervention(id);
+          });
+
+          // Track
+          this.renderer.activeInterventions.set(id, intervention);
+
+          // Auto-dismiss based on persistence
+          if (intervention.timing.persistence === 'timed') {
+            setTimeout(() => this.dismissIntervention(id), intervention.timing.duration);
           }
-        });
-      }
+
+          this.diagnostics?.log('renderer', 'intervention_shown', {
+            id,
+            type: intervention.type
+          }, 'info', intervention.correlationId);
+
+          return id;
+        }
+      };
     }
 
-    // Check for hover
-    const el = document.elementFromPoint(x, y);
-    if (el && velocity < 0.5) {
-      if (el !== state.hoverElement) {
-        state.hoverStart = now;
-        state.hoverElement = el;
-      } else if (now - state.hoverStart > 500) {  // Reduced threshold for faster detection
-        // Detect element context
-        const elText = (el.textContent || '').toLowerCase();
-        const elClass = (el.className || '').toLowerCase();
-        const elId = (el.id || '').toLowerCase();
-        const target = `${elClass} ${elId} ${el.tagName.toLowerCase()}`;
+    calculateVelocity(p1, p2) {
+      const dx = p2.x - p1.x;
+      const dy = p2.y - p1.y;
+      const dt = p2.t - p1.t;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+      return distance / dt * 1000; // pixels per second
+    }
 
-        // Detect price elements
-        const isPricing = elText.includes('$') ||
-                         elClass.includes('price') ||
-                         elClass.includes('cost') ||
-                         elId.includes('price') ||
-                         el.closest('[class*="price"], [id*="price"], [data-price]');
+    async fetchTenantConfig() {
+      try {
+        const response = await fetch(`${this.apiEndpoint}/api/tenant-templates?tenantId=${this.tenantId}`);
+        const data = await response.json();
 
-        // Detect cart/checkout elements
-        const isCart = elClass.includes('cart') ||
-                      elId.includes('cart') ||
-                      el.closest('[class*="cart"], [id*="cart"]');
+        this.tenantBranding = data.config || {
+          tier: 'starter',
+          brand: {
+            primaryColor: '#0066ff',
+            companyName: 'Demo'
+          }
+        };
 
-        // Detect CTA buttons
-        const isCTA = el.tagName === 'BUTTON' ||
-                     el.tagName === 'A' ||
-                     elClass.includes('btn') ||
-                     elClass.includes('button');
-
-        // Track pricing interactions
-        if (isPricing) {
-          state.lastPricingInteraction = now;
+        // Apply generated CSS if available
+        if (data.generatedCSS) {
+          const style = document.createElement('style');
+          style.textContent = data.generatedCSS.modal || '';
+          document.head.appendChild(style);
         }
 
-        record('hover', {
-          x, y,
-          duration: now - state.hoverStart,
-          target: target,
-          ctx: {
-            pricing: isPricing,
-            cart: isCart,
-            cta: isCTA
+        this.diagnostics?.log('choreographer', 'tenant_config_loaded', {
+          tier: this.tenantBranding.tier
+        }, 'info');
+
+      } catch (error) {
+        console.error('Failed to fetch tenant config:', error);
+        this.tenantBranding = { tier: 'starter', brand: {} };
+      }
+    }
+
+    connectWebSocket() {
+      const wsUrl = `${this.wsEndpoint}?session=${this.sessionId}&tenant=${this.tenantId}`;
+
+      this.ws = new WebSocket(wsUrl);
+
+      this.ws.onopen = () => {
+        console.log('📡 WebSocket connected');
+        this.reconnectAttempts = 0;
+
+        this.diagnostics?.log('websocket', 'connected', {
+          url: wsUrl
+        }, 'info');
+
+        // Register as intervention receiver
+        this.ws.send(JSON.stringify({
+          type: 'register',
+          channel: 'interventions',
+          sessionId: this.sessionId,
+          tenantId: this.tenantId
+        }));
+      };
+
+      this.ws.onmessage = (event) => {
+        try {
+          const message = JSON.parse(event.data);
+
+          this.diagnostics?.log('websocket', 'message_received', message, 'debug', message.correlationId);
+
+          if (message.type === 'intervention') {
+            this.handleIntervention(message);
           }
-        });
-        state.hoverStart = now; // Reset to avoid spam
-      }
-    } else {
-      state.hoverElement = null;
-      state.hoverStart = null;
-    }
-
-    // Detect exit trajectory (moving toward viewport edges)
-    if (velocity > 5) {
-      const edgeProximity = Math.min(x, y, window.innerWidth - x, window.innerHeight - y);
-      if (edgeProximity < 100) {
-        state.exitDirection =
-          y < 100 ? 'top' :
-          x < 100 ? 'left' :
-          x > window.innerWidth - 100 ? 'right' :
-          y > window.innerHeight - 100 ? 'bottom' : null;
-      }
-    }
-
-    // Only record significant movements
-    if (distance > 10) {
-      record('move', { x, y, v: velocity });
-    }
-
-    state.lastMove = { x, y, t: now, v: velocity };
-  }
-
-  // Detect scroll patterns
-  function processScroll() {
-    const now = Date.now();
-    const y = window.scrollY;
-    const dt = now - state.lastScroll.t;
-    if (dt < 100) return; // Throttle
-
-    const velocity = (y - state.lastScroll.y) / (dt / 100);
-
-    // Detect smooth/auto scroll (consistent velocity = programmatic)
-    const isAutoScroll = state.lastScroll.v &&
-                        Math.abs(velocity) > 10 &&
-                        Math.abs(velocity - state.lastScroll.v) < 2;
-
-    // Check what's visible in viewport - pricing elements?
-    const viewportElements = document.elementsFromPoint(window.innerWidth / 2, window.innerHeight / 2);
-    const visibleText = viewportElements.map(el => (el.textContent || '').toLowerCase()).join(' ');
-    const visibleClasses = viewportElements.map(el => (el.className || '').toLowerCase()).join(' ');
-
-    const isPricingVisible = visibleText.includes('$') ||
-                            visibleText.includes('price') ||
-                            visibleText.includes('tier') ||
-                            visibleText.includes('plan') ||
-                            visibleText.includes('month') ||
-                            visibleText.includes('year') ||
-                            visibleClasses.includes('price') ||
-                            visibleClasses.includes('tier') ||
-                            visibleClasses.includes('plan');
-
-    // Detect rapid scroll to top (tab shopping behavior)
-    if (y < 50 && velocity < -20) {
-      record('scroll_to_tabs', {
-        y,
-        v: velocity,
-        from_y: state.lastScroll.y
-      });
-    } else {
-      record('scroll', {
-        y,
-        v: velocity,
-        dir: velocity > 0 ? 'down' : 'up',
-        at_top: y < 50,
-        at_bottom: y > document.body.scrollHeight - window.innerHeight - 100,
-        ctx: {
-          pricing: isPricingVisible,
-          auto_scroll: isAutoScroll,  // Landing on pricing section
-          // Track if user is going back and forth (comparison behavior)
-          oscillating: state.lastScroll.v && Math.sign(velocity) !== Math.sign(state.lastScroll.v)
+        } catch (error) {
+          console.error('Failed to parse WebSocket message:', error);
         }
-      });
+      };
+
+      this.ws.onerror = (error) => {
+        this.diagnostics?.log('websocket', 'error', error, 'error');
+      };
+
+      this.ws.onclose = () => {
+        this.diagnostics?.log('websocket', 'disconnected', {
+          attempts: this.reconnectAttempts
+        }, 'warn');
+
+        // Attempt reconnection
+        if (this.reconnectAttempts < this.maxReconnectAttempts) {
+          setTimeout(() => {
+            this.reconnectAttempts++;
+            this.connectWebSocket();
+          }, this.reconnectDelay * Math.pow(2, this.reconnectAttempts));
+        }
+      };
     }
 
-    state.lastScroll = { y, t: now, v: velocity };
-  }
+    handleIntervention(message) {
+      const correlationId = message.correlationId || 'int-' + Date.now();
 
-  // Send telemetry to backend
-  function flush() {
-    if (buffer.length === 0) return;
+      this.diagnostics?.log('choreographer', 'intervention_received', message, 'info', correlationId);
 
-    const batch = buffer.splice(0, config.batchSize);
-    const payload = {
-      session_id: config.sessionId,
-      tenant_id: config.tenantId,
-      events: batch,
-      timestamp: new Date().toISOString()
-    };
-
-    // Use sendBeacon for reliability
-    if (navigator.sendBeacon) {
-      const blob = new Blob([JSON.stringify(payload)], { type: 'application/json' });
-      navigator.sendBeacon(config.endpoint, blob);
-    } else {
-      // Fallback to fetch
-      fetch(config.endpoint, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-API-Key': config.apiKey
+      // Create intervention object
+      const intervention = {
+        type: message.interventionType || 'toast',
+        template: message.template || 'default',
+        timing: {
+          delay: message.timing?.delay || 0,
+          duration: message.timing?.duration || 10000,
+          persistence: message.timing?.persistence || 'timed'
         },
-        body: JSON.stringify(payload),
-        keepalive: true
-      }).catch(() => {});
+        content: {
+          headline: message.content?.headline || 'Special Offer',
+          body: message.content?.body || 'Just for you!',
+          cta: message.content?.cta || 'Learn More',
+          discount: message.discount
+        },
+        correlationId
+      };
+
+      // Schedule rendering
+      setTimeout(() => {
+        if (this.renderer) {
+          const id = this.renderer.render(intervention);
+
+          // Track impression
+          this.recordBehavior('intervention_shown', {
+            id,
+            type: intervention.type,
+            template: intervention.template
+          });
+        }
+      }, intervention.timing.delay);
     }
 
-    if (config.debug) {
-      console.log(`📡 Sent ${batch.length} telemetry events`);
+    startTelemetryCollection() {
+      // Click tracking
+      document.addEventListener('click', (e) => {
+        const target = e.target;
+        const data = {
+          tag: target.tagName,
+          id: target.id,
+          classes: target.className,
+          text: target.innerText?.substring(0, 50),
+          href: target.href,
+          position: { x: e.clientX, y: e.clientY }
+        };
+
+        this.recordBehavior('click', data);
+      });
+
+      // Form tracking
+      document.addEventListener('submit', (e) => {
+        const form = e.target;
+        this.recordBehavior('form_submit', {
+          id: form.id,
+          action: form.action,
+          method: form.method
+        });
+      });
+
+      // Page visibility
+      document.addEventListener('visibilitychange', () => {
+        this.recordBehavior('visibility_change', {
+          hidden: document.hidden,
+          timestamp: Date.now()
+        });
+      });
+
+      // Unload warning for cart abandonment
+      window.addEventListener('beforeunload', () => {
+        if (this.eventQueue.length > 0) {
+          this.flushEvents();
+        }
+      });
     }
 
-    lastFlush = Date.now();
-  }
+    recordBehavior(event, data = {}) {
+      const telemetryEvent = {
+        event,
+        data,
+        timestamp: Date.now(),
+        sessionId: this.sessionId,
+        tenantId: this.tenantId,
+        url: window.location.href,
+        viewport: {
+          width: window.innerWidth,
+          height: window.innerHeight
+        }
+      };
 
-  // Event listeners
-  document.addEventListener('click', e => processClick(e.clientX, e.clientY, e.target), { passive: true });
-  document.addEventListener('pointermove', e => processMove(e.clientX, e.clientY), { passive: true });
-  window.addEventListener('scroll', processScroll, { passive: true });
+      this.eventQueue.push(telemetryEvent);
 
-  // Mouse leave/enter - use both for compatibility
-  const handleMouseLeave = (e) => {
-    const now = Date.now();
-
-    // Check if user interacted with pricing in last 5 seconds
-    const recentPricingInteraction = (now - state.lastPricingInteraction) < 5000;
-
-    // Check what they were looking at BEFORE marking off canvas
-    const wasViewingPricing = recentPricingInteraction ||
-                             state.hoverElement?.classList?.contains('price') ||
-                             state.hoverElement?.textContent?.includes('$');
-
-    // Determine exit direction
-    const exitDir = state.exitDirection ||
-      (e.clientY < 10 ? 'top' :
-       e.clientX < 10 ? 'left' :
-       e.clientX > window.innerWidth - 10 ? 'right' : 'bottom');
-
-    // Record exit BEFORE halting
-    record('mouse_exit', {
-      dir: exitDir,
-      x: e.clientX,
-      y: e.clientY,
-      after_pricing: wasViewingPricing,
-      time_since_pricing: now - state.lastPricingInteraction
-    });
-
-    // NOW halt all tracking
-    state.mouseOffCanvas = true;
-    state.hoverElement = null;
-    state.hoverStart = null;
-    state.velocityHistory = [];
-    state.exitDirection = null;
-  };
-
-  // Try multiple event types for better compatibility
-  window.addEventListener('pointerleave', handleMouseLeave, { passive: true });
-  window.addEventListener('mouseleave', handleMouseLeave, { passive: true });
-  document.addEventListener('mouseleave', handleMouseLeave, { passive: true });
-
-  // Multiple event types for better browser compatibility
-  const handleMouseEnter = () => {
-    if (state.mouseOffCanvas) {
-      if (config.debug) {
-        console.log('🔄 Mouse returned to canvas');
+      // Send immediately for critical events
+      if (['exit_intent', 'rage_scroll', 'form_submit'].includes(event)) {
+        this.flushEvents();
       }
-      state.mouseOffCanvas = false;
-      state.exitDirection = null;
-      record('mouse_return', {});
     }
-  };
 
-  window.addEventListener('pointerenter', handleMouseEnter, { passive: true });
-  window.addEventListener('mouseenter', handleMouseEnter, { passive: true });
-  document.addEventListener('mouseenter', handleMouseEnter, { passive: true });
+    startBatchProcessor() {
+      setInterval(() => {
+        if (this.eventQueue.length >= this.batchSize) {
+          this.flushEvents();
+        }
+      }, this.batchInterval);
+    }
 
-  // Also reset on any mouse movement (failsafe)
-  document.addEventListener('mousemove', () => {
-    if (state.mouseOffCanvas) {
-      if (config.debug) {
-        console.log('🔄 Mouse movement detected - resetting offCanvas');
+    async flushEvents() {
+      if (this.eventQueue.length === 0) return;
+
+      const events = [...this.eventQueue];
+      this.eventQueue = [];
+
+      try {
+        const correlationId = 'batch-' + Date.now();
+
+        this.diagnostics?.log('choreographer', 'sending_telemetry', {
+          count: events.length
+        }, 'debug', correlationId);
+
+        const response = await fetch(`${this.apiEndpoint}/api/telemetry/stream`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            session_id: this.sessionId,
+            tenant_id: this.tenantId,
+            events
+          })
+        });
+
+        const result = await response.json();
+
+        this.diagnostics?.log('processor', 'telemetry_processed', result, 'info', correlationId);
+
+      } catch (error) {
+        console.error('Failed to send telemetry:', error);
+        // Re-queue events
+        this.eventQueue.unshift(...events);
       }
-      state.mouseOffCanvas = false;
-      state.exitDirection = null;
     }
-  }, { passive: true, once: false });
 
-  // Copy/paste detection (high intent signals)
-  document.addEventListener('copy', (e) => {
-    const selection = window.getSelection().toString();
-    if (selection) {
-      const isPriceText = selection.includes('$') ||
-                         selection.includes('price') ||
-                         selection.includes('month') ||
-                         selection.includes('year');
+    handleInteraction(id, intervention) {
+      this.diagnostics?.log('renderer', 'intervention_clicked', {
+        id,
+        type: intervention.type
+      }, 'info', intervention.correlationId);
 
-      record('copy', {
-        length: selection.length,
-        ctx: {
-          pricing: isPriceText,
-          url: selection.includes('http'),
-          email: selection.includes('@')
-        }
-      });
-    }
-  }, { passive: true });
-
-  // Form field interactions (critical for checkout/signup)
-  let formStartTime = null;
-  let currentField = null;
-
-  document.addEventListener('focusin', (e) => {
-    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') {
-      const fieldType = e.target.type || e.target.tagName.toLowerCase();
-      const fieldName = e.target.name || e.target.id || fieldType;
-
-      currentField = fieldName;
-      formStartTime = Date.now();
-
-      record('field_focus', {
-        field: fieldName,
-        type: fieldType,
-        ctx: {
-          checkout: fieldName.includes('card') || fieldName.includes('payment') || fieldName.includes('cvv'),
-          email: fieldType === 'email' || fieldName.includes('email'),
-          pricing: e.target.closest('[class*="price"], [id*="price"], form[action*="checkout"]') !== null
-        }
-      });
-    }
-  }, { passive: true });
-
-  document.addEventListener('focusout', (e) => {
-    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') {
-      const timeSpent = formStartTime ? Date.now() - formStartTime : 0;
-      const hasValue = e.target.value && e.target.value.length > 0;
-
-      record('field_blur', {
-        field: currentField,
-        duration: timeSpent,
-        filled: hasValue,
-        ctx: {
-          abandoned: !hasValue && timeSpent > 1000, // Focused but left empty
-          checkout: currentField?.includes('card') || currentField?.includes('payment')
-        }
+      // Track conversion
+      this.recordBehavior('intervention_clicked', {
+        id,
+        type: intervention.type,
+        template: intervention.template,
+        discount: intervention.content.discount
       });
 
-      formStartTime = null;
-      currentField = null;
-    }
-  }, { passive: true });
-
-  // Visibility handling with rapid switching detection
-  let lastTabHidden = 0;
-  let tabSwitchCount = 0;
-
-  document.addEventListener('visibilitychange', () => {
-    state.suspended = document.hidden;
-
-    if (document.hidden) {
-      lastTabHidden = Date.now();
-      record('tab_hidden', {});
-    } else {
-      const awayTime = Date.now() - lastTabHidden;
-
-      // Track rapid tab switching (comparison shopping behavior)
-      if (awayTime < 30000) {
-        tabSwitchCount++;
-      } else {
-        tabSwitchCount = 0;
+      // Send feedback
+      if (this.ws?.readyState === WebSocket.OPEN) {
+        this.ws.send(JSON.stringify({
+          type: 'intervention_feedback',
+          sessionId: this.sessionId,
+          interventionType: intervention.type,
+          interacted: true,
+          timestamp: Date.now()
+        }));
       }
 
-      record('tab_return', {
-        away_duration: awayTime,
-        ctx: {
-          quick_switch: awayTime < 5000,
-          comparison_pattern: tabSwitchCount > 2
-        }
+      // Apply discount if present
+      if (intervention.content.discount) {
+        this.applyDiscount(intervention.content.discount);
+      }
+
+      // Dismiss after interaction
+      this.dismissIntervention(id);
+    }
+
+    dismissIntervention(id) {
+      const element = document.getElementById(id);
+      if (element) {
+        element.style.animation = 'fadeOut 0.3s';
+        setTimeout(() => element.remove(), 300);
+      }
+
+      this.renderer?.activeInterventions.delete(id);
+    }
+
+    applyDiscount(percent) {
+      // Generate discount code
+      const code = 'SENTIENT' + percent + Math.random().toString(36).substring(2, 6).toUpperCase();
+
+      // Store in session
+      sessionStorage.setItem('sentientiq_discount', JSON.stringify({
+        code,
+        percent,
+        timestamp: Date.now()
+      }));
+
+      // Try to apply to page (Shopify, WooCommerce, etc)
+      const discountInputs = document.querySelectorAll('[name*="discount"], [name*="coupon"], [name*="promo"]');
+      discountInputs.forEach(input => {
+        input.value = code;
+        input.dispatchEvent(new Event('input', { bubbles: true }));
       });
+
+      // Show confirmation
+      this.showDiscountConfirmation(code, percent);
     }
-  });
 
-  // Periodic flush
-  flushTimer = setInterval(flush, config.flushInterval);
+    showDiscountConfirmation(code, percent) {
+      const toast = document.createElement('div');
+      toast.style.cssText = `
+        position: fixed; top: 20px; right: 20px;
+        background: #10b981; color: white;
+        padding: 16px 24px; border-radius: 8px;
+        font-weight: bold; z-index: 999999;
+        animation: slideDown 0.3s;
+      `;
+      toast.innerHTML = `✅ ${percent}% discount applied! Code: ${code}`;
+      document.body.appendChild(toast);
 
-  // Flush on unload
-  window.addEventListener('pagehide', flush);
-  window.addEventListener('beforeunload', flush);
-
-  // Initialize site mapping on load
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initializeSiteMapping);
-  } else {
-    initializeSiteMapping();
+      setTimeout(() => toast.remove(), 5000);
+    }
   }
 
-  // Public API
-  window.SentientIQTelemetry = {
-    version: '5.0',
-    flush,
-    getSessionId: () => config.sessionId,
-    getTenantId: () => config.tenantId,
-    getSiteMap: () => siteMap,
-    destroy: () => {
-      clearInterval(flushTimer);
-      flush();
-      state.suspended = true;
-    }
-  };
+  // Add animations
+  const style = document.createElement('style');
+  style.textContent = `
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
+    @keyframes slideDown { from { transform: translateY(-100%); } to { transform: translateY(0); } }
+    @keyframes slideIn { from { transform: translateX(100%); } to { transform: translateX(0); } }
 
-  if (config.debug) {
-    console.log('🚀 SentientIQ Telemetry v5.0 initialized');
-    console.log(`📊 Session: ${config.sessionId}`);
-  }
+    .sentientiq-cta {
+      background: #0066ff;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 6px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    .sentientiq-close {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: transparent;
+      border: none;
+      font-size: 24px;
+      cursor: pointer;
+      color: #666;
+    }
+
+    .sentientiq-content {
+      background: white;
+      padding: 32px;
+      border-radius: 12px;
+      max-width: 500px;
+      text-align: center;
+    }
+  `;
+  document.head.appendChild(style);
+
+  // Initialize
+  window.SentientIQTelemetry = new SentientIQTelemetry();
+
+  // Expose for debugging
+  window.sentientiq = window.SentientIQTelemetry;
+  console.log('🔍 Debug: window.sentientiq');
+
 })();
