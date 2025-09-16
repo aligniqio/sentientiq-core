@@ -48,6 +48,10 @@
 
   // Record telemetry event
   function record(type, data) {
+    if (config.debug && type !== 'move') { // Don't spam console with move events
+      console.log(`📝 Record called: ${type}`);
+    }
+
     if (state.suspended || state.mouseOffCanvas) {
       if (config.debug) {
         console.log(`⛔ Event blocked: ${type}, suspended: ${state.suspended}, mouseOffCanvas: ${state.mouseOffCanvas}`);
@@ -585,13 +589,32 @@
   window.addEventListener('mouseleave', handleMouseLeave, { passive: true });
   document.addEventListener('mouseleave', handleMouseLeave, { passive: true });
 
-  window.addEventListener('pointerenter', () => {
+  // Multiple event types for better browser compatibility
+  const handleMouseEnter = () => {
     if (state.mouseOffCanvas) {
+      if (config.debug) {
+        console.log('🔄 Mouse returned to canvas');
+      }
+      state.mouseOffCanvas = false;
+      state.exitDirection = null;
       record('mouse_return', {});
+    }
+  };
+
+  window.addEventListener('pointerenter', handleMouseEnter, { passive: true });
+  window.addEventListener('mouseenter', handleMouseEnter, { passive: true });
+  document.addEventListener('mouseenter', handleMouseEnter, { passive: true });
+
+  // Also reset on any mouse movement (failsafe)
+  document.addEventListener('mousemove', () => {
+    if (state.mouseOffCanvas) {
+      if (config.debug) {
+        console.log('🔄 Mouse movement detected - resetting offCanvas');
+      }
       state.mouseOffCanvas = false;
       state.exitDirection = null;
     }
-  }, { passive: true });
+  }, { passive: true, once: false });
 
   // Copy/paste detection (high intent signals)
   document.addEventListener('copy', (e) => {
