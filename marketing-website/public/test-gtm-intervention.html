@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>GTM Intervention Test</title>
+    <style>
+        body { font-family: monospace; padding: 20px; }
+        .log { margin: 5px 0; padding: 5px; background: #f0f0f0; }
+        .error { background: #ffdddd; }
+        .success { background: #ddffdd; }
+        .info { background: #ddeeff; }
+    </style>
+</head>
+<body>
+    <h1>GTM Intervention Loading Test</h1>
+    <div id="logs"></div>
+
+    <script>
+        const logs = document.getElementById('logs');
+
+        function log(msg, type = '') {
+            const div = document.createElement('div');
+            div.className = 'log ' + type;
+            div.textContent = `[${new Date().toISOString().split('T')[1].split('.')[0]}] ${msg}`;
+            logs.appendChild(div);
+            console.log(msg);
+        }
+
+        // Set up window.SentientIQ like GTM would
+        window.SentientIQ = {
+            tenantId: 'demo',
+            apiEndpoint: 'https://api.sentientiq.app'
+        };
+        log('Set window.SentientIQ config', 'info');
+
+        // Load telemetry first
+        log('Loading telemetry-v5.js...', 'info');
+        const telemetryScript = document.createElement('script');
+        telemetryScript.src = '/telemetry-v5.js';
+        telemetryScript.onload = () => {
+            log('✅ Telemetry script loaded', 'success');
+
+            // Check if SentientIQTelemetry is available
+            if (window.SentientIQTelemetry) {
+                log(`✅ window.SentientIQTelemetry is available! Version: ${window.SentientIQTelemetry.version}`, 'success');
+                log(`Session ID: ${window.SentientIQTelemetry.getSessionId()}`, 'success');
+
+                // Check sessionStorage
+                const storedSession = sessionStorage.getItem('sq_session_id');
+                log(`SessionStorage sq_session_id: ${storedSession}`, storedSession ? 'success' : 'error');
+            } else {
+                log('❌ window.SentientIQTelemetry NOT found!', 'error');
+            }
+        };
+        telemetryScript.onerror = () => {
+            log('❌ Failed to load telemetry script', 'error');
+        };
+        document.head.appendChild(telemetryScript);
+
+        // Now simulate the GTM intervention loader
+        log('Starting GTM-style intervention loader...', 'info');
+
+        let attempts = 0;
+        function loadInterventions() {
+            attempts++;
+            log(`Checking for SentientIQTelemetry (attempt ${attempts})...`);
+
+            if (window.SentientIQTelemetry) {
+                log('✅ Found SentientIQTelemetry! Loading intervention-receiver.js', 'success');
+
+                var script = document.createElement('script');
+                script.src = '/intervention-receiver.js';
+                script.setAttribute('data-tenant-id', 'demo');
+                script.onload = () => {
+                    log('✅ intervention-receiver.js loaded!', 'success');
+
+                    // Check if WebSocket is created
+                    setTimeout(() => {
+                        if (window.SentientIQInterventions) {
+                            const ws = window.SentientIQInterventions.ws();
+                            if (ws) {
+                                log(`✅ WebSocket found! State: ${ws.readyState} (0=CONNECTING, 1=OPEN, 2=CLOSING, 3=CLOSED)`,
+                                    ws.readyState === 1 ? 'success' : 'info');
+                                log(`WebSocket URL: ${ws.url}`, 'info');
+                            } else {
+                                log('⚠️ WebSocket not initialized yet', 'error');
+                            }
+
+                            log(`Session ID from interventions: ${window.SentientIQInterventions.getSessionId()}`, 'info');
+                            log(`Tenant ID from interventions: ${window.SentientIQInterventions.getTenantId()}`, 'info');
+                        } else {
+                            log('❌ window.SentientIQInterventions not found!', 'error');
+                        }
+                    }, 2000);
+                };
+                script.onerror = () => {
+                    log('❌ Failed to load intervention-receiver.js', 'error');
+                };
+                document.head.appendChild(script);
+            } else {
+                if (attempts < 50) {
+                    setTimeout(loadInterventions, 100);
+                } else {
+                    log('❌ Gave up waiting for SentientIQTelemetry after 5 seconds', 'error');
+                }
+            }
+        }
+
+        // Start the GTM-style loader after a small delay
+        setTimeout(loadInterventions, 100);
+
+        // Also check WebSocket endpoint directly
+        setTimeout(() => {
+            log('Testing direct WebSocket connection...', 'info');
+            const testSession = sessionStorage.getItem('sq_session_id') || 'test_' + Date.now();
+            const wsUrl = `wss://api.sentientiq.app/ws?channel=interventions&session=${testSession}&tenant=demo`;
+
+            try {
+                const testWs = new WebSocket(wsUrl);
+                testWs.onopen = () => {
+                    log(`✅ Direct WebSocket test SUCCEEDED!`, 'success');
+                    testWs.close();
+                };
+                testWs.onerror = (e) => {
+                    log(`❌ Direct WebSocket test failed: ${e.type}`, 'error');
+                };
+            } catch (e) {
+                log(`❌ Direct WebSocket exception: ${e.message}`, 'error');
+            }
+        }, 3000);
+    </script>
+</body>
+</html>
