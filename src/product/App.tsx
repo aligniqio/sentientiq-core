@@ -18,7 +18,7 @@ import InvitesPage from './admin/InvitesPage'
 import SuperAdmin from '../pages/super-admin'
 import DebugSuperAdmin from '../pages/debug-super-admin'
 import SystemImplementation from '../pages/system/implementation'
-import SystemConfiguration from '../pages/system/configuration'
+import { Configuration as SystemConfiguration } from '../pages/system/configuration'
 
 // Candy Kit UI enhancements
 import { SenseiCandyProvider } from '../components/ui/SenseiCandy'
