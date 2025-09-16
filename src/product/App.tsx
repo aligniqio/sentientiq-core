@@ -10,7 +10,6 @@ import Auth from '../pages/auth'
 import Settings from '../pages/settings'
 import Pricing from '../pages/pricing'
 import Billing from '../pages/billing'
-import SageInbox from '../pages/sage-inbox'
 import EmotionalLiveFeed from '../components/EmotionalLiveFeed'
 
 // Admin pages
@@ -52,24 +51,9 @@ function App() {
           } />
           
           {/* /ask route removed - not needed */}
-          
-          {/* Sage - The Inbox Protector */}
-          <Route
-            path="/sage"
-            element={
-              <>
-                <SignedIn>
-                  <Layout>
-                    <SageInbox />
-                  </Layout>
-                </SignedIn>
-                <SignedOut>
-                  <Navigate to="/auth" replace />
-                </SignedOut>
-              </>
-            }
-          />
-          
+
+          {/* Sage lives in the corner crystal ball - no dedicated route needed */}
+
           {/* PhD Collective */}
           <Route
             path="/collective"

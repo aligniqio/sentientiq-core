@@ -346,7 +346,7 @@ export default function SageCrystalBall() {
                     <div className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
                     <div className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
                   </div>
-                  <span className="text-sm">Analyzing the BS level...</span>
+                  <span className="text-sm">*adjusts monocle, examining evidence*</span>
                 </div>
               )}
 
@@ -355,7 +355,7 @@ export default function SageCrystalBall() {
                   <div className="flex items-start gap-3">
                     <Eye className="w-5 h-5 text-purple-400 mt-1 flex-shrink-0" />
                     <div className="flex-1">
-                      <TypewriterText text={sageResponse} speed={25} />
+                      <TypewriterText text={sageResponse} speed={8} />
                     </div>
                   </div>
                 </div>
