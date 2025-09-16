@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import PageHeader from '../../components/PageHeader';
 import { useUser } from '@clerk/clerk-react';
+import { TemplateGallery } from '../../components/TemplateGallery';
 
 interface ConfigState {
   // Branding
@@ -48,10 +49,8 @@ interface ConfigState {
   demoVideoUrl: string;
   caseStudyUrl: string;
 
-  // Interventions
-  enablePriceHoverAssist: boolean;
-  enableExitSave: boolean;
-  enableConfusionHelp: boolean;
+  // Selected intervention template
+  selectedTemplateId?: string;
 
   // Template
   template: 'saas' | 'ecommerce' | 'automotive' | 'custom';
@@ -85,14 +84,11 @@ const SystemConfiguration: React.FC = () => {
     calendarUrl: '',
     demoVideoUrl: '',
     caseStudyUrl: '',
-    enablePriceHoverAssist: true,
-    enableExitSave: true,
-    enableConfusionHelp: false,
+    selectedTemplateId: undefined,
     template: 'saas'
   });
 
   const [isPublishing, setIsPublishing] = useState(false);
-  const [publishedUrl, setPublishedUrl] = useState('');
   const [gtmSnippet, setGtmSnippet] = useState('');
   const [copied, setCopied] = useState(false);
   const [tenantId, setTenantId] = useState('');
@@ -146,7 +142,8 @@ const SystemConfiguration: React.FC = () => {
         discount: config.discountPercent,
         code: config.discountCode,
         trial: config.freeTrialDays
-      }
+      },
+      selectedTemplateId: config.selectedTemplateId
     }, null, 2)}
   };
 
@@ -166,7 +163,6 @@ const SystemConfiguration: React.FC = () => {
 </script>`;
 
     setGtmSnippet(snippet);
-    setPublishedUrl(`https://sentientiq.ai/preview/${tenantId}`);
 
     // Simulate publish delay
     setTimeout(() => {
@@ -191,15 +187,6 @@ const SystemConfiguration: React.FC = () => {
     }
   };
 
-  const getTierFeatures = () => {
-    const features = {
-      starter: ['UI Interventions', 'Basic Analytics', 'GTM Ready'],
-      growth: ['Everything in Starter', 'Email Interventions', 'A/B Testing', 'Advanced Analytics'],
-      scale: ['Everything in Growth', 'Slack Integration', 'CRM Sync', 'Custom Webhooks', 'API Access'],
-      enterprise: ['Everything in Scale', 'Executive Alerts', 'Dedicated Slack', 'Custom Integrations', 'White Glove Service']
-    };
-    return features[tier] || features.starter;
-  };
 
   return (
     <div className="min-h-screen">
@@ -768,153 +755,20 @@ const SystemConfiguration: React.FC = () => {
             </motion.div>
           )}
 
-          {/* Interventions Toggle - Updated with Real Intervention Types */}
+          {/* SPECTACULAR INTERVENTION TEMPLATE GALLERY */}
           {step === 'interventions' && (
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-              <h2 className="text-2xl font-bold mb-6">Choose Your Interventions</h2>
-              <p className="text-gray-400 mb-8">These interventions will trigger based on visitor emotions</p>
+              <h2 className="text-2xl font-bold mb-6">Design Your Interventions</h2>
+              <p className="text-gray-400 mb-8">Select and customize beautiful intervention templates that respond to visitor emotions</p>
 
-              <div className="grid gap-4">
-                {/* Sticker Shock Interventions */}
-                <div className="p-4 bg-gradient-to-r from-red-900/20 to-orange-900/20 rounded-lg border border-red-500/30">
-                  <h3 className="font-medium text-red-400 mb-3">💸 Sticker Shock Response</h3>
-                  <div className="space-y-3">
-                    <label className="flex items-center justify-between p-3 bg-black/30 rounded-lg hover:bg-black/40 cursor-pointer">
-                      <div>
-                        <div className="font-medium">ROI Calculator</div>
-                        <div className="text-xs text-gray-400">Shows value when price causes hesitation</div>
-                      </div>
-                      <input
-                        type="checkbox"
-                        checked={config.enablePriceHoverAssist}
-                        onChange={(e) => setConfig(prev => ({ ...prev, enablePriceHoverAssist: e.target.checked }))}
-                        className="w-4 h-4 text-blue-600 rounded"
-                      />
-                    </label>
-                    <label className="flex items-center justify-between p-3 bg-black/30 rounded-lg hover:bg-black/40 cursor-pointer">
-                      <div>
-                        <div className="font-medium">Payment Plans</div>
-                        <div className="text-xs text-gray-400">Offer installments on high-velocity recoil</div>
-                      </div>
-                      <input
-                        type="checkbox"
-                        checked={true}
-                        disabled
-                        className="w-4 h-4 text-blue-600 rounded"
-                      />
-                    </label>
-                  </div>
-                </div>
-
-                {/* Exit Intent Interventions */}
-                <div className="p-4 bg-gradient-to-r from-yellow-900/20 to-amber-900/20 rounded-lg border border-yellow-500/30">
-                  <h3 className="font-medium text-yellow-400 mb-3">🚪 Exit Intent Saves</h3>
-                  <div className="space-y-3">
-                    <label className="flex items-center justify-between p-3 bg-black/30 rounded-lg hover:bg-black/40 cursor-pointer">
-                      <div>
-                        <div className="font-medium">Discount Modal</div>
-                        <div className="text-xs text-gray-400">Last-chance offer before they leave</div>
-                      </div>
-                      <input
-                        type="checkbox"
-                        checked={config.enableExitSave}
-                        onChange={(e) => setConfig(prev => ({ ...prev, enableExitSave: e.target.checked }))}
-                        className="w-4 h-4 text-blue-600 rounded"
-                      />
-                    </label>
-                    <label className="flex items-center justify-between p-3 bg-black/30 rounded-lg hover:bg-black/40 cursor-pointer">
-                      <div>
-                        <div className="font-medium">Free Trial Offer</div>
-                        <div className="text-xs text-gray-400">Remove risk for hesitant visitors</div>
-                      </div>
-                      <input
-                        type="checkbox"
-                        checked={true}
-                        disabled
-                        className="w-4 h-4 text-blue-600 rounded"
-                      />
-                    </label>
-                  </div>
-                </div>
-
-                {/* Confusion Interventions */}
-                <div className="p-4 bg-gradient-to-r from-blue-900/20 to-cyan-900/20 rounded-lg border border-blue-500/30">
-                  <h3 className="font-medium text-blue-400 mb-3">😕 Confusion Helpers</h3>
-                  <div className="space-y-3">
-                    <label className="flex items-center justify-between p-3 bg-black/30 rounded-lg hover:bg-black/40 cursor-pointer">
-                      <div>
-                        <div className="font-medium">Live Chat Prompt</div>
-                        <div className="text-xs text-gray-400">Offer help during erratic behavior</div>
-                      </div>
-                      <input
-                        type="checkbox"
-                        checked={config.enableConfusionHelp}
-                        onChange={(e) => setConfig(prev => ({ ...prev, enableConfusionHelp: e.target.checked }))}
-                        className="w-4 h-4 text-blue-600 rounded"
-                      />
-                    </label>
-                    <label className="flex items-center justify-between p-3 bg-black/30 rounded-lg hover:bg-black/40 cursor-pointer">
-                      <div>
-                        <div className="font-medium">Comparison Chart</div>
-                        <div className="text-xs text-gray-400">Show value props for comparison shoppers</div>
-                      </div>
-                      <input
-                        type="checkbox"
-                        checked={true}
-                        disabled
-                        className="w-4 h-4 text-blue-600 rounded"
-                      />
-                    </label>
-                  </div>
-                </div>
-
-                {/* Rage Click Response */}
-                <div className="p-4 bg-gradient-to-r from-blue-900/20 to-indigo-900/20 rounded-lg border border-blue-500/30">
-                  <h3 className="font-medium text-blue-400 mb-3">😤 Rage Click Response</h3>
-                  <div className="space-y-3">
-                    <label className="flex items-center justify-between p-3 bg-black/30 rounded-lg hover:bg-black/40 cursor-pointer">
-                      <div>
-                        <div className="font-medium">Success Stories</div>
-                        <div className="text-xs text-gray-400">Social proof when frustration detected</div>
-                      </div>
-                      <input
-                        type="checkbox"
-                        checked={true}
-                        disabled
-                        className="w-4 h-4 text-blue-600 rounded"
-                      />
-                    </label>
-                    <label className="flex items-center justify-between p-3 bg-black/30 rounded-lg hover:bg-black/40 cursor-pointer">
-                      <div>
-                        <div className="font-medium">Guarantee Badge</div>
-                        <div className="text-xs text-gray-400">Build trust during high stress</div>
-                      </div>
-                      <input
-                        type="checkbox"
-                        checked={true}
-                        disabled
-                        className="w-4 h-4 text-blue-600 rounded"
-                      />
-                    </label>
-                  </div>
-                </div>
-              </div>
-
-              {/* Tier Features */}
-              <div className="mt-8 p-4 bg-gradient-to-r from-blue-900/20 to-blue-900/20 rounded-lg border border-blue-500/30">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="font-medium">Your {tier.charAt(0).toUpperCase() + tier.slice(1)} Plan Includes:</h3>
-                  <Shield className="w-5 h-5 text-blue-400" />
-                </div>
-                <div className="space-y-2">
-                  {getTierFeatures().map((feature, index) => (
-                    <div key={index} className="flex items-center text-sm text-gray-300">
-                      <Check className="w-4 h-4 text-green-400 mr-2" />
-                      {feature}
-                    </div>
-                  ))}
-                </div>
-              </div>
+              {/* The Magnificent Template Gallery */}
+              <TemplateGallery
+                tenantId={tenantId}
+                currentTier={tier}
+                onTemplateSelect={(template) => {
+                  setConfig(prev => ({ ...prev, selectedTemplateId: template.id }));
+                }}
+              />
 
               <div className="mt-8 flex justify-between">
                 <button
@@ -925,7 +779,7 @@ const SystemConfiguration: React.FC = () => {
                 </button>
                 <button
                   onClick={handlePublish}
-                  disabled={isPublishing}
+                  disabled={isPublishing || !config.selectedTemplateId}
                   className="px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-600 rounded-lg hover:from-blue-700 hover:to-blue-700 transition-all flex items-center disabled:opacity-50"
                 >
                   {isPublishing ? (
