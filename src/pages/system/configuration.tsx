@@ -28,9 +28,6 @@ export const Configuration: React.FC = () => {
           className="mt-16 text-center text-gray-400"
         >
           <p className="text-sm">
-            After GTM hell, this is where the magic happens.
-          </p>
-          <p className="text-xs mt-2">
             Every gradient. Every shadow. Every word. Under your control.
           </p>
         </motion.div>
