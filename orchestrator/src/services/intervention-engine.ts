@@ -10,6 +10,8 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { identityService, UserIdentity } from './identity-resolution.js';
 import { crmService } from './crm-integration.js';
 import { webhookDispatcher, WebhookPayload } from './webhook-dispatcher.js';
+import { EmotionalState, EmotionalSession, InterventionDecision } from '../types/emotional-state.js';
+import { unifiedWS } from './unified-websocket.js';
 
 // Lazy-initialize Supabase client
 let supabase: SupabaseClient | null = null;
@@ -1198,6 +1200,258 @@ class InterventionEngine extends EventEmitter {
     return Math.min(0.99, Math.max(0, 1 - Math.exp(-zScore * zScore / 2)));
   }
   
+  /**
+   * CORE DECISION ENGINE - Process emotional state and decide on interventions
+   * This is THE method that replaces behavior-processor's intervention logic
+   */
+  async processEmotionalState(state: EmotionalState): Promise<InterventionDecision | null> {
+    const { sessionId, emotion, confidence, intensity, frustration, anxiety, urgency } = state;
+
+    // Map emotional patterns to intervention types
+    const interventionMap = this.getInterventionForEmotion(emotion, {
+      frustration: frustration || 0,
+      anxiety: anxiety || 0,
+      urgency: urgency || 0,
+      intensity: intensity || confidence
+    });
+
+    if (!interventionMap) return null;
+
+    // Check cooldowns
+    if (this.isOnCooldown(sessionId, interventionMap.type)) {
+      console.log(`⏸️ Intervention ${interventionMap.type} on cooldown for ${sessionId}`);
+      return null;
+    }
+
+    // Build decision
+    const decision: InterventionDecision = {
+      sessionId,
+      interventionType: interventionMap.type,
+      reason: interventionMap.reason,
+      confidence: confidence * (interventionMap.multiplier || 1),
+      priority: this.calculatePriority(state),
+      timing: this.calculateTiming(state)
+    };
+
+    // Execute if high priority
+    if (decision.priority === 'critical' || decision.priority === 'high') {
+      await this.executeInterventionDecision(decision, state);
+    }
+
+    return decision;
+  }
+
+  /**
+   * Map emotions to specific interventions - THE BRAIN
+   */
+  private getInterventionForEmotion(emotion: string, vectors: any): any {
+    // Cart-specific emotions get immediate interventions
+    const cartInterventions: Record<string, any> = {
+      'cart_hesitation': {
+        type: 'cart_save_modal',
+        reason: 'Cart hesitation detected',
+        multiplier: 1.2
+      },
+      'cart_shock': {
+        type: 'discount_modal',
+        reason: 'Price shock in cart',
+        multiplier: 1.5
+      },
+      'cart_review': {
+        type: 'value_popup',
+        reason: 'Reviewing cart items',
+        multiplier: 1.0
+      },
+      'abandonment_intent': {
+        type: 'save_cart_urgent',
+        reason: 'Abandonment signals detected',
+        multiplier: 2.0
+      }
+    };
+
+    if (cartInterventions[emotion]) {
+      return cartInterventions[emotion];
+    }
+
+    // High frustration patterns
+    if (vectors.frustration > 80) {
+      if (vectors.urgency > 60) {
+        return {
+          type: 'help_offer',
+          reason: 'High frustration with urgency',
+          multiplier: 1.3
+        };
+      }
+      return {
+        type: 'live_chat',
+        reason: 'Frustration threshold exceeded',
+        multiplier: 1.1
+      };
+    }
+
+    // High anxiety patterns
+    if (vectors.anxiety > 75) {
+      if (emotion === 'comparison_shopping') {
+        return {
+          type: 'comparison_chart',
+          reason: 'Anxious comparison shopping',
+          multiplier: 1.2
+        };
+      }
+      return {
+        type: 'money_back_guarantee',
+        reason: 'High purchase anxiety',
+        multiplier: 1.0
+      };
+    }
+
+    // Price-related patterns
+    if (emotion === 'price_shock' || emotion === 'sticker_shock') {
+      if (vectors.intensity > 70) {
+        return {
+          type: 'payment_plan_offer',
+          reason: 'Significant price shock',
+          multiplier: 1.4
+        };
+      }
+      return {
+        type: 'discount_offer',
+        reason: 'Price sensitivity detected',
+        multiplier: 1.2
+      };
+    }
+
+    // Trust-building patterns
+    if (emotion === 'skeptical' || emotion === 'evaluation') {
+      return {
+        type: 'success_stories',
+        reason: 'Building trust during evaluation',
+        multiplier: 0.9
+      };
+    }
+
+    return null;
+  }
+
+  /**
+   * Calculate intervention priority based on emotional state
+   */
+  private calculatePriority(state: EmotionalState): 'low' | 'medium' | 'high' | 'critical' {
+    const { emotion, confidence, frustration = 0, urgency = 0, sessionAge } = state;
+
+    // Critical conditions
+    if (emotion === 'abandonment_intent' && confidence > 80) return 'critical';
+    if (emotion === 'cart_shock' && frustration > 70) return 'critical';
+    if (frustration > 90) return 'critical';
+
+    // High priority
+    if (emotion.startsWith('cart_') && confidence > 70) return 'high';
+    if (urgency > 80 && sessionAge > 60000) return 'high'; // Urgent after 1 min
+    if (frustration > 70) return 'high';
+
+    // Medium priority
+    if (confidence > 60) return 'medium';
+    if (urgency > 50) return 'medium';
+
+    return 'low';
+  }
+
+  /**
+   * Calculate optimal intervention timing
+   */
+  private calculateTiming(state: EmotionalState): 'immediate' | 'delayed' | 'optimal' {
+    const { sessionAge, urgency = 0, emotion } = state;
+
+    // Too early in session - wait
+    if (sessionAge < 5000) return 'delayed'; // Wait 5 seconds minimum
+
+    // Cart emotions need immediate action
+    if (emotion.startsWith('cart_')) return 'immediate';
+    if (emotion === 'abandonment_intent') return 'immediate';
+
+    // High urgency = immediate
+    if (urgency > 80) return 'immediate';
+
+    // Otherwise find optimal moment
+    return 'optimal';
+  }
+
+  /**
+   * Check if intervention is on cooldown
+   */
+  private isOnCooldown(sessionId: string, interventionType: string): boolean {
+    const cooldowns = this.userCooldowns.get(sessionId);
+    if (!cooldowns) return false;
+
+    const lastTriggered = cooldowns.get(interventionType);
+    if (!lastTriggered) return false;
+
+    const cooldownMs = 30000; // 30 second minimum between same intervention
+    return Date.now() - lastTriggered.getTime() < cooldownMs;
+  }
+
+  /**
+   * Execute the intervention decision (new emotion-based flow)
+   */
+  private async executeInterventionDecision(decision: InterventionDecision, state: EmotionalState): Promise<void> {
+    const { sessionId, interventionType } = decision;
+
+    // Send via WebSocket
+    const sent = unifiedWS.sendIntervention(sessionId, interventionType);
+
+    if (sent) {
+      // Track cooldown
+      if (!this.userCooldowns.has(sessionId)) {
+        this.userCooldowns.set(sessionId, new Map());
+      }
+      this.userCooldowns.get(sessionId)!.set(interventionType, new Date());
+
+      // Log to database
+      await this.logInterventionDecision(decision, state);
+
+      // Emit event for tracking
+      this.emit('intervention_sent', {
+        sessionId,
+        interventionType,
+        emotion: state.emotion,
+        confidence: decision.confidence,
+        reason: decision.reason
+      });
+
+      console.log(`✅ Intervention ${interventionType} sent to ${sessionId} - Reason: ${decision.reason}`);
+    }
+  }
+
+  /**
+   * Log intervention decision for learning
+   */
+  private async logInterventionDecision(decision: InterventionDecision, state: EmotionalState): Promise<void> {
+    try {
+      const client = getSupabaseClient();
+      if (!client) return;
+
+      await client.from('intervention_decisions').insert({
+        session_id: decision.sessionId,
+        tenant_id: state.tenantId,
+        intervention_type: decision.interventionType,
+        emotion: state.emotion,
+        confidence: decision.confidence,
+        priority: decision.priority,
+        reason: decision.reason,
+        emotional_vectors: {
+          frustration: state.frustration,
+          anxiety: state.anxiety,
+          urgency: state.urgency,
+          excitement: state.excitement,
+          trust: state.trust
+        },
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error('Failed to log intervention decision:', error);
+    }
+  }
+
   /**
    * Get intervention statistics
    */

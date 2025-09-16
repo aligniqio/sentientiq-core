@@ -6,21 +6,17 @@
 
 import { createClient } from '@supabase/supabase-js';
 import crypto from 'crypto';
+import { interventionEngine } from './intervention-engine.js';
 
 // Initialize Supabase client
 const supabase = createClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
 export class BehaviorProcessor {
-  private sessions: Map<string, any>;
-  private wsServer: any;
-  private patternMemory: any;
-  private interventionMetrics: any;
-  private behaviorMap: any;
 
-  constructor(websocketServer: any = null) {
+  constructor(websocketServer = null) {
     // Session buffers for context
     this.sessions = new Map();
 
@@ -444,8 +440,8 @@ export class BehaviorProcessor {
       session.patterns = patterns;
       console.log(`🎯 Patterns detected for ${sessionId}:`, patterns.map(p => p.type));
 
-      // TRIGGER INTERVENTIONS FOR CRITICAL PATTERNS
-      this.triggerInterventions(sessionId, patterns, session);
+      // Send emotional state to intervention engine for decision
+      this.sendToInterventionEngine(sessionId, diagnosed, session);
     }
 
     return { emotions: diagnosed, patterns };
@@ -498,9 +494,115 @@ export class BehaviorProcessor {
   }
 
   /**
-   * Trigger interventions based on detected patterns with DYNAMIC TIMING
+   * Send emotional state to intervention engine for decision making
+   * This replaces the old triggerInterventions method
    */
-  triggerInterventions(sessionId, patterns, session) {
+  async sendToInterventionEngine(sessionId, emotions, session) {
+    if (!emotions || emotions.length === 0) return;
+
+    // Get the most recent/confident emotion
+    const latestEmotion = emotions[emotions.length - 1];
+
+    // Build emotional state for intervention engine
+    const emotionalState = {
+      sessionId,
+      tenantId: session.tenantId || 'unknown',
+      timestamp: Date.now(),
+      emotion: latestEmotion.emotion,
+      confidence: latestEmotion.confidence,
+      intensity: latestEmotion.intensity || latestEmotion.confidence,
+
+      // Calculate emotional vectors from session history
+      frustration: this.calculateFrustration(session),
+      anxiety: this.calculateAnxiety(session),
+      urgency: this.calculateUrgency(session),
+      excitement: this.calculateExcitement(session),
+      trust: this.calculateTrust(session),
+
+      // Context
+      pageUrl: session.pageUrl,
+      userId: session.userId,
+      sessionAge: Date.now() - session.firstEventTime,
+
+      // Telemetry data
+      telemetry: {
+        mouseVelocity: session.avgMouseVelocity,
+        scrollDepth: session.maxScrollDepth,
+        clickRate: session.clickRate
+      }
+    };
+
+    // Let intervention engine decide what to do
+    try {
+      const decision = await interventionEngine.processEmotionalState(emotionalState);
+
+      if (decision) {
+        console.log(`🧠 Intervention Engine Decision: ${decision.interventionType} for ${sessionId}`);
+        console.log(`   Reason: ${decision.reason}`);
+        console.log(`   Priority: ${decision.priority}`);
+      }
+    } catch (error) {
+      console.error('Failed to process emotional state:', error);
+    }
+  }
+
+  /**
+   * Calculate frustration level from session history
+   */
+  calculateFrustration(session) {
+    const frustrationEmotions = ['frustration', 'rage', 'anger', 'stuck', 'cart_hesitation'];
+    const recent = session.history.slice(-10);
+    const frustrationCount = recent.filter(h => frustrationEmotions.includes(h.emotion)).length;
+    return Math.min(100, frustrationCount * 15);
+  }
+
+  /**
+   * Calculate anxiety level from session history
+   */
+  calculateAnxiety(session) {
+    const anxietyEmotions = ['anxiety', 'worry', 'cart_shock', 'price_shock', 'comparison_shopping'];
+    const recent = session.history.slice(-10);
+    const anxietyCount = recent.filter(h => anxietyEmotions.includes(h.emotion)).length;
+    return Math.min(100, anxietyCount * 12);
+  }
+
+  /**
+   * Calculate urgency level from session history
+   */
+  calculateUrgency(session) {
+    const urgentEmotions = ['urgency', 'cart_review', 'abandonment_intent', 'exit_intent'];
+    const recent = session.history.slice(-5);
+    const urgencyCount = recent.filter(h => urgentEmotions.includes(h.emotion)).length;
+    return Math.min(100, urgencyCount * 25);
+  }
+
+  /**
+   * Calculate excitement level from session history
+   */
+  calculateExcitement(session) {
+    const excitementEmotions = ['excitement', 'interest', 'engaged', 'exploring'];
+    const recent = session.history.slice(-10);
+    const excitementCount = recent.filter(h => excitementEmotions.includes(h.emotion)).length;
+    return Math.min(100, excitementCount * 10);
+  }
+
+  /**
+   * Calculate trust level from session history
+   */
+  calculateTrust(session) {
+    const trustEmotions = ['confident', 'comfortable', 'trusting'];
+    const distrustEmotions = ['skeptical', 'suspicious', 'worried'];
+    const recent = session.history.slice(-10);
+    const trustCount = recent.filter(h => trustEmotions.includes(h.emotion)).length;
+    const distrustCount = recent.filter(h => distrustEmotions.includes(h.emotion)).length;
+    return Math.max(0, Math.min(100, 50 + (trustCount * 10) - (distrustCount * 15)));
+  }
+
+  /**
+   * DEPRECATED - Old intervention logic (kept for reference)
+   * This is being replaced by the intervention engine
+   */
+  triggerInterventions_DEPRECATED(sessionId, patterns, session) {
     if (!this.wsServer) return;
 
     // Initialize intervention tracking
