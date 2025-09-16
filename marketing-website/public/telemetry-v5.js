@@ -9,11 +9,18 @@
 
   // Configuration
   const scriptTag = document.currentScript || document.querySelector('script[src*="telemetry"]');
+  const sessionId = `sq_${Date.now()}_${Math.random().toString(36).slice(2,9)}`;
+  const tenantId = window.SentientIQ?.tenantId || scriptTag?.getAttribute('data-tenant-id') || 'unknown';
+
+  // Store session ID and tenant ID in sessionStorage for intervention-receiver to use
+  sessionStorage.setItem('sq_session_id', sessionId);
+  localStorage.setItem('tenantId', tenantId);
+
   const config = {
     endpoint: (window.SentientIQ?.apiEndpoint ? window.SentientIQ.apiEndpoint + '/api/telemetry/stream' : 'https://api.sentientiq.app/api/telemetry/stream'),
     apiKey: window.SentientIQ?.apiKey || scriptTag?.getAttribute('data-api-key') || 'sq_demo_v5',
-    tenantId: window.SentientIQ?.tenantId || scriptTag?.getAttribute('data-tenant-id') || 'unknown',
-    sessionId: `sq_${Date.now()}_${Math.random().toString(36).slice(2,9)}`,
+    tenantId: tenantId,
+    sessionId: sessionId,
     batchSize: 20,
     flushInterval: 1000, // Send every second
     debug: scriptTag?.getAttribute('data-debug') === 'true',
