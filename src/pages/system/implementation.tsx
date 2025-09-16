@@ -271,7 +271,7 @@ export default function SystemImplementation() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
-          className="bg-gradient-to-r from-blue-600/20 to-purple-600/20 rounded-2xl p-8 border border-blue-500/30"
+          className="bg-gradient-to-r from-blue-600/20 to-purple-600/20 rounded-2xl p-8 border border-blue-500/30 relative z-10"
         >
           <h2 className="text-2xl font-semibold mb-4">Final Steps</h2>
           <ol className="space-y-3 text-gray-300">
