@@ -11,6 +11,7 @@ export default function Navbar() {
           <a href="/how-it-works">How it works</a>
           <a href="/whats-behind-this">What's behind this</a>
           <a href="/why-different">Why it's different</a>
+          <a href="/the-truth">The Truth</a>
           <a href="/#pricing">Pricing</a>
           <a href="/#faq">FAQ</a>
         </nav>
