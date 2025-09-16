@@ -503,6 +503,8 @@ export class BehaviorProcessor {
     // Get the most recent/confident emotion
     const latestEmotion = emotions[emotions.length - 1];
 
+    console.log(`🔄 Sending emotional state to intervention engine: ${latestEmotion.emotion} (${latestEmotion.confidence}%) for session ${sessionId}`);
+
     // Build emotional state for intervention engine
     const emotionalState = {
       sessionId,

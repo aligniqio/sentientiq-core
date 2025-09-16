@@ -1207,6 +1207,9 @@ class InterventionEngine extends EventEmitter {
   async processEmotionalState(state: EmotionalState): Promise<InterventionDecision | null> {
     const { sessionId, emotion, confidence, intensity, frustration, anxiety, urgency } = state;
 
+    console.log(`🧠 Intervention Engine received: ${emotion} for ${sessionId}`);
+    console.log(`   Vectors - Frustration: ${frustration}%, Anxiety: ${anxiety}%, Urgency: ${urgency}%`);
+
     // Map emotional patterns to intervention types
     const interventionMap = this.getInterventionForEmotion(emotion, {
       frustration: frustration || 0,
