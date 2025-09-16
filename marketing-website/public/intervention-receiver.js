@@ -10,15 +10,8 @@
   const API_ENDPOINT = 'wss://api.sentientiq.app/ws';
   const CHANNEL = 'interventions';
 
-  // Get session ID from telemetry (it should have already set it in sessionStorage)
-  let sessionId = sessionStorage.getItem('sq_session_id');
-
-  // If no session ID yet, create one (but telemetry should have set it)
-  if (!sessionId) {
-    sessionId = `session_${Date.now()}_${Math.random().toString(36).slice(2)}`;
-    sessionStorage.setItem('sq_session_id', sessionId);
-    console.warn('⚠️ Session ID not found from telemetry, creating new one:', sessionId);
-  }
+  // Session ID will be set from telemetry or created as fallback
+  let sessionId = null;
 
   // Get tenant ID from window.SentientIQ (set by GTM) or script tag
   const scriptTag = document.currentScript || document.querySelector('script[src*="intervention-receiver"]');
@@ -337,7 +330,7 @@
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        session_id: sessionId,
+        session_id: sessionStorage.getItem('sq_session_id') || sessionId,
         intervention_type: intervention,
         interacted: clicked,
         converted: false
@@ -987,15 +980,28 @@
     }
   }, 30000);
 
-  // Initialize connection with a small delay to ensure telemetry has loaded
-  // This gives telemetry time to set the session ID in sessionStorage
-  setTimeout(() => {
+  // Initialize connection - wait for telemetry to set session ID
+  function waitForSessionAndConnect(attempts = 0) {
     const storedSessionId = sessionStorage.getItem('sq_session_id');
-    if (!storedSessionId) {
-      console.warn('⚠️ Telemetry may not have loaded yet, using fallback session');
+
+    if (storedSessionId) {
+      sessionId = storedSessionId; // Update the global sessionId variable
+      console.log('✅ Session ID found from telemetry, connecting...', sessionId);
+      connect();
+    } else if (attempts < 50) { // Try for up to 5 seconds
+      // Telemetry hasn't set the session yet, wait and retry
+      setTimeout(() => waitForSessionAndConnect(attempts + 1), 100);
+    } else {
+      // Fallback: create our own session if telemetry never loads
+      console.warn('⚠️ Telemetry session not found after 5s, using fallback');
+      sessionId = `session_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+      sessionStorage.setItem('sq_session_id', sessionId);
+      connect();
     }
-    connect();
-  }, 100);
+  }
+
+  // Start initialization
+  waitForSessionAndConnect();
 
   // Export for debugging
   window.SentientIQInterventions = {
