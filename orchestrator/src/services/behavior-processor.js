@@ -39,6 +39,18 @@ export class BehaviorProcessor {
       }
     };
 
+    // INTERVENTION EFFECTIVENESS TRACKING
+    this.interventionMetrics = {
+      // Track performance by intervention type
+      byType: new Map(), // type -> {shown, clicked, converted, revenue}
+      // Track performance by pattern
+      byPattern: new Map(), // pattern -> {triggered, successful}
+      // A/B testing variants
+      variants: new Map(), // intervention -> [variantA, variantB]
+      // Real-time effectiveness scores
+      effectiveness: new Map() // intervention -> score (0-100)
+    };
+
     // Start volatility calculation interval
     this.startVolatilityTracking();
 
@@ -480,25 +492,43 @@ export class BehaviorProcessor {
   }
 
   /**
-   * Trigger interventions based on detected patterns
+   * Trigger interventions based on detected patterns with DYNAMIC TIMING
    */
   triggerInterventions(sessionId, patterns, session) {
     if (!this.wsServer) return;
 
-    // Track intervention cooldowns per session
+    // Initialize intervention tracking
     if (!session.interventionHistory) {
       session.interventionHistory = new Map();
+      session.interventionStats = {
+        shown: 0,
+        dismissed: 0,
+        clicked: 0,
+        fatigueLevel: 0
+      };
     }
 
     const now = Date.now();
+    const sessionAge = now - session.firstEventTime;
 
+    // DYNAMIC TIMING OPTIMIZATION
     for (const pattern of patterns) {
-      // Check cooldown (don't spam interventions)
+      // Calculate dynamic cooldown based on priority and session context
+      const baseCooldown = this.getDynamicCooldown(pattern, session);
       const lastTriggered = session.interventionHistory.get(pattern.intervention) || 0;
-      const cooldownMs = 60000; // 1 minute cooldown per intervention type
 
-      if (now - lastTriggered < cooldownMs) {
-        console.log(`⏸️ Intervention ${pattern.intervention} on cooldown for ${sessionId}`);
+      // Adjust cooldown based on intervention fatigue
+      const fatigueMultiplier = 1 + (session.interventionStats.fatigueLevel * 0.5);
+      const adjustedCooldown = baseCooldown * fatigueMultiplier;
+
+      if (now - lastTriggered < adjustedCooldown) {
+        console.log(`⏸️ Intervention ${pattern.intervention} on cooldown (${Math.round(adjustedCooldown/1000)}s) for ${sessionId}`);
+        continue;
+      }
+
+      // Check for optimal timing windows
+      if (!this.isOptimalTiming(pattern, session, sessionAge)) {
+        console.log(`⏰ Waiting for optimal timing for ${pattern.intervention}`);
         continue;
       }
 
@@ -531,9 +561,19 @@ export class BehaviorProcessor {
         if (sent) {
           // Record intervention
           session.interventionHistory.set(pattern.intervention, now);
+          session.interventionStats.shown++;
+
+          // Track effectiveness metrics
+          this.trackInterventionShown(interventionType, pattern.type);
 
           // Log to database for tracking
           this.logIntervention(sessionId, pattern, interventionType);
+
+          // Update fatigue level
+          session.interventionStats.fatigueLevel = Math.min(
+            session.interventionStats.fatigueLevel + 0.2,
+            1.0
+          );
 
           console.log(`✅ Intervention ${interventionType} sent to session ${sessionId}`);
         } else {
@@ -740,6 +780,139 @@ export class BehaviorProcessor {
       });
     }
 
+    // NEW HIGH-CONVERTING PATTERNS
+
+    // The "Almost Buyer" - hovering on checkout button repeatedly
+    const checkoutHoverCount = recent.filter(e => e === 'checkout_intent' || e === 'cart_review').length;
+    if (checkoutHoverCount >= 2 && !recent.includes('click')) {
+      patterns.push({
+        type: 'checkout_button_hesitation',
+        intervention: 'one_click_checkout',
+        priority: 'CRITICAL',
+        message: 'Complete with one click'
+      });
+    }
+
+    // The "Feature Seeker" - rapid scanning + intrigue
+    if (recent.includes('scanning') && recent.includes('intrigue')) {
+      patterns.push({
+        type: 'feature_exploration',
+        intervention: 'feature_highlight',
+        priority: 'HIGH',
+        message: 'Key features for you'
+      });
+    }
+
+    // Price Anchoring Recovery - saw high price first, now considering
+    if (session.history.length > 0 &&
+        session.history[0].emotion === 'sticker_shock' &&
+        recent.includes('price_consideration')) {
+      patterns.push({
+        type: 'price_anchoring_recovery',
+        intervention: 'value_comparison',
+        priority: 'HIGH',
+        message: 'Compare the value'
+      });
+    }
+
+    // Demo Momentum - interested in demo but hasn't clicked
+    if ((recent.includes('demo_interest') || recent.includes('intrigue')) &&
+        recent.filter(e => e.includes('demo')).length >= 2) {
+      patterns.push({
+        type: 'demo_momentum',
+        intervention: 'instant_demo',
+        priority: 'HIGH',
+        message: 'Try it instantly - no signup'
+      });
+    }
+
+    // Scroll Fatigue + Pricing - scrolling a lot near pricing
+    const scrollCount = session.history.slice(-15).filter(h => h.behavior === 'scroll').length;
+    if (scrollCount > 10 && recent.some(e => e.includes('price'))) {
+      patterns.push({
+        type: 'information_overload',
+        intervention: 'simple_pricing',
+        priority: 'MEDIUM',
+        message: 'See simplified pricing'
+      });
+    }
+
+    // The "Silent Shopper" - lots of reading, no interaction
+    const readingCount = recent.filter(e => e === 'reading' || e === 'deep_reading').length;
+    if (readingCount >= 4 && !recent.includes('click')) {
+      patterns.push({
+        type: 'passive_research',
+        intervention: 'personalized_guide',
+        priority: 'MEDIUM',
+        message: 'Get a personalized recommendation'
+      });
+    }
+
+    // Competitor PTSD - comparing after trust issues
+    if (recent.includes('comparison_shopping') &&
+        (recent.includes('trust_hesitation') || recent.includes('seeking_validation'))) {
+      patterns.push({
+        type: 'competitor_trauma',
+        intervention: 'switching_incentive',
+        priority: 'HIGH',
+        message: 'Special offer for switching'
+      });
+    }
+
+    // Weekend Browser vs Weekday Buyer patterns
+    const now = new Date();
+    const isWeekend = now.getDay() === 0 || now.getDay() === 6;
+    const hour = now.getHours();
+
+    if (isWeekend && recent.includes('price_consideration')) {
+      patterns.push({
+        type: 'weekend_researcher',
+        intervention: 'save_for_monday',
+        priority: 'LOW',
+        message: 'Save this for Monday'
+      });
+    } else if (!isWeekend && hour >= 9 && hour <= 17 && recent.includes('purchase_intent')) {
+      patterns.push({
+        type: 'business_hours_buyer',
+        intervention: 'expense_report_help',
+        priority: 'MEDIUM',
+        message: 'Need help with purchase approval?'
+      });
+    }
+
+    // Mobile vs Desktop specific patterns
+    if (metadata && metadata.device === 'mobile' && recent.includes('form_engagement')) {
+      patterns.push({
+        type: 'mobile_form_struggle',
+        intervention: 'send_to_desktop',
+        priority: 'MEDIUM',
+        message: 'Email this to complete on desktop'
+      });
+    }
+
+    // The "Budget Shopper" - multiple price checks
+    const priceCheckCount = extended.filter(e =>
+      e.includes('price') || e === 'tier_comparison' || e === 'sticker_shock'
+    ).length;
+    if (priceCheckCount >= 5) {
+      patterns.push({
+        type: 'budget_conscious',
+        intervention: 'custom_package',
+        priority: 'HIGH',
+        message: 'Build a custom package'
+      });
+    }
+
+    // Rage Quit Prevention - multiple frustrations
+    if (frustrationCount >= 2 && recent.includes('abandonment_intent')) {
+      patterns.push({
+        type: 'rage_quit_imminent',
+        intervention: 'frustration_acknowledgment',
+        priority: 'CRITICAL',
+        message: 'We see you\'re having trouble'
+      });
+    }
+
     return patterns;
   }
 
@@ -759,6 +932,215 @@ export class BehaviorProcessor {
     };
 
     return cooldowns[emotion] || 5000;
+  }
+
+  /**
+   * Calculate dynamic cooldown based on priority and context
+   */
+  getDynamicCooldown(pattern, session) {
+    // Base cooldowns by priority (in ms)
+    const priorityCooldowns = {
+      CRITICAL: 30000,  // 30 seconds for critical
+      HIGH: 45000,      // 45 seconds for high
+      MEDIUM: 60000,    // 1 minute for medium
+      LOW: 120000       // 2 minutes for low
+    };
+
+    let cooldown = priorityCooldowns[pattern.priority] || 60000;
+
+    // Reduce cooldown if user has shown high purchase intent
+    if (session.history.some(h => h.emotion === 'strong_purchase_intent')) {
+      cooldown *= 0.7;
+    }
+
+    // Increase cooldown if user dismissed previous interventions
+    if (session.interventionStats && session.interventionStats.dismissed > 2) {
+      cooldown *= 1.5;
+    }
+
+    return cooldown;
+  }
+
+  /**
+   * Check if it's optimal timing for an intervention
+   */
+  isOptimalTiming(pattern, session, sessionAge) {
+    // Don't intervene in first 5 seconds (let them orient)
+    if (sessionAge < 5000) {
+      return false;
+    }
+
+    // Don't intervene if user is actively reading
+    const lastEmotion = session.history[session.history.length - 1];
+    if (lastEmotion && lastEmotion.emotion === 'deep_reading') {
+      return false;
+    }
+
+    // CRITICAL patterns can interrupt anything except checkout
+    if (pattern.priority === 'CRITICAL') {
+      return lastEmotion?.emotion !== 'checkout_intent';
+    }
+
+    // HIGH priority - wait for pause in activity
+    if (pattern.priority === 'HIGH') {
+      const recentActivity = session.history.slice(-3);
+      const hasSlowedDown = recentActivity.some(h =>
+        h.emotion === 'hesitation' ||
+        h.emotion === 'idle' ||
+        h.emotion === 'price_consideration'
+      );
+      return hasSlowedDown;
+    }
+
+    // MEDIUM/LOW - only intervene during natural pauses
+    const isPaused = ['idle', 'hesitation', 'confusion', 'price_paralysis'].includes(
+      lastEmotion?.emotion
+    );
+    return isPaused;
+  }
+
+  /**
+   * Track intervention shown event
+   */
+  trackInterventionShown(interventionType, patternType) {
+    // Update metrics for this intervention type
+    if (!this.interventionMetrics.byType.has(interventionType)) {
+      this.interventionMetrics.byType.set(interventionType, {
+        shown: 0,
+        clicked: 0,
+        converted: 0,
+        dismissed: 0,
+        revenue: 0,
+        conversionRate: 0,
+        clickRate: 0
+      });
+    }
+
+    const metrics = this.interventionMetrics.byType.get(interventionType);
+    metrics.shown++;
+
+    // Track by pattern
+    if (!this.interventionMetrics.byPattern.has(patternType)) {
+      this.interventionMetrics.byPattern.set(patternType, {
+        triggered: 0,
+        successful: 0,
+        effectiveness: 0
+      });
+    }
+
+    const patternMetrics = this.interventionMetrics.byPattern.get(patternType);
+    patternMetrics.triggered++;
+
+    // Broadcast metrics update via WebSocket
+    if (this.wsServer) {
+      this.wsServer.broadcast({
+        type: 'intervention_metrics',
+        metrics: this.getInterventionMetrics()
+      });
+    }
+  }
+
+  /**
+   * Track intervention interaction (clicked, dismissed, converted)
+   */
+  trackInterventionInteraction(sessionId, interventionType, action) {
+    const session = this.sessions.get(sessionId);
+    if (!session) return;
+
+    const metrics = this.interventionMetrics.byType.get(interventionType);
+    if (!metrics) return;
+
+    switch (action) {
+      case 'clicked':
+        metrics.clicked++;
+        session.interventionStats.clicked++;
+        break;
+      case 'dismissed':
+        metrics.dismissed++;
+        session.interventionStats.dismissed++;
+        // Increase fatigue when dismissed
+        session.interventionStats.fatigueLevel = Math.min(
+          session.interventionStats.fatigueLevel + 0.3,
+          1.0
+        );
+        break;
+      case 'converted':
+        metrics.converted++;
+        // Find the pattern that triggered this
+        for (const [patternType, patternMetrics] of this.interventionMetrics.byPattern) {
+          // Mark as successful if this was the triggering pattern
+          patternMetrics.successful++;
+          patternMetrics.effectiveness =
+            (patternMetrics.successful / patternMetrics.triggered) * 100;
+        }
+        break;
+    }
+
+    // Update rates
+    metrics.clickRate = (metrics.clicked / metrics.shown) * 100;
+    metrics.conversionRate = (metrics.converted / metrics.shown) * 100;
+
+    // Calculate effectiveness score (0-100)
+    const effectiveness =
+      (metrics.clickRate * 0.3) +
+      (metrics.conversionRate * 0.7) -
+      ((metrics.dismissed / metrics.shown) * 20);
+
+    this.interventionMetrics.effectiveness.set(
+      interventionType,
+      Math.max(0, Math.min(100, effectiveness))
+    );
+
+    // Broadcast update
+    if (this.wsServer) {
+      this.wsServer.broadcast({
+        type: 'intervention_metrics',
+        metrics: this.getInterventionMetrics()
+      });
+    }
+  }
+
+  /**
+   * Get current intervention metrics for dashboard
+   */
+  getInterventionMetrics() {
+    const topInterventions = [];
+    const topPatterns = [];
+
+    // Get top performing interventions
+    for (const [type, metrics] of this.interventionMetrics.byType) {
+      topInterventions.push({
+        type,
+        ...metrics,
+        effectiveness: this.interventionMetrics.effectiveness.get(type) || 0
+      });
+    }
+
+    // Sort by effectiveness
+    topInterventions.sort((a, b) => b.effectiveness - a.effectiveness);
+
+    // Get top patterns
+    for (const [pattern, metrics] of this.interventionMetrics.byPattern) {
+      topPatterns.push({
+        pattern,
+        ...metrics
+      });
+    }
+
+    // Sort by success rate
+    topPatterns.sort((a, b) => b.effectiveness - a.effectiveness);
+
+    return {
+      topInterventions: topInterventions.slice(0, 5),
+      topPatterns: topPatterns.slice(0, 5),
+      totalShown: Array.from(this.interventionMetrics.byType.values())
+        .reduce((sum, m) => sum + m.shown, 0),
+      totalConverted: Array.from(this.interventionMetrics.byType.values())
+        .reduce((sum, m) => sum + m.converted, 0),
+      overallEffectiveness: topInterventions.length > 0
+        ? topInterventions.reduce((sum, i) => sum + i.effectiveness, 0) / topInterventions.length
+        : 0
+    };
   }
 
   /**

@@ -7,7 +7,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useUser } from '@clerk/clerk-react';
-import { Users, AlertCircle, Zap, Brain, Lightbulb } from 'lucide-react';
+import { Users, AlertCircle, Zap, Brain, Lightbulb, TrendingUp, Target } from 'lucide-react';
 import PageHeader from './PageHeader';
 import EVIDisplay from './EVIDisplay';
 
@@ -32,58 +32,165 @@ interface EmotionalStats {
   volatilityIndex?: number;
 }
 
+interface InterventionMetrics {
+  topInterventions: Array<{
+    type: string;
+    shown: number;
+    clicked: number;
+    converted: number;
+    dismissed: number;
+    effectiveness: number;
+    clickRate: number;
+    conversionRate: number;
+  }>;
+  topPatterns: Array<{
+    pattern: string;
+    triggered: number;
+    successful: number;
+    effectiveness: number;
+  }>;
+  totalShown: number;
+  totalConverted: number;
+  overallEffectiveness: number;
+}
+
 const EMOTION_COLORS: Record<string, string> = {
-  // RED gradients - Critical states
+  // RED gradients - Critical states (High Risk)
   rage: 'from-red-600 to-red-700',
-  abandonment: 'from-red-800 to-red-900',
-  abandonment_intent: 'from-red-700 to-red-800',
-  abandonment_risk: 'from-red-800 to-red-900',
+  rage_click: 'from-red-500 to-red-600',
+  abandonment: 'from-red-700 to-red-800',
+  abandonment_intent: 'from-red-600 to-red-700',
+  abandonment_risk: 'from-red-500 to-red-600',
+  abandonment_warning: 'from-red-600 to-red-700',
   frustration: 'from-red-400 to-red-500',
-  
-  // YELLOW gradients - Caution states
+  cart_shock: 'from-red-500 to-red-600',
+  cart_abandonment: 'from-red-600 to-red-700',
+  financial_anxiety: 'from-red-500 to-orange-600',
+  comparison_shopping: 'from-red-400 to-orange-500',
+
+  // YELLOW gradients - Caution states (Medium Risk)
   hesitation: 'from-yellow-500 to-amber-500',
   confusion: 'from-yellow-400 to-yellow-500',
-  anxiety: 'from-amber-400 to-yellow-500',
+  anxiety: 'from-amber-500 to-orange-500',
   skepticism: 'from-yellow-500 to-amber-600',
-  sticker_shock: 'from-yellow-400 to-amber-500',
-  
-  // GREEN gradients - Positive states
+  sticker_shock: 'from-amber-500 to-orange-600',
+  price_shock: 'from-yellow-500 to-amber-600',
+  price_hesitation: 'from-yellow-400 to-amber-500',
+  price_paralysis: 'from-amber-600 to-orange-600',
+  trust_hesitation: 'from-yellow-500 to-amber-500',
+  seeking_validation: 'from-yellow-400 to-amber-400',
+  distracted: 'from-yellow-300 to-amber-400',
+  idle: 'from-amber-300 to-yellow-400',
+
+  // GREEN gradients - Positive states (Good Intent)
   confidence: 'from-green-500 to-emerald-600',
+  confident_user: 'from-green-600 to-emerald-700',
   curiosity: 'from-emerald-500 to-green-600',
   delight: 'from-green-400 to-emerald-500',
   interest: 'from-green-600 to-emerald-700',
   engagement: 'from-emerald-500 to-teal-600',
+  engaged: 'from-green-500 to-emerald-600',
   purchase_intent: 'from-green-600 to-green-700',
-  
-  // Neutral
-  normal: 'from-gray-500 to-gray-600'
+  strong_purchase_intent: 'from-green-700 to-green-800',
+  checkout_intent: 'from-green-600 to-emerald-700',
+  demo_interest: 'from-emerald-500 to-teal-600',
+  demo_activation: 'from-green-600 to-teal-700',
+  intrigue: 'from-emerald-400 to-green-500',
+
+  // BLUE gradients - Information seeking (Low Risk)
+  reading: 'from-blue-400 to-blue-500',
+  deep_reading: 'from-blue-500 to-indigo-600',
+  browsing: 'from-blue-300 to-blue-400',
+  scanning: 'from-sky-400 to-blue-500',
+  exploring: 'from-blue-400 to-indigo-500',
+  information_gathering: 'from-blue-500 to-indigo-600',
+  reference_checking: 'from-sky-500 to-blue-600',
+
+  // PURPLE gradients - High value states
+  tier_comparison: 'from-purple-500 to-indigo-600',
+  price_evaluation: 'from-purple-400 to-indigo-500',
+  price_consideration: 'from-purple-500 to-pink-600',
+  form_engagement: 'from-purple-400 to-indigo-500',
+  signup_intent: 'from-purple-600 to-indigo-700',
+
+  // GRAY - Neutral/Unknown
+  normal: 'from-gray-500 to-gray-600',
+  noticing: 'from-gray-400 to-gray-500',
+  re_engaged: 'from-gray-500 to-blue-500',
+  returning_visitor: 'from-gray-400 to-blue-400',
+
+  // Default fallback
+  default: 'from-gray-400 to-gray-500'
 };
 
 const EMOTION_LABELS: Record<string, string> = {
-  // Critical states
+  // Critical states (RED)
   rage: 'Rage Click',
+  rage_click: 'Rage Click',
   abandonment: 'Abandoning',
   abandonment_intent: 'Exit Intent',
   abandonment_risk: 'Exit Risk',
-  frustration: 'Frustration',
-  
-  // Caution states
+  abandonment_warning: 'Exit Warning',
+  frustration: 'Frustrated',
+  cart_shock: 'Cart Shock',
+  cart_abandonment: 'Cart Abandon',
+  cart_hesitation: 'Cart Hesitation',
+  financial_anxiety: 'Price Anxiety',
+  comparison_shopping: 'Comparing',
+
+  // Caution states (YELLOW)
   hesitation: 'Hesitating',
   confusion: 'Confused',
-  anxiety: 'Anxiety',
+  anxiety: 'Anxious',
   skepticism: 'Skeptical',
   sticker_shock: 'Price Shock',
-  
-  // Positive states
+  price_shock: 'Price Shock',
+  price_hesitation: 'Price Hesitation',
+  price_paralysis: 'Price Paralysis',
+  trust_hesitation: 'Trust Issues',
+  seeking_validation: 'Validating',
+  distracted: 'Distracted',
+  idle: 'Idle',
+
+  // Positive states (GREEN)
   confidence: 'Confident',
+  confident_user: 'Confident User',
   curiosity: 'Curious',
   delight: 'Delighted',
   interest: 'Interested',
   engagement: 'Engaged',
+  engaged: 'Engaged',
   purchase_intent: 'Purchase Intent',
-  
-  // Neutral
-  normal: 'Normal'
+  strong_purchase_intent: 'Strong Intent',
+  checkout_intent: 'Checkout Ready',
+  demo_interest: 'Demo Interest',
+  demo_activation: 'Demo Active',
+  intrigue: 'Intrigued',
+
+  // Information seeking (BLUE)
+  reading: 'Reading',
+  deep_reading: 'Deep Reading',
+  browsing: 'Browsing',
+  scanning: 'Scanning',
+  exploring: 'Exploring',
+  information_gathering: 'Researching',
+  reference_checking: 'Checking Refs',
+
+  // High value states (PURPLE)
+  tier_comparison: 'Comparing Tiers',
+  price_evaluation: 'Evaluating Price',
+  price_consideration: 'Considering',
+  form_engagement: 'Form Active',
+  signup_intent: 'Signup Intent',
+
+  // Neutral (GRAY)
+  normal: 'Normal',
+  noticing: 'Noticing',
+  re_engaged: 'Re-engaged',
+  returning_visitor: 'Returning',
+
+  // Default
+  default: 'Unknown'
 };
 
 const EmotionalLiveFeed = () => {
@@ -100,6 +207,7 @@ const EmotionalLiveFeed = () => {
   const [lastEtag, setLastEtag] = useState<string | null>(null);
   const [connectionType, setConnectionType] = useState<'websocket' | 'polling'>('polling');
   const [tenantInsights, setTenantInsights] = useState<any>(null);
+  const [interventionMetrics, setInterventionMetrics] = useState<InterventionMetrics | null>(null);
   const pollingInterval = useRef<NodeJS.Timeout>();
   const ws = useRef<WebSocket | null>(null);
 
@@ -165,6 +273,9 @@ const EmotionalLiveFeed = () => {
             } else if (data.type === 'stats') {
               // Update stats including volatility index
               setStats(data.payload);
+            } else if (data.type === 'intervention_metrics') {
+              // Update intervention effectiveness metrics
+              setInterventionMetrics(data.metrics);
             }
           } catch (error) {
             console.error('Failed to parse WebSocket message:', error);
@@ -461,6 +572,145 @@ const EmotionalLiveFeed = () => {
         )}
       </motion.div>
 
+      {/* Intervention Effectiveness Dashboard */}
+      {interventionMetrics && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+          className="glass-card p-6 mb-8"
+        >
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-xl font-bold text-white">Intervention Performance</h2>
+            <div className="flex items-center gap-2">
+              <Target className="w-5 h-5 text-green-400" />
+              <span className="text-sm text-white/60">Live Effectiveness</span>
+            </div>
+          </div>
+
+          {/* Overall Metrics */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+            <div className="text-center p-4 bg-white/5 rounded-lg">
+              <div className="text-2xl font-bold text-white">{interventionMetrics.totalShown}</div>
+              <div className="text-xs text-white/60 mt-1">Interventions Shown</div>
+            </div>
+            <div className="text-center p-4 bg-white/5 rounded-lg">
+              <div className="text-2xl font-bold text-green-400">{interventionMetrics.totalConverted}</div>
+              <div className="text-xs text-white/60 mt-1">Conversions</div>
+            </div>
+            <div className="text-center p-4 bg-white/5 rounded-lg">
+              <div className="text-2xl font-bold text-purple-400">
+                {interventionMetrics.overallEffectiveness.toFixed(1)}%
+              </div>
+              <div className="text-xs text-white/60 mt-1">Overall Effectiveness</div>
+            </div>
+            <div className="text-center p-4 bg-white/5 rounded-lg">
+              <div className="text-2xl font-bold text-blue-400">
+                {interventionMetrics.totalShown > 0
+                  ? ((interventionMetrics.totalConverted / interventionMetrics.totalShown) * 100).toFixed(1)
+                  : '0'}%
+              </div>
+              <div className="text-xs text-white/60 mt-1">Conversion Rate</div>
+            </div>
+          </div>
+
+          {/* Top Performing Interventions */}
+          <div className="grid md:grid-cols-2 gap-6">
+            <div>
+              <h3 className="text-sm font-semibold text-white/80 mb-3 flex items-center gap-2">
+                <TrendingUp className="w-4 h-4 text-green-400" />
+                Top Performing Interventions
+              </h3>
+              <div className="space-y-2">
+                {interventionMetrics.topInterventions.length > 0 ? (
+                  interventionMetrics.topInterventions.map((intervention) => (
+                    <div
+                      key={intervention.type}
+                      className="p-3 bg-white/5 rounded-lg border border-white/10"
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm font-medium text-white">
+                          {intervention.type.replace(/_/g, ' ').replace(/^\w/, c => c.toUpperCase())}
+                        </span>
+                        <span className={`text-xs px-2 py-1 rounded-full ${
+                          intervention.effectiveness > 70
+                            ? 'bg-green-500/20 text-green-400'
+                            : intervention.effectiveness > 40
+                            ? 'bg-yellow-500/20 text-yellow-400'
+                            : 'bg-red-500/20 text-red-400'
+                        }`}>
+                          {intervention.effectiveness.toFixed(0)}% effective
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-3 gap-2 text-xs">
+                        <div>
+                          <span className="text-white/40">Shown:</span>
+                          <span className="text-white ml-1">{intervention.shown}</span>
+                        </div>
+                        <div>
+                          <span className="text-white/40">Clicked:</span>
+                          <span className="text-green-400 ml-1">{intervention.clickRate.toFixed(0)}%</span>
+                        </div>
+                        <div>
+                          <span className="text-white/40">Converted:</span>
+                          <span className="text-purple-400 ml-1">{intervention.conversionRate.toFixed(0)}%</span>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-center py-4 text-white/40">
+                    <p className="text-sm">No intervention data yet</p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Top Patterns */}
+            <div>
+              <h3 className="text-sm font-semibold text-white/80 mb-3 flex items-center gap-2">
+                <Brain className="w-4 h-4 text-purple-400" />
+                Most Effective Patterns
+              </h3>
+              <div className="space-y-2">
+                {interventionMetrics.topPatterns.length > 0 ? (
+                  interventionMetrics.topPatterns.map((pattern) => (
+                    <div
+                      key={pattern.pattern}
+                      className="p-3 bg-white/5 rounded-lg border border-white/10"
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm font-medium text-white">
+                          {pattern.pattern.replace(/_/g, ' ').replace(/^\w/, c => c.toUpperCase())}
+                        </span>
+                        <span className="text-xs text-white/60">
+                          {pattern.triggered} triggers
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-4">
+                        <div className="flex-1 bg-white/10 rounded-full h-2 overflow-hidden">
+                          <div
+                            className="h-full bg-gradient-to-r from-purple-500 to-blue-500 rounded-full transition-all"
+                            style={{ width: `${pattern.effectiveness}%` }}
+                          />
+                        </div>
+                        <span className="text-xs text-white/60">
+                          {pattern.successful}/{pattern.triggered} successful
+                        </span>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-center py-4 text-white/40">
+                    <p className="text-sm">Pattern learning in progress...</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </motion.div>
+      )}
+
       {/* Live Event Feed */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -505,8 +755,8 @@ const EmotionalLiveFeed = () => {
                   className="flex items-center gap-4 p-4 bg-white/5 rounded-xl hover:bg-white/10 transition-all border border-white/10"
                 >
                   {/* Emotion Badge */}
-                  <div className={`px-3 py-1 rounded-full bg-gradient-to-r ${EMOTION_COLORS[event.emotion] || EMOTION_COLORS.normal}`}>
-                    <span className="text-xs font-semibold text-white">
+                  <div className={`px-3 py-1 rounded-full bg-gradient-to-r ${EMOTION_COLORS[event.emotion] || EMOTION_COLORS.default} shadow-lg`}>
+                    <span className="text-xs font-semibold text-white drop-shadow">
                       {EMOTION_LABELS[event.emotion] || event.emotion}
                     </span>
                   </div>
