@@ -232,6 +232,64 @@ app.post('/api/emotional/intervention-feedback', async (req, res) => {
   }
 });
 
+// Track discount code generation
+app.post('/api/track-discount', async (req, res) => {
+  try {
+    const { code, session_id, intervention } = req.body;
+
+    console.log(`💰 Discount generated: ${code} for session: ${session_id}`);
+
+    // Store discount generation event
+    await supabase
+      .from('discount_codes')
+      .insert({
+        code,
+        session_id,
+        intervention_type: intervention,
+        percent_off: 10,
+        created_at: new Date().toISOString(),
+        expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), // 24 hours
+        status: 'active'
+      });
+
+    // Update intervention metrics
+    behaviorProcessor.trackInteraction(intervention, 'generated', { discount_code: code });
+
+    res.json({ success: true, code });
+  } catch (error) {
+    console.error('Error tracking discount:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Create Stripe discount (optional - requires Stripe integration)
+app.post('/api/create-discount', async (req, res) => {
+  try {
+    const { code, percent_off, duration, max_redemptions, metadata } = req.body;
+
+    // For now, just acknowledge - full Stripe integration would go here
+    console.log(`🎟️ Stripe discount request: ${code} (${percent_off}% off)`);
+
+    // In production, you'd use Stripe API:
+    // const coupon = await stripe.coupons.create({
+    //   percent_off,
+    //   duration,
+    //   id: code,
+    //   max_redemptions,
+    //   metadata
+    // });
+
+    res.json({
+      success: true,
+      code,
+      message: 'Discount code ready for use'
+    });
+  } catch (error) {
+    console.error('Error creating Stripe discount:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // Start server
 const server = app.listen(PORT, async () => {
   console.log(`🚀 Clean Orchestrator running on port ${PORT}`);

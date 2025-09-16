@@ -731,49 +731,110 @@
     };
   }
 
-  function showDiscountOffer() {
+  async function showDiscountOffer() {
     const discount = document.createElement('div');
     discount.className = 'sq-intervention sq-discount';
+
+    // Generate dynamic discount code
+    const sessionId = window.sentientSession || 'guest';
+    const discountCode = `SAVE10_${sessionId.slice(-6).toUpperCase()}`;
+
     discount.innerHTML = `
       <div class="sq-discount-content" style="
         position: fixed;
         bottom: 20px;
         left: 50%;
         transform: translateX(-50%);
-        padding: 20px 30px;
-        border-radius: 50px;
+        padding: 24px 40px;
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%);
+        backdrop-filter: blur(20px) saturate(180%);
+        -webkit-backdrop-filter: blur(20px) saturate(180%);
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        border-radius: 24px;
+        box-shadow:
+          0 8px 32px 0 rgba(31, 38, 135, 0.37),
+          0 0 0 1px rgba(255, 255, 255, 0.1) inset,
+          0 2px 8px -2px rgba(0, 0, 0, 0.2);
         animation: slideUp 0.4s ease-out;
         z-index: 10000;
         display: flex;
         align-items: center;
-        gap: 20px;
+        gap: 24px;
       ">
-        <div style="font-size: 32px;">💰</div>
+        <div style="
+          font-size: 40px;
+          filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
+          animation: pulse 2s infinite;
+        ">💰</div>
         <div>
-          <strong style="color: white;">Price too high?</strong>
-          <span style="color: rgba(255, 255, 255, 0.95);">Here's 10% off!</span>
-          <div style="opacity: 0.8; font-size: 14px; color: rgba(255, 255, 255, 0.8);">Auto-applied at checkout</div>
+          <strong style="
+            color: rgba(255, 255, 255, 0.95);
+            font-size: 18px;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.1);
+          ">Price too high?</strong>
+          <div style="
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 16px;
+            margin-top: 4px;
+          ">Here's 10% off with code: <span style="
+            background: rgba(255, 255, 255, 0.2);
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-weight: bold;
+          ">${discountCode}</span></div>
+          <div style="
+            opacity: 0.7;
+            font-size: 13px;
+            color: rgba(255, 255, 255, 0.8);
+            margin-top: 4px;
+          ">Click to copy • Valid for 24 hours</div>
         </div>
         <button style="
-          background: rgba(255, 255, 255, 0.95);
-          color: #7c3aed;
-          border: none;
-          padding: 10px 20px;
-          border-radius: 25px;
+          background: linear-gradient(135deg, rgba(124, 58, 237, 0.9) 0%, rgba(139, 92, 246, 0.9) 100%);
+          color: white;
+          border: 1px solid rgba(255, 255, 255, 0.2);
+          padding: 12px 24px;
+          border-radius: 12px;
           cursor: pointer;
           font-weight: 600;
+          font-size: 15px;
           transition: all 0.2s ease;
-        ">Continue</button>
+          box-shadow:
+            0 4px 12px rgba(124, 58, 237, 0.3),
+            0 1px 2px rgba(0, 0, 0, 0.2) inset;
+        " onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">Apply Discount</button>
       </div>
     `;
     document.body.appendChild(discount);
     addStyles();
 
-    setTimeout(() => discount.remove(), 8000);
+    setTimeout(() => discount.remove(), 12000);
 
     discount.querySelector('button').onclick = () => {
-      discount.remove();
-      trackInteraction('discount_offer', true);
+      // Copy code to clipboard
+      navigator.clipboard.writeText(discountCode).then(() => {
+        const button = discount.querySelector('button');
+        button.textContent = 'Copied! ✓';
+        button.style.background = 'linear-gradient(135deg, rgba(16, 185, 129, 0.9) 0%, rgba(34, 197, 94, 0.9) 100%)';
+        setTimeout(() => discount.remove(), 1500);
+      }).catch(() => {
+        // Fallback if clipboard API fails
+        alert(`Discount code: ${discountCode}`);
+        discount.remove();
+      });
+      trackInteraction('discount_offer', true, { code: discountCode });
+
+      // Track discount generation
+      fetch('https://api.sentientiq.app/api/track-discount', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          code: discountCode,
+          session_id: sessionId,
+          intervention: 'price_shock_recovery'
+        })
+      }).catch(() => {}); // Silent fail
     };
   }
 

@@ -881,7 +881,7 @@ export class BehaviorProcessor {
     }
 
     // Mobile vs Desktop specific patterns
-    if (metadata && metadata.device === 'mobile' && recent.includes('form_engagement')) {
+    if (session && session.metadata && session.metadata.device === 'mobile' && recent.includes('form_engagement')) {
       patterns.push({
         type: 'mobile_form_struggle',
         intervention: 'send_to_desktop',
