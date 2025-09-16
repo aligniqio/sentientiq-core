@@ -1,564 +1,322 @@
 import { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { ExternalLink, CheckCircle, Copy, Zap, Shield, BarChart3, Clock, Key, RefreshCw, HelpCircle, X, AlertCircle } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { ChevronRight, Copy, Check, Code, Settings, Zap } from 'lucide-react';
 import PageHeader from '../../components/PageHeader';
 import { useUser } from '@clerk/clerk-react';
-import { useSageHint } from '../../hooks/useTenant';
 
 export default function SystemImplementation() {
   const { user } = useUser();
-  const [copied, setCopied] = useState(false);
-  const [apiKeys, setApiKeys] = useState<Array<{id: string, name: string, key: string, created: string}>>([]);
-  const [newKeyName, setNewKeyName] = useState('');
-  const [generatingKey, setGeneratingKey] = useState(false);
-  const [userTier, setUserTier] = useState<'starter' | 'growth' | 'scale' | 'enterprise'>('starter');
-  const [isAutomotive, setIsAutomotive] = useState(false);
+  const [tenantId, setTenantId] = useState('');
+  const [debugMode, setDebugMode] = useState(true);
+  const [copiedScript, setCopiedScript] = useState<string | null>(null);
 
-  // Sage hint management
-  const { shouldShow, trackShown, trackDismissed, dismissPermanently } = useSageHint('/system/implementation');
-  const [hintShown, setHintShown] = useState(false);
-
-  // Track when hint is shown
   useEffect(() => {
-    if (shouldShow && !hintShown) {
-      trackShown();
-      setHintShown(true);
-    }
-  }, [shouldShow, hintShown, trackShown]);
+    // Try to get tenant ID from localStorage or URL params
+    const storedTenantId = localStorage.getItem('tenantId');
+    const params = new URLSearchParams(window.location.search);
+    const urlTenantId = params.get('tenant_id');
 
-  // Load existing API keys and check user configuration
-  useEffect(() => {
-    const storedKeys = localStorage.getItem(`sentientiq_keys_${user?.id}`);
-    if (storedKeys) {
-      setApiKeys(JSON.parse(storedKeys));
+    if (urlTenantId) {
+      setTenantId(urlTenantId);
+    } else if (storedTenantId) {
+      setTenantId(storedTenantId);
     }
+  }, []);
 
-    // Check if user has automotive template configured
-    const tenantId = localStorage.getItem('tenantId');
-    if (tenantId) {
-      fetch(`/api/interventions/config/${tenantId}`)
-        .then(res => res.json())
-        .then(data => {
-          if (data.config?.template === 'automotive') {
-            setIsAutomotive(true);
-          }
-          if (data.config?.tier) {
-            setUserTier(data.config.tier);
-          }
-        })
-        .catch(() => {}); // Silently fail if no config
+  const copyToClipboard = async (text: string, scriptName: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedScript(scriptName);
+      setTimeout(() => setCopiedScript(null), 2000);
+    } catch (err) {
+      console.error('Failed to copy:', err);
     }
-  }, [user]);
-
-  const handleCopy = (text: string) => {
-    navigator.clipboard.writeText(text);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
   };
 
-  const generateApiKey = () => {
-    if (!newKeyName.trim()) return;
+  const generateTelemetryScript = () => {
+    if (!tenantId) return '';
 
-    setGeneratingKey(true);
+    return `<script>
+  (function() {
+    'use strict';
 
-    // Generate a production-like API key
-    const prefix = 'sq_live_';
-    const randomString = Array.from(crypto.getRandomValues(new Uint8Array(24)))
-      .map(b => b.toString(16).padStart(2, '0'))
-      .join('');
-
-    const newKey = {
-      id: Date.now().toString(),
-      name: newKeyName,
-      key: `${prefix}${randomString}`,
-      created: new Date().toISOString()
+    // Set config for telemetry script
+    window.SentientIQ = {
+      tenantId: '${tenantId}',
+      apiEndpoint: 'https://api.sentientiq.app'
     };
 
-    const updatedKeys = [...apiKeys, newKey];
-    setApiKeys(updatedKeys);
-    localStorage.setItem(`sentientiq_keys_${user?.id}`, JSON.stringify(updatedKeys));
-    setNewKeyName('');
-    setGeneratingKey(false);
+    // Load telemetry
+    var script = document.createElement('script');
+    script.src = 'https://sentientiq.ai/telemetry-v5.js';
+    script.setAttribute('data-tenant-id', '${tenantId}');
+    script.setAttribute('data-debug', '${debugMode}');
+    document.head.appendChild(script);
+  })();
+</script>`;
   };
 
-  const deleteApiKey = (id: string) => {
-    const updatedKeys = apiKeys.filter(k => k.id !== id);
-    setApiKeys(updatedKeys);
-    localStorage.setItem(`sentientiq_keys_${user?.id}`, JSON.stringify(updatedKeys));
+  const generateInterventionScript = () => {
+    if (!tenantId) return '';
+
+    return `<script>
+  (function() {
+    'use strict';
+
+    console.log('[GTM] Intervention tag fired at DOM Ready!');
+
+    // Set config
+    window.SentientIQ = window.SentientIQ || {
+      tenantId: '${tenantId}',
+      apiEndpoint: 'https://api.sentientiq.app'
+    };
+
+    // Wait a bit for telemetry to set session
+    setTimeout(function() {
+      console.log('[GTM] Loading intervention after delay...');
+      console.log('[GTM] Session:', sessionStorage.getItem('sq_session_id'));
+
+      var script = document.createElement('script');
+      script.src = 'https://sentientiq.ai/intervention-receiver.js';
+      script.onload = function() {
+        console.log('[GTM] ✅ Intervention script loaded!');
+      };
+      script.onerror = function() {
+        console.log('[GTM] ❌ Failed to load intervention script');
+      };
+      document.head.appendChild(script);
+    }, 2000); // 2 second delay to ensure telemetry has initialized
+  })();
+</script>`;
   };
 
-  // Use first API key or user ID as fallback
-  const primaryApiKey = apiKeys[0]?.key || `sq_demo_${user?.id}` || 'sq_demo_YOUR_API_KEY';
+  const telemetryScript = generateTelemetryScript();
+  const interventionScript = generateInterventionScript();
 
   return (
-    <>
+    <div className="min-h-screen">
       <PageHeader
-        title="GTM Implementation"
-        subtitle="Install SentientIQ via Google Tag Manager in minutes"
+        title="GTM Implementation Guide"
+        subtitle="Follow these steps to integrate SentientIQ into your website using Google Tag Manager"
       />
 
-      {/* Sage Helper Hint - Only shows for new users */}
-      <AnimatePresence>
-        {shouldShow && (
-          <motion.div
-            initial={{ opacity: 0, x: 100 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: 100 }}
-            className="fixed top-24 right-6 max-w-xs glass-card p-4 bg-purple-900/20 border-purple-500/30 z-40 transition-all"
-          >
-            {/* Dismiss button */}
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                trackDismissed();
-              }}
-              className="absolute top-2 right-2 p-1 hover:bg-white/10 rounded-full transition-colors"
-              aria-label="Dismiss hint"
-            >
-              <X className="w-4 h-4 text-white/40 hover:text-white/60" />
-            </button>
-
-            <div
-              className="cursor-pointer"
-              onClick={() => {
-                // Find and click the Sage crystal ball
-                const sageBall = document.querySelector('[data-sage-crystal-ball]');
-                if (sageBall) {
-                  (sageBall as HTMLElement).click();
-                  trackDismissed(); // Hide after opening Sage
-                }
-              }}
-            >
-              <div className="flex items-start gap-3">
-                <HelpCircle className="w-5 h-5 text-purple-400 mt-0.5" />
-                <div>
-                  <p className="text-sm text-white/80 mb-2">
-                    Need help? <strong>Sage</strong> is watching this page and can help with:
-                  </p>
-                  <ul className="text-xs text-white/60 space-y-1">
-                    <li>• "What is Google Tag Manager?"</li>
-                    <li>• "Where do I find the template gallery?"</li>
-                    <li>• "Which trigger should I use?"</li>
-                    <li>• "How do I test if it's working?"</li>
-                  </ul>
-                  <p className="text-xs text-purple-400 mt-3">
-                    Click here or the purple orb → bottom right
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Don't show again option */}
-            <button
-              onClick={() => dismissPermanently()}
-              className="mt-3 text-xs text-white/40 hover:text-white/60 transition-colors"
-            >
-              Don't show hints anymore
-            </button>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Hero Section */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="glass-card p-8 mb-8 bg-gradient-to-br from-purple-900/10 to-blue-900/10 border-purple-500/20"
-      >
-        <div className="flex items-start justify-between">
-          <div>
-            <h2 className="text-2xl font-bold text-white mb-3">
-              Google Tag Manager Template
-            </h2>
-            <p className="text-white/70 mb-4 max-w-2xl">
-              Import our GTM template directly from our CDN.
-              Deploy behavioral analytics to any website without touching code.
-            </p>
-            <div className="flex gap-4">
-              <a
-                href="https://cdn.sentientiq.app/gtm/sentientiq-v4.tpl"
-                download="sentientiq-v4.tpl"
-                className="inline-flex items-center gap-2 px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-all"
-              >
-                <ExternalLink className="w-4 h-4" />
-                Download GTM Template
-              </a>
-              <button
-                onClick={() => handleCopy(primaryApiKey)}
-                className="inline-flex items-center gap-2 px-6 py-3 bg-white/10 text-white rounded-lg hover:bg-white/20 transition-all border border-white/20"
-              >
-                {copied ? <CheckCircle className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                {copied ? 'Copied!' : 'Copy Primary Key'}
-              </button>
-            </div>
-          </div>
-          <div className="text-right">
-            <div className="text-sm text-white/50 mb-1">Version</div>
-            <div className="text-2xl font-bold text-purple-400">v2.0.0</div>
-          </div>
-        </div>
-      </motion.div>
-
-      {/* Automotive-Specific Guidance */}
-      {isAutomotive && (
+      <div className="max-w-4xl mx-auto px-6 pb-20">
+        {/* Configuration Section */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.05 }}
-          className="glass-card p-6 mb-8 bg-gradient-to-br from-blue-900/10 to-green-900/10 border-green-500/20"
+          className="bg-gray-800/50 backdrop-blur-sm rounded-2xl p-8 mb-8 border border-gray-700"
         >
-          <div className="flex items-start gap-4">
-            <Zap className="w-6 h-6 text-green-400 mt-1" />
-            <div className="flex-1">
-              <h3 className="text-xl font-bold text-white mb-3">Automotive Dealership Setup</h3>
-              <p className="text-white/70 mb-4">
-                Your configuration is optimized for automotive retail. The tag will automatically:
-              </p>
-              <div className="grid md:grid-cols-2 gap-4 mb-4">
-                <div className="bg-black/30 rounded-lg p-3 border border-white/10">
-                  <div className="text-green-400 font-medium mb-1">✓ Track Vehicle Interest</div>
-                  <div className="text-sm text-white/60">Detect when shoppers hover on pricing, features, or photos</div>
-                </div>
-                <div className="bg-black/30 rounded-lg p-3 border border-white/10">
-                  <div className="text-green-400 font-medium mb-1">✓ Exit Intent Offers</div>
-                  <div className="text-sm text-white/60">Present financing specials or test drive scheduling</div>
-                </div>
-                <div className="bg-black/30 rounded-lg p-3 border border-white/10">
-                  <div className="text-green-400 font-medium mb-1">✓ Confusion Detection</div>
-                  <div className="text-sm text-white/60">Offer live chat when browsing trade-in or financing</div>
-                </div>
-                <div className="bg-black/30 rounded-lg p-3 border border-white/10">
-                  <div className="text-green-400 font-medium mb-1">✓ High Intent Signals</div>
-                  <div className="text-sm text-white/60">Alert sales team when someone views 3+ vehicles</div>
-                </div>
-              </div>
-              <div className="p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
-                <p className="text-sm text-yellow-400">
-                  <strong>Pro Tip:</strong> Add the tag to your VDP (Vehicle Detail Pages) and SRP (Search Results Pages) first.
-                  These pages have the highest conversion impact.
+          <h2 className="text-2xl font-semibold mb-6 flex items-center gap-2">
+            <Settings className="w-6 h-6 text-blue-400" />
+            Configuration
+          </h2>
+
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Tenant ID
+              </label>
+              <input
+                type="text"
+                value={tenantId}
+                onChange={(e) => setTenantId(e.target.value)}
+                placeholder="Enter your Tenant ID"
+                className="w-full px-4 py-3 bg-gray-900 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+              />
+              {!tenantId && (
+                <p className="text-sm text-yellow-400 mt-2">
+                  ⚠️ Please enter your Tenant ID to generate the scripts
                 </p>
-              </div>
+              )}
+            </div>
+
+            <div className="flex items-center gap-3">
+              <input
+                type="checkbox"
+                id="debugMode"
+                checked={debugMode}
+                onChange={(e) => setDebugMode(e.target.checked)}
+                className="w-4 h-4 text-blue-600 bg-gray-900 border-gray-600 rounded focus:ring-blue-500"
+              />
+              <label htmlFor="debugMode" className="text-gray-300">
+                Enable Debug Mode (recommended during setup)
+              </label>
             </div>
           </div>
         </motion.div>
-      )}
 
-      {/* API Key Management */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.1 }}
-        className="glass-card p-6 mb-8"
-      >
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-white flex items-center gap-2">
-            <Key className="w-5 h-5 text-purple-400" />
-            API Keys
-          </h3>
-          <span className="text-sm text-white/50">
-            {apiKeys.length} key{apiKeys.length !== 1 ? 's' : ''} active
-          </span>
-        </div>
+        {/* Step 1: Telemetry Script */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="bg-gray-800/50 backdrop-blur-sm rounded-2xl p-8 mb-8 border border-gray-700"
+        >
+          <h2 className="text-2xl font-semibold mb-6 flex items-center gap-2">
+            <Code className="w-6 h-6 text-green-400" />
+            Step 1: Add Telemetry Script
+          </h2>
 
-        {/* Key Generator */}
-        <div className="mb-6">
-          <div className="flex gap-2">
-            <input
-              type="text"
-              placeholder="Enter key name (e.g., Production, Staging)"
-              value={newKeyName}
-              onChange={(e) => setNewKeyName(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && generateApiKey()}
-              className="flex-1 px-4 py-2 bg-black/30 border border-white/10 rounded-lg text-white placeholder-white/30 focus:outline-none focus:border-purple-500/50"
-            />
-            <button
-              onClick={generateApiKey}
-              disabled={!newKeyName.trim() || generatingKey}
-              className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-            >
-              {generatingKey ? (
-                <RefreshCw className="w-4 h-4 animate-spin" />
-              ) : (
-                <Key className="w-4 h-4" />
-              )}
-              Generate Key
-            </button>
-          </div>
-        </div>
+          <div className="space-y-4">
+            <div>
+              <h3 className="font-medium mb-2">GTM Configuration:</h3>
+              <ul className="space-y-2 text-gray-300">
+                <li className="flex items-start gap-2">
+                  <ChevronRight className="w-4 h-4 mt-1 text-blue-400" />
+                  <span>Tag Type: Custom HTML</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <ChevronRight className="w-4 h-4 mt-1 text-blue-400" />
+                  <span>Tag Name: SentientIQ Telemetry</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <ChevronRight className="w-4 h-4 mt-1 text-blue-400" />
+                  <span>Trigger: All Pages</span>
+                </li>
+              </ul>
+            </div>
 
-        {/* Existing Keys */}
-        {apiKeys.length > 0 ? (
-          <div className="space-y-3">
-            {apiKeys.map((key, index) => (
-              <div key={key.id} className="bg-black/30 rounded-lg p-4 border border-white/10">
-                <div className="flex items-start justify-between mb-2">
-                  <div>
-                    <span className="text-white font-medium">{key.name}</span>
-                    {index === 0 && (
-                      <span className="ml-2 text-xs px-2 py-1 bg-purple-600/20 text-purple-400 rounded">Primary</span>
+            {tenantId && (
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="font-medium">Script to Copy:</h3>
+                  <button
+                    onClick={() => copyToClipboard(telemetryScript, 'telemetry')}
+                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
+                  >
+                    {copiedScript === 'telemetry' ? (
+                      <>
+                        <Check className="w-4 h-4" />
+                        Copied!
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-4 h-4" />
+                        Copy Script
+                      </>
                     )}
-                  </div>
-                  <button
-                    onClick={() => deleteApiKey(key.id)}
-                    className="text-red-400 hover:text-red-300 text-sm"
-                  >
-                    Delete
                   </button>
                 </div>
-                <div className="flex items-center justify-between">
-                  <code className="text-purple-400 text-sm font-mono">{key.key}</code>
+                <pre className="bg-gray-900 p-4 rounded-lg overflow-x-auto text-sm text-gray-300">
+                  <code>{telemetryScript}</code>
+                </pre>
+              </div>
+            )}
+          </div>
+        </motion.div>
+
+        {/* Step 2: Intervention Script */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="bg-gray-800/50 backdrop-blur-sm rounded-2xl p-8 mb-8 border border-gray-700"
+        >
+          <h2 className="text-2xl font-semibold mb-6 flex items-center gap-2">
+            <Zap className="w-6 h-6 text-purple-400" />
+            Step 2: Add Intervention Script
+          </h2>
+
+          <div className="space-y-4">
+            <div>
+              <h3 className="font-medium mb-2">GTM Configuration:</h3>
+              <ul className="space-y-2 text-gray-300">
+                <li className="flex items-start gap-2">
+                  <ChevronRight className="w-4 h-4 mt-1 text-blue-400" />
+                  <span>Tag Type: Custom HTML</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <ChevronRight className="w-4 h-4 mt-1 text-blue-400" />
+                  <span>Tag Name: SentientIQ Interventions</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <ChevronRight className="w-4 h-4 mt-1 text-blue-400" />
+                  <span>Trigger: All Pages - DOM Ready</span>
+                </li>
+              </ul>
+            </div>
+
+            {tenantId && (
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="font-medium">Script to Copy:</h3>
                   <button
-                    onClick={() => handleCopy(key.key)}
-                    className="ml-4 p-2 hover:bg-white/10 rounded transition-colors"
+                    onClick={() => copyToClipboard(interventionScript, 'intervention')}
+                    className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg transition-colors"
                   >
-                    <Copy className="w-4 h-4 text-white/60" />
+                    {copiedScript === 'intervention' ? (
+                      <>
+                        <Check className="w-4 h-4" />
+                        Copied!
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-4 h-4" />
+                        Copy Script
+                      </>
+                    )}
                   </button>
                 </div>
-                <p className="text-xs text-white/40 mt-2">
-                  Created: {new Date(key.created).toLocaleDateString()}
-                </p>
+                <pre className="bg-gray-900 p-4 rounded-lg overflow-x-auto text-sm text-gray-300">
+                  <code>{interventionScript}</code>
+                </pre>
               </div>
-            ))}
+            )}
           </div>
-        ) : (
-          <div className="bg-black/30 rounded-lg p-6 border border-white/10 text-center">
-            <Key className="w-12 h-12 text-white/20 mx-auto mb-3" />
-            <p className="text-white/60 mb-2">No API keys yet</p>
-            <p className="text-sm text-white/40">Generate your first key above to get started</p>
-          </div>
-        )}
+        </motion.div>
 
-        {apiKeys.length === 0 && (
-          <div className="mt-4 p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
-            <p className="text-sm text-yellow-400">
-              💡 For testing, you can use the demo key: <code className="text-yellow-300">sq_demo_{user?.id || 'test'}</code>
-            </p>
-          </div>
-        )}
-      </motion.div>
-
-      {/* Installation Steps */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.2 }}
-        className="glass-card p-8 mb-8"
-      >
-        <h3 className="text-xl font-bold text-white mb-6">Installation Steps</h3>
-
-        <div className="space-y-6">
-          {/* Step 1 */}
-          <div className="flex gap-4">
-            <div className="flex-shrink-0 w-8 h-8 rounded-full bg-purple-600 text-white flex items-center justify-center text-sm font-bold">
-              1
-            </div>
-            <div className="flex-1">
-              <h4 className="font-semibold text-white mb-2">Open Google Tag Manager</h4>
-              <p className="text-white/60 mb-3">
-                Go to your GTM container and navigate to Templates → Tag Templates
-              </p>
-              <a
-                href="https://tagmanager.google.com/"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 text-purple-400 hover:text-purple-300"
-              >
-                Open GTM <ExternalLink className="w-3 h-3" />
-              </a>
-            </div>
-          </div>
-
-          {/* Step 2 */}
-          <div className="flex gap-4">
-            <div className="flex-shrink-0 w-8 h-8 rounded-full bg-purple-600 text-white flex items-center justify-center text-sm font-bold">
-              2
-            </div>
-            <div className="flex-1">
-              <h4 className="font-semibold text-white mb-2">Import Template</h4>
-              <p className="text-white/60 mb-3">
-                Click "New" → 3 dots menu → "Import" → Enter URL or upload the template file
-              </p>
-              <div className="bg-black/30 rounded-lg p-3 border border-white/10">
-                <code className="text-green-400 text-sm">URL: https://cdn.sentientiq.app/gtm/sentientiq-v4.tpl</code>
-              </div>
-            </div>
-          </div>
-
-          {/* Step 3 */}
-          <div className="flex gap-4">
-            <div className="flex-shrink-0 w-8 h-8 rounded-full bg-purple-600 text-white flex items-center justify-center text-sm font-bold">
-              3
-            </div>
-            <div className="flex-1">
-              <h4 className="font-semibold text-white mb-2">Save Template</h4>
-              <p className="text-white/60 mb-3">
-                Review permissions and click "Save" to add the template to your workspace
-              </p>
-            </div>
-          </div>
-
-          {/* Step 4 */}
-          <div className="flex gap-4">
-            <div className="flex-shrink-0 w-8 h-8 rounded-full bg-purple-600 text-white flex items-center justify-center text-sm font-bold">
-              4
-            </div>
-            <div className="flex-1">
-              <h4 className="font-semibold text-white mb-2">Create New Tag</h4>
-              <p className="text-white/60 mb-3">
-                Go to Tags → New → Choose "SentientIQ Detect" from Custom templates
-              </p>
-            </div>
-          </div>
-
-          {/* Step 5 */}
-          <div className="flex gap-4">
-            <div className="flex-shrink-0 w-8 h-8 rounded-full bg-purple-600 text-white flex items-center justify-center text-sm font-bold">
-              5
-            </div>
-            <div className="flex-1">
-              <h4 className="font-semibold text-white mb-2">Configure Tag</h4>
-              <p className="text-white/60 mb-3">
-                Enter your API key and select your trigger (typically "All Pages")
-              </p>
-              <div className="bg-black/30 rounded-lg p-4 border border-white/10 space-y-2">
-                <div className="flex items-center gap-2">
-                  <span className="text-white/50 text-sm">API Key:</span>
-                  <code className="text-purple-400 text-sm">{primaryApiKey}</code>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-white/50 text-sm">Tenant ID:</span>
-                  <code className="text-blue-400 text-sm">{localStorage.getItem('tenantId') || 'YOUR_TENANT_ID'}</code>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-white/50 text-sm">Trigger:</span>
-                  <code className="text-green-400 text-sm">All Pages</code>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Step 6 */}
-          <div className="flex gap-4">
-            <div className="flex-shrink-0 w-8 h-8 rounded-full bg-green-600 text-white flex items-center justify-center text-sm font-bold">
-              ✓
-            </div>
-            <div className="flex-1">
-              <h4 className="font-semibold text-white mb-2">Publish</h4>
-              <p className="text-white/60 mb-3">
-                Save your tag, submit changes, and publish to start tracking emotions
-              </p>
-            </div>
-          </div>
-        </div>
-      </motion.div>
-
-      {/* Features Grid */}
-      <div className="grid md:grid-cols-3 gap-6 mb-8">
+        {/* Final Steps */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
-          className="glass-card p-6"
+          className="bg-gradient-to-r from-blue-600/20 to-purple-600/20 rounded-2xl p-8 border border-blue-500/30"
         >
-          <Shield className="w-8 h-8 text-purple-400 mb-4" />
-          <h3 className="font-semibold text-white mb-2">Privacy First</h3>
-          <p className="text-white/60 text-sm">
-            No cookies, no PII collection. GDPR & CCPA compliant by design.
-          </p>
+          <h2 className="text-2xl font-semibold mb-4">Final Steps</h2>
+          <ol className="space-y-3 text-gray-300">
+            <li className="flex items-start gap-3">
+              <span className="flex-shrink-0 w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center text-sm font-bold">1</span>
+              <span>Copy both scripts above (after entering your Tenant ID)</span>
+            </li>
+            <li className="flex items-start gap-3">
+              <span className="flex-shrink-0 w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center text-sm font-bold">2</span>
+              <span>Add them as Custom HTML tags in your GTM container</span>
+            </li>
+            <li className="flex items-start gap-3">
+              <span className="flex-shrink-0 w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center text-sm font-bold">3</span>
+              <span>Configure the triggers as specified for each tag</span>
+            </li>
+            <li className="flex items-start gap-3">
+              <span className="flex-shrink-0 w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center text-sm font-bold">4</span>
+              <span>Preview and test your container</span>
+            </li>
+            <li className="flex items-start gap-3">
+              <span className="flex-shrink-0 w-6 h-6 bg-green-600 rounded-full flex items-center justify-center text-sm font-bold">5</span>
+              <span>Publish your container when ready</span>
+            </li>
+          </ol>
         </motion.div>
 
+        {/* Support Section */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4 }}
-          className="glass-card p-6"
+          className="mt-12 text-center"
         >
-          <Zap className="w-8 h-8 text-yellow-400 mb-4" />
-          <h3 className="font-semibold text-white mb-2">Real-Time Detection</h3>
-          <p className="text-white/60 text-sm">
-            Detect 15+ emotions instantly with behavioral physics engine.
+          <p className="text-gray-400 mb-4">
+            Need help with implementation?
           </p>
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.5 }}
-          className="glass-card p-6"
-        >
-          <BarChart3 className="w-8 h-8 text-green-400 mb-4" />
-          <h3 className="font-semibold text-white mb-2">Proven ROI</h3>
-          <p className="text-white/60 text-sm">
-            38% reduction in cart abandonment. 24% increase in conversions.
-          </p>
+          <a
+            href="mailto:support@sentientiq.app"
+            className="inline-flex items-center gap-2 text-blue-400 hover:text-blue-300 transition-colors"
+          >
+            Contact Support
+            <ChevronRight className="w-4 h-4" />
+          </a>
         </motion.div>
       </div>
-
-      {/* Alternative Installation */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.6 }}
-        className="glass-card p-6 border-yellow-500/20"
-      >
-        <div className="flex items-start gap-4">
-          <Clock className="w-5 h-5 text-yellow-400 mt-1" />
-          <div>
-            <h3 className="font-semibold text-white mb-2">Common Issues & Solutions</h3>
-            <div className="space-y-3 text-sm">
-              <div className="flex items-start gap-2">
-                <AlertCircle className="w-4 h-4 text-yellow-400 mt-0.5" />
-                <div>
-                  <p className="text-white/80 font-medium">Not seeing data?</p>
-                  <p className="text-white/60">Make sure you published your GTM container after adding the tag.</p>
-                </div>
-              </div>
-              <div className="flex items-start gap-2">
-                <AlertCircle className="w-4 h-4 text-yellow-400 mt-0.5" />
-                <div>
-                  <p className="text-white/80 font-medium">Tag not firing?</p>
-                  <p className="text-white/60">Use GTM Preview mode to check if the tag is triggered on your pages.</p>
-                </div>
-              </div>
-              <div className="flex items-start gap-2">
-                <CheckCircle className="w-4 h-4 text-green-400 mt-0.5" />
-                <div>
-                  <p className="text-white/80 font-medium">Working correctly?</p>
-                  <p className="text-white/60">You'll see "SentientIQ Telemetry initialized" in your browser console.</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </motion.div>
-
-      {/* Support Section */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.7 }}
-        className="text-center mt-12 mb-8"
-      >
-        <p className="text-white/60 mb-4">
-          Need help? Check our documentation or contact support.
-        </p>
-        <div className="flex justify-center gap-4">
-          <a
-            href="https://docs.sentientiq.ai/gtm"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-purple-400 hover:text-purple-300"
-          >
-            Documentation →
-          </a>
-          <a
-            href="mailto:api@sentientiq.app"
-            className="text-purple-400 hover:text-purple-300"
-          >
-            Email Support →
-          </a>
-        </div>
-      </motion.div>
-    </>
+    </div>
   );
 }
