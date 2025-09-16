@@ -23,18 +23,24 @@ import { useSuperAdmin } from '../hooks/useSuperAdmin';
 
 interface Tenant {
   id: string;
-  company_name: string;
-  domain: string;
+  clerk_org_id: string;
+  name: string;
+  slug: string;
   subscription_tier: string;
-  is_white_label: boolean;
-  is_demo?: boolean;
+  subscription_status: string;
   created_at: string;
-  mrr: number;
-  active_users: number;
-  questions_this_month: number;
-  revenue_share_percent: number;
-  referral_code?: string;
+  updated_at: string;
+  monthly_event_limit: number;
+  monthly_events_used: number;
+  team_members_limit: number;
+  tenant_id: string;
   stripe_customer_id?: string;
+  stripe_subscription_id?: string;
+  features?: {
+    white_label?: boolean;
+    api_access?: boolean;
+    priority_support?: boolean;
+  };
 }
 
 export default function SuperAdmin() {
@@ -53,7 +59,7 @@ export default function SuperAdmin() {
   const [stats, setStats] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [newTenant, setNewTenant] = useState({
-    company_name: '',
+    name: '',
     email: '',
     tenant_type: 'standard',
     revenue_share: 0.30, // Default 30% revenue share
@@ -64,18 +70,19 @@ export default function SuperAdmin() {
   const fetchStats = async () => {
     if (!supabase) return;
     try {
-      // Fetch ONLY REAL metrics - demos excluded
-      const [orgsData, membershipsData] = await Promise.all([
-        supabase.from('organizations').select('*').eq('is_demo', false), // TRUTH FILTER
-        supabase.from('memberships').select(`
-          *,
-          organizations!inner(is_demo)
-        `).eq('organizations.is_demo', false) // TRUTH FILTER
-      ]);
+      // Fetch metrics from organizations table
+      const { data: orgsData, error: orgsError } = await supabase
+        .from('organizations')
+        .select('*');
 
-      const totalOrgs = orgsData.data?.length || 0;
-      const whiteLabel = orgsData.data?.filter((t: any) => t.is_white_label).length || 0;
-      const totalMembers = membershipsData.data?.length || 0;
+      if (orgsError) {
+        console.error('Error fetching organizations:', orgsError);
+        return;
+      }
+
+      const totalOrgs = orgsData?.length || 0;
+      const whiteLabel = orgsData?.filter((t: any) => t.features?.white_label).length || 0;
+      const totalMembers = orgsData?.reduce((sum: number, org: any) => sum + (org.team_members_limit || 1), 0) || 0;
       
       // Calculate real MRR based on subscription tiers
       const tierPrices: Record<string, number> = { 
@@ -87,14 +94,12 @@ export default function SuperAdmin() {
         agency: 999        // White-label partners (+ rev share)
       };
       
-      const mrr = orgsData.data?.reduce((sum: number, org: any) => {
+      const mrr = orgsData?.reduce((sum: number, org: any) => {
         return sum + (tierPrices[org.subscription_tier] || 0);
       }, 0) || 0;
 
-      // Calculate average revenue share
-      const avgRevShare = orgsData.data?.reduce((sum: number, org: any) => {
-        return sum + (org.revenue_share_percent || 0);
-      }, 0) / Math.max(totalOrgs, 1);
+      // No revenue share in current schema, default to 0
+      const avgRevShare = 0;
 
       // Set only the stats we have real data for
       setStats([
@@ -122,19 +127,19 @@ export default function SuperAdmin() {
         const { data, error } = await supabase
           .rpc('create_demo_account', {
             p_email: newTenant.email,
-            p_name: newTenant.company_name,
+            p_name: newTenant.name,
             p_expires_in_days: newTenant.demo_days
           });
         
         if (error) throw error;
         
         console.log('Demo account created:', data);
-        alert(`✅ Demo account created for ${newTenant.company_name}\n\nExpires in ${newTenant.demo_days} days\nEmail: ${newTenant.email}\nPassword: DemoPass123!`);
+        alert(`✅ Demo account created for ${newTenant.name}\n\nExpires in ${newTenant.demo_days} days\nEmail: ${newTenant.email}\nPassword: DemoPass123!`);
         
         // Refresh tenants list
         fetchTenants();
         setShowAddTenant(false);
-        setNewTenant({ company_name: '', email: '', tenant_type: 'standard', revenue_share: 0.30, demo_days: 7 });
+        setNewTenant({ name: '', email: '', tenant_type: 'standard', revenue_share: 0.30, demo_days: 7 });
         return;
       } catch (error) {
         console.error('Failed to create demo account:', error);
@@ -158,7 +163,7 @@ export default function SuperAdmin() {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          companyName: newTenant.company_name,
+          companyName: newTenant.name,
           adminEmail: newTenant.email,
           tenantType: newTenant.tenant_type,
           subscriptionTier: newTenant.tenant_type === 'agency' ? 'agency' : 
@@ -180,20 +185,24 @@ export default function SuperAdmin() {
       const { error } = await supabase
         .from('organizations')
         .insert({
-          company_name: newTenant.company_name,
+          name: newTenant.name,
           domain,
           admin_email: newTenant.email,
           clerk_organization_id: organizationId,
-          is_white_label: newTenant.tenant_type === 'agency',
-          is_demo: false,
           subscription_tier: newTenant.tenant_type === 'agency' ? 'agency' : newTenant.tenant_type,
-          revenue_share_percent: newTenant.tenant_type === 'agency' ? newTenant.revenue_share : 0,
+          features: {
+            white_label: newTenant.tenant_type === 'agency',
+            api_access: true,
+            sage_assistant: true,
+            emotional_detection: true,
+            behavioral_analytics: true
+          },
           created_at: new Date().toISOString(),
           settings: {
             branding: {
               primary_color: '#6366f1',
               logo_url: null,
-              company_name: newTenant.company_name
+              name: newTenant.name
             },
             features: {
               phd_collective: true,
@@ -206,15 +215,15 @@ export default function SuperAdmin() {
       
       if (error) throw error;
       
-      console.log(`New ${newTenant.tenant_type} organization created: ${newTenant.company_name}`);
+      console.log(`New ${newTenant.tenant_type} organization created: ${newTenant.name}`);
       
       // Refresh tenants list
       fetchTenants();
       setShowAddTenant(false);
-      setNewTenant({ company_name: '', email: '', tenant_type: 'standard', revenue_share: 0.30, demo_days: 7 });
+      setNewTenant({ name: '', email: '', tenant_type: 'standard', revenue_share: 0.30, demo_days: 7 });
       
       // Show success message
-      alert(`✅ Organization ${newTenant.company_name} created successfully and you've been added as an admin.`);
+      alert(`✅ Organization ${newTenant.name} created successfully and you've been added as an admin.`);
     } catch (error) {
       console.error('Failed to add tenant:', error);
       alert(`Failed to create organization: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -241,9 +250,9 @@ export default function SuperAdmin() {
   const switchContext = (tenant: Tenant) => {
     // Store the organization context
     localStorage.setItem('admin_context_org', JSON.stringify(tenant));
-    console.log(`Switching context to: ${tenant.company_name}`);
+    console.log(`Switching context to: ${tenant.name}`);
     // You could navigate to a tenant-specific view or update the UI
-    alert(`Context switched to ${tenant.company_name}. You're now viewing as this organization.`);
+    alert(`Context switched to ${tenant.name}. You're now viewing as this organization.`);
   };
 
   const openAddUserModal = (tenant: Tenant) => {
@@ -271,7 +280,7 @@ export default function SuperAdmin() {
           email: newUser.email,
           name: newUser.name,
           organizationId: selectedOrgForUser.id,
-          organizationName: selectedOrgForUser.company_name,
+          organizationName: selectedOrgForUser.name,
           role: newUser.role
         })
       });
@@ -298,7 +307,7 @@ export default function SuperAdmin() {
       
       if (error) throw error;
       
-      alert(`✅ Invitation sent to ${newUser.name} (${newUser.email}) for ${selectedOrgForUser.company_name}`);
+      alert(`✅ Invitation sent to ${newUser.name} (${newUser.email}) for ${selectedOrgForUser.name}`);
       setShowAddUser(false);
       setSelectedOrgForUser(null);
       setNewUser({ name: '', email: '', role: 'user' }); // Reset form
@@ -312,7 +321,7 @@ export default function SuperAdmin() {
 
   const deleteTenant = async (tenant: Tenant) => {
     const confirmDelete = window.confirm(
-      `Are you sure you want to delete ${tenant.company_name}?\n\nThis action cannot be undone.`
+      `Are you sure you want to delete ${tenant.name}?\n\nThis action cannot be undone.`
     );
     
     if (!confirmDelete) return;
@@ -332,7 +341,7 @@ export default function SuperAdmin() {
       
       // Refresh the list
       fetchTenants();
-      alert(`✅ ${tenant.company_name} has been deleted.`);
+      alert(`✅ ${tenant.name} has been deleted.`);
     } catch (error) {
       console.error('Failed to delete tenant:', error);
       alert('Failed to delete organization. Check console for details.');
@@ -497,7 +506,7 @@ export default function SuperAdmin() {
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-2xl font-bold text-white">Organizations</h2>
             <div className="text-sm text-white/60">
-              {tenants.filter(t => t.is_white_label).length} White Label • {tenants.length} Total
+              {tenants.filter(t => t.features?.white_label).length} White Label • {tenants.length} Total
             </div>
           </div>
           
@@ -537,27 +546,27 @@ export default function SuperAdmin() {
                       animate={{ opacity: 1 }}
                       className="border-b border-white/5 hover:bg-white/5 transition-colors"
                     >
-                      <td className="py-4 text-white font-medium">{tenant.company_name}</td>
-                      <td className="py-4 text-white/80">{tenant.domain}</td>
+                      <td className="py-4 text-white font-medium">{tenant.name}</td>
+                      <td className="py-4 text-white/80">{tenant.slug || tenant.tenant_id}</td>
                       <td className="py-4">
                         <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                          tenant.is_demo
+                          tenant.subscription_tier === 'free'
                             ? 'bg-gradient-to-r from-green-500/20 to-emerald-500/20 text-green-300 border border-green-500/30'
-                            : tenant.is_white_label 
+                            : tenant.features?.white_label 
                             ? 'bg-gradient-to-r from-purple-500/20 to-pink-500/20 text-purple-300 border border-purple-500/30'
                             : 'bg-blue-500/20 text-blue-300 border border-blue-500/30'
                         }`}>
-                          {tenant.is_demo ? '🎭 Demo' : tenant.is_white_label ? '👑 Agency' : 'Standard'}
+                          {tenant.subscription_tier === 'free' ? '🎭 Demo' : tenant.features?.white_label ? '👑 Agency' : 'Standard'}
                         </span>
                       </td>
                       <td className="py-4">
                         <span className="text-white/80 capitalize">{tenant.subscription_tier}</span>
                       </td>
                       <td className="py-4 text-green-400 font-medium">
-                        {(tenant.revenue_share_percent * 100).toFixed(0)}%
+                        {tenant.features?.white_label ? '30%' : '0%'}
                       </td>
                       <td className="py-4 text-white/60">
-                        {tenant.referral_code || '-'}
+                        {tenant.slug || '-'}
                       </td>
                       <td className="py-4 text-white/60">
                         {tenant.stripe_customer_id ? '✓' : '-'}
@@ -621,8 +630,8 @@ export default function SuperAdmin() {
                     <label className="block text-white/60 mb-2 text-sm font-medium">Company Name</label>
                     <input
                       type="text"
-                      value={newTenant.company_name}
-                      onChange={(e) => setNewTenant({...newTenant, company_name: e.target.value})}
+                      value={newTenant.name}
+                      onChange={(e) => setNewTenant({...newTenant, name: e.target.value})}
                       className="w-full px-4 py-3 bg-white/5 border border-white/20 rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-purple-400 transition-colors"
                       placeholder="Acme Corporation"
                     />
@@ -762,7 +771,7 @@ export default function SuperAdmin() {
                   <div className="flex gap-3 mt-6">
                     <button
                       onClick={handleAddTenant}
-                      disabled={!newTenant.company_name || !newTenant.email}
+                      disabled={!newTenant.name || !newTenant.email}
                       className="flex-1 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl hover:from-purple-700 hover:to-pink-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all font-medium"
                     >
                       Create Tenant
@@ -839,7 +848,7 @@ export default function SuperAdmin() {
                       <option value="">Select a tenant...</option>
                       {tenants.map(tenant => (
                         <option key={tenant.id} value={tenant.id}>
-                          {tenant.company_name}
+                          {tenant.name}
                         </option>
                       ))}
                     </select>
@@ -862,7 +871,7 @@ export default function SuperAdmin() {
                     <p className="text-sm text-white/80">
                       <span className="font-bold text-green-400">User Access:</span>
                       <br />• Will receive an invitation email
-                      <br />• Access to {selectedOrgForUser?.company_name || 'selected organization'}
+                      <br />• Access to {selectedOrgForUser?.name || 'selected organization'}
                       <br />• {newUser.role === 'admin' ? 'Can manage team settings' : newUser.role === 'owner' ? 'Full organization control' : 'Standard user access'}
                     </p>
                   </div>
