@@ -228,7 +228,8 @@ export default function LiveEmotionDemo() {
     
     // TRIGGER IN-BROWSER INTERVENTIONS!
     // Only trigger for high-confidence, meaningful emotions
-    if (confidence > 80 && emotion !== 'normal' && emotion !== 'curiosity') {
+    // Skip 'confidence' emotion - let the GTM script handle real interventions
+    if (confidence > 80 && emotion !== 'normal' && emotion !== 'curiosity' && emotion !== 'confidence') {
       // Delay slightly so user sees emotion first
       setTimeout(() => triggerIntervention(emotion), 500);
     }
@@ -306,13 +307,9 @@ export default function LiveEmotionDemo() {
         };
         break;
       case 'confidence':
-        intervention = {
-          id: `int_${Date.now()}`,
-          type: 'upsell',
-          message: 'You qualify for our Enterprise plan →',
-          timestamp: Date.now()
-        };
-        break;
+        // Skip popup for confidence - GTM script handles real interventions
+        // Just show emotion detection in the feed
+        return;
     }
     
     if (intervention) {
@@ -502,42 +499,42 @@ export default function LiveEmotionDemo() {
               style={{ ...pos, position: 'fixed' }}
             >
               {intervention.type === 'chat' && (
-                <div className="bg-blue-600 text-white p-4 rounded-lg shadow-2xl">
+                <div className="backdrop-blur-md bg-blue-600/20 border border-blue-400/30 text-white p-4 rounded-lg shadow-2xl">
                   <div className="flex items-center gap-2 mb-2">
                     <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
                     <span className="text-sm font-semibold">Support Chat</span>
                   </div>
-                  <p>{intervention.message}</p>
+                  <p className="text-blue-100">{intervention.message}</p>
                 </div>
               )}
               
               {intervention.type === 'discount' && (
-                <div className="bg-gradient-to-r from-purple-600 to-pink-600 text-white p-4 rounded-lg shadow-2xl animate-pulse">
-                  <div className="text-2xl font-bold mb-1">🎉 SPECIAL OFFER</div>
-                  <p className="text-lg">{intervention.message}</p>
-                  <button className="mt-2 bg-white text-purple-600 px-4 py-2 rounded font-semibold">
+                <div className="backdrop-blur-md bg-gradient-to-r from-purple-600/30 to-pink-600/30 border border-purple-400/40 text-white p-4 rounded-lg shadow-2xl">
+                  <div className="text-2xl font-bold mb-1 drop-shadow-lg">🎉 SPECIAL OFFER</div>
+                  <p className="text-lg text-purple-100">{intervention.message}</p>
+                  <button className="mt-2 bg-white/90 backdrop-blur text-purple-600 px-4 py-2 rounded font-semibold hover:bg-white transition-all">
                     CLAIM NOW
                   </button>
                 </div>
               )}
               
               {intervention.type === 'guide' && (
-                <div className="bg-green-600 text-white p-4 rounded-lg shadow-2xl">
+                <div className="backdrop-blur-md bg-green-600/20 border border-green-400/30 text-white p-4 rounded-lg shadow-2xl">
                   <div className="flex items-center gap-2">
                     <span className="text-2xl">👋</span>
                     <div>
-                      <p className="font-semibold">Need help?</p>
-                      <p className="text-sm">{intervention.message}</p>
+                      <p className="font-semibold text-green-100">Need help?</p>
+                      <p className="text-sm text-green-200">{intervention.message}</p>
                     </div>
                   </div>
                 </div>
               )}
               
               {intervention.type === 'support' && (
-                <div className="bg-red-600 text-white p-4 rounded-lg shadow-2xl animate-bounce">
-                  <div className="text-lg font-bold mb-1">⚡ URGENT</div>
-                  <p>{intervention.message}</p>
-                  <button className="mt-2 bg-white text-red-600 px-4 py-2 rounded font-semibold">
+                <div className="backdrop-blur-md bg-red-600/20 border border-red-400/30 text-white p-4 rounded-lg shadow-2xl animate-bounce">
+                  <div className="text-lg font-bold mb-1 text-red-100">⚡ URGENT</div>
+                  <p className="text-red-100">{intervention.message}</p>
+                  <button className="mt-2 bg-white/90 backdrop-blur text-red-600 px-4 py-2 rounded font-semibold hover:bg-white transition-all">
                     CONNECT NOW
                   </button>
                 </div>

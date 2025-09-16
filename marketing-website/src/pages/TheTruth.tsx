@@ -29,7 +29,7 @@ const TheTruth: React.FC = () => {
 
       <NeuralBackground />
 
-      <div className="min-h-screen bg-black text-white relative z-10">
+      <div className="min-h-screen text-white relative z-10">
         <NavBar />
 
         <div className="container mx-auto px-4 pt-24 pb-20">
