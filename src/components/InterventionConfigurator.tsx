@@ -17,6 +17,17 @@ import {
 import { useUser } from '@clerk/clerk-react';
 import { getSupabaseClient } from '@/lib/supabase';
 
+interface ComparisonData {
+  competitors: string[];
+  features: {
+    name: string;
+    us: boolean;
+    competitor1: boolean;
+    competitor2: boolean;
+    competitor3: boolean;
+  }[];
+}
+
 interface InterventionConfig {
   // Branding
   primaryColor: string;
@@ -33,6 +44,7 @@ interface InterventionConfig {
       body: string;
       ctaText: string;
       discount?: number;
+      comparisonData?: ComparisonData;
       timing: {
         delay: number;
         duration: number;
@@ -167,6 +179,16 @@ export const InterventionConfigurator: React.FC = () => {
         headline: 'See How We Compare',
         body: 'We\'ve done the research for you. See why we\'re the #1 choice.',
         ctaText: 'View Comparison',
+        comparisonData: {
+          competitors: ['Competitor A', 'Competitor B', 'Competitor C'],
+          features: [
+            { name: '24/7 Support', us: true, competitor1: false, competitor2: true, competitor3: false },
+            { name: 'Free Shipping', us: true, competitor1: true, competitor2: false, competitor3: false },
+            { name: 'Money-Back Guarantee', us: true, competitor1: false, competitor2: false, competitor3: true },
+            { name: 'Same-Day Service', us: true, competitor1: false, competitor2: false, competitor3: false },
+            { name: 'Lifetime Warranty', us: true, competitor1: false, competitor2: true, competitor3: false }
+          ]
+        },
         timing: { delay: 1000, duration: 0, persistence: 'sticky' }
       },
       exit_rescue: {
@@ -270,6 +292,50 @@ export const InterventionConfigurator: React.FC = () => {
       fontWeight: 600
     };
 
+    // Special preview for comparison table
+    if (selectedIntervention === 'comparison_table' && intervention.comparisonData) {
+      return (
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="p-6 w-full max-w-md mx-auto"
+          style={previewStyles}
+        >
+          <h3 className="text-lg font-bold mb-2">{intervention.headline}</h3>
+          <p className="text-sm mb-4 opacity-90">{intervention.body}</p>
+
+          {/* Mini Comparison Table */}
+          <div className="text-xs">
+            <div className="grid grid-cols-4 gap-1 mb-2 font-semibold">
+              <div>Features</div>
+              <div className="text-center">Us</div>
+              {intervention.comparisonData.competitors.slice(0, 2).map((comp, idx) => (
+                <div key={idx} className="text-center truncate">{comp}</div>
+              ))}
+            </div>
+            {intervention.comparisonData.features.slice(0, 3).map((feature, idx) => (
+              <div key={idx} className="grid grid-cols-4 gap-1 py-1 border-t border-opacity-20">
+                <div className="truncate">{feature.name}</div>
+                <div className="text-center">{feature.us ? '✓' : '✗'}</div>
+                <div className="text-center">{feature.competitor1 ? '✓' : '✗'}</div>
+                <div className="text-center">{feature.competitor2 ? '✓' : '✗'}</div>
+              </div>
+            ))}
+          </div>
+
+          {intervention.ctaText && (
+            <button
+              className="px-6 py-2.5 text-sm font-medium transition-all hover:scale-105 mt-4"
+              style={buttonStyles}
+            >
+              {intervention.ctaText}
+            </button>
+          )}
+        </motion.div>
+      );
+    }
+
+    // Default preview for other interventions
     return (
       <motion.div
         initial={{ opacity: 0, scale: 0.9 }}
@@ -619,6 +685,117 @@ export const InterventionConfigurator: React.FC = () => {
                 </div>
               )}
             </div>
+
+            {/* Comparison Table Editor for comparison_table intervention */}
+            {selectedIntervention === 'comparison_table' && (
+              <div className="space-y-4 border-t border-white/20 pt-4">
+                <h4 className="text-sm font-medium text-white">Comparison Table</h4>
+
+                {/* Competitor Names */}
+                <div className="grid grid-cols-4 gap-2">
+                  <div className="text-xs text-white/60">Your Business</div>
+                  {config.interventions.comparison_table.comparisonData?.competitors.map((comp, idx) => (
+                    <input
+                      key={idx}
+                      type="text"
+                      value={comp}
+                      onChange={(e) => {
+                        const newData = { ...config.interventions.comparison_table.comparisonData! };
+                        newData.competitors[idx] = e.target.value;
+                        updateIntervention('comparisonData', newData);
+                      }}
+                      className="px-2 py-1 bg-white/10 border border-white/20 rounded text-white text-xs"
+                      placeholder={`Competitor ${idx + 1}`}
+                    />
+                  ))}
+                </div>
+
+                {/* Features */}
+                <div className="space-y-2">
+                  {config.interventions.comparison_table.comparisonData?.features.map((feature, fIdx) => (
+                    <div key={fIdx} className="grid grid-cols-5 gap-2 items-center">
+                      <input
+                        type="text"
+                        value={feature.name}
+                        onChange={(e) => {
+                          const newData = { ...config.interventions.comparison_table.comparisonData! };
+                          newData.features[fIdx].name = e.target.value;
+                          updateIntervention('comparisonData', newData);
+                        }}
+                        className="px-2 py-1 bg-white/10 border border-white/20 rounded text-white text-xs"
+                        placeholder="Feature name"
+                      />
+                      <div className="flex justify-center">
+                        <input
+                          type="checkbox"
+                          checked={feature.us}
+                          onChange={(e) => {
+                            const newData = { ...config.interventions.comparison_table.comparisonData! };
+                            newData.features[fIdx].us = e.target.checked;
+                            updateIntervention('comparisonData', newData);
+                          }}
+                          className="w-4 h-4"
+                        />
+                      </div>
+                      <div className="flex justify-center">
+                        <input
+                          type="checkbox"
+                          checked={feature.competitor1}
+                          onChange={(e) => {
+                            const newData = { ...config.interventions.comparison_table.comparisonData! };
+                            newData.features[fIdx].competitor1 = e.target.checked;
+                            updateIntervention('comparisonData', newData);
+                          }}
+                          className="w-4 h-4"
+                        />
+                      </div>
+                      <div className="flex justify-center">
+                        <input
+                          type="checkbox"
+                          checked={feature.competitor2}
+                          onChange={(e) => {
+                            const newData = { ...config.interventions.comparison_table.comparisonData! };
+                            newData.features[fIdx].competitor2 = e.target.checked;
+                            updateIntervention('comparisonData', newData);
+                          }}
+                          className="w-4 h-4"
+                        />
+                      </div>
+                      <div className="flex justify-center">
+                        <input
+                          type="checkbox"
+                          checked={feature.competitor3}
+                          onChange={(e) => {
+                            const newData = { ...config.interventions.comparison_table.comparisonData! };
+                            newData.features[fIdx].competitor3 = e.target.checked;
+                            updateIntervention('comparisonData', newData);
+                          }}
+                          className="w-4 h-4"
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Add Feature Button */}
+                <button
+                  onClick={() => {
+                    const newData = { ...config.interventions.comparison_table.comparisonData! };
+                    newData.features.push({
+                      name: '',
+                      us: true,
+                      competitor1: false,
+                      competitor2: false,
+                      competitor3: false
+                    });
+                    updateIntervention('comparisonData', newData);
+                  }}
+                  className="text-xs text-cyan-400 hover:text-cyan-300"
+                >
+                  + Add Feature
+                </button>
+              </div>
+            )}
 
             <div className="grid grid-cols-3 gap-4">
               <div>
