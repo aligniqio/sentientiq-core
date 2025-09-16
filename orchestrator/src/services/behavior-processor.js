@@ -433,7 +433,7 @@ export class BehaviorProcessor {
     }
 
     // Look for patterns in the session
-    const patterns = this.detectPatterns(session.history);
+    const patterns = this.detectPatterns(session.history, session);
     if (patterns.length > 0) {
       session.patterns = patterns;
       console.log(`🎯 Patterns detected for ${sessionId}:`, patterns.map(p => p.type));
@@ -603,7 +603,7 @@ export class BehaviorProcessor {
   /**
    * Detect emotional patterns that need intervention
    */
-  detectPatterns(history) {
+  detectPatterns(history, session = null) {
     const patterns = [];
 
     if (history.length < 3) return patterns;
@@ -804,8 +804,8 @@ export class BehaviorProcessor {
     }
 
     // Price Anchoring Recovery - saw high price first, now considering
-    if (session.history.length > 0 &&
-        session.history[0].emotion === 'sticker_shock' &&
+    if (history.length > 0 &&
+        history[0].emotion === 'sticker_shock' &&
         recent.includes('price_consideration')) {
       patterns.push({
         type: 'price_anchoring_recovery',
