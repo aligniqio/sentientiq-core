@@ -37,13 +37,6 @@ export const TemplateGallery: React.FC<TemplateGalleryProps> = ({
     // In production, use a real toast library
   };
 
-  // Tier limits
-  const tierLimits = {
-    starter: 1,
-    growth: 3,
-    scale: 10,
-    enterprise: Infinity
-  };
 
   // Filter templates by tier
   const availableTemplates = interventionTemplates.filter(template => {
@@ -178,10 +171,7 @@ export const TemplateGallery: React.FC<TemplateGalleryProps> = ({
     const buttonCSS = styles.button?.replace(/{primary}/g, primaryColor) || '';
 
     return (
-      <div
-        className="relative w-full h-48 bg-gray-100 rounded-lg overflow-hidden flex items-center justify-center"
-        style={{ background: 'url(/grid-pattern.svg)' }}
-      >
+      <div className="relative w-full h-48 bg-gray-800/50 backdrop-blur-sm rounded-lg overflow-hidden flex items-center justify-center border border-white/10">
         {previewMode === 'modal' && (
           <div
             className="w-72 p-6 shadow-xl rounded-lg"
@@ -244,13 +234,13 @@ export const TemplateGallery: React.FC<TemplateGalleryProps> = ({
   if (loading) {
     return (
       <div className="flex items-center justify-center h-96">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-500"></div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 text-white">
       {/* Preview Mode Selector */}
       <div className="flex items-center justify-between">
         <div className="flex gap-2">
@@ -259,10 +249,10 @@ export const TemplateGallery: React.FC<TemplateGalleryProps> = ({
               key={mode}
               onClick={() => setPreviewMode(mode)}
               className={cn(
-                'px-4 py-2 rounded-lg text-sm font-medium transition-colors',
+                'px-4 py-2 rounded-lg text-sm font-medium transition-all',
                 previewMode === mode
-                  ? 'bg-black text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  ? 'bg-gradient-to-r from-cyan-500 to-blue-500 text-white shadow-lg'
+                  : 'bg-white/10 backdrop-blur-sm text-white/80 hover:bg-white/20 border border-white/20'
               )}
             >
               {mode.charAt(0).toUpperCase() + mode.slice(1)}
@@ -272,7 +262,7 @@ export const TemplateGallery: React.FC<TemplateGalleryProps> = ({
 
         <button
           onClick={() => setCustomizing(!customizing)}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg bg-gradient-to-r from-purple-600 to-blue-600 text-white font-medium hover:opacity-90 transition-opacity"
+          className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white/10 backdrop-blur-sm text-white font-medium hover:bg-white/20 transition-all border border-white/20"
         >
           <Palette className="w-4 h-4" />
           Customize Branding
@@ -288,12 +278,12 @@ export const TemplateGallery: React.FC<TemplateGalleryProps> = ({
             exit={{ height: 0, opacity: 0 }}
             className="overflow-hidden"
           >
-            <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl p-6 space-y-4">
-              <h3 className="text-lg font-bold">Brand Customization</h3>
+            <div className="bg-white/10 backdrop-blur-md rounded-xl p-6 space-y-4 border border-white/20">
+              <h3 className="text-lg font-bold text-white">Brand Customization</h3>
 
               <div className="grid grid-cols-3 gap-4">
                 <div>
-                  <label className="block text-sm font-medium mb-2">Primary Color</label>
+                  <label className="block text-sm font-medium mb-2 text-white/80">Primary Color</label>
                   <div className="flex items-center gap-2">
                     <input
                       type="color"
@@ -302,26 +292,26 @@ export const TemplateGallery: React.FC<TemplateGalleryProps> = ({
                         ...branding!,
                         brand: { ...branding?.brand!, primaryColor: e.target.value }
                       })}
-                      className="w-12 h-12 rounded border-2 border-gray-300"
+                      className="w-12 h-12 rounded border-2 border-white/30"
                     />
                     <input
                       type="text"
                       value={branding?.brand?.primaryColor || '#0066ff'}
                       readOnly
-                      className="flex-1 px-3 py-2 border rounded-lg bg-white"
+                      className="flex-1 px-3 py-2 border border-white/30 rounded-lg bg-white/10 backdrop-blur-sm text-white"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium mb-2">Font Family</label>
+                  <label className="block text-sm font-medium mb-2 text-white/80">Font Family</label>
                   <select
                     value={branding?.brand?.fontFamily || 'system-ui'}
                     onChange={(e) => setBranding({
                       ...branding!,
                       brand: { ...branding?.brand!, fontFamily: e.target.value }
                     })}
-                    className="w-full px-3 py-2 border rounded-lg bg-white"
+                    className="w-full px-3 py-2 border border-white/30 rounded-lg bg-white/10 backdrop-blur-sm text-white"
                   >
                     <option value="system-ui">System UI</option>
                     <option value="Inter, sans-serif">Inter</option>
@@ -332,7 +322,7 @@ export const TemplateGallery: React.FC<TemplateGalleryProps> = ({
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium mb-2">Logo URL</label>
+                  <label className="block text-sm font-medium mb-2 text-white/80">Logo URL</label>
                   <input
                     type="url"
                     value={branding?.brand?.logoUrl || ''}
@@ -341,19 +331,19 @@ export const TemplateGallery: React.FC<TemplateGalleryProps> = ({
                       brand: { ...branding?.brand!, logoUrl: e.target.value }
                     })}
                     placeholder="https://..."
-                    className="w-full px-3 py-2 border rounded-lg bg-white"
+                    className="w-full px-3 py-2 border border-white/30 rounded-lg bg-white/10 backdrop-blur-sm text-white"
                   />
                 </div>
               </div>
 
               {currentTier === 'enterprise' && (
                 <div>
-                  <label className="block text-sm font-medium mb-2">Custom CSS</label>
+                  <label className="block text-sm font-medium mb-2 text-white/80">Custom CSS</label>
                   <textarea
                     value={branding?.customCSS || ''}
                     onChange={(e) => setBranding({ ...branding!, customCSS: e.target.value })}
                     placeholder="/* Your custom styles */"
-                    className="w-full h-32 px-3 py-2 border rounded-lg bg-white font-mono text-sm"
+                    className="w-full h-32 px-3 py-2 border border-white/30 rounded-lg bg-white/10 backdrop-blur-sm font-mono text-sm text-white placeholder-white/50"
                   />
                 </div>
               )}
@@ -374,7 +364,7 @@ export const TemplateGallery: React.FC<TemplateGalleryProps> = ({
                     setCustomizing(false);
                   }
                 }}
-                className="px-6 py-2 bg-black text-white rounded-lg font-medium hover:bg-gray-800"
+                className="px-6 py-2 bg-gradient-to-r from-cyan-500 to-blue-500 text-white rounded-lg font-medium hover:from-cyan-600 hover:to-blue-600 transition-all shadow-lg"
               >
                 Save Branding
               </button>
@@ -400,13 +390,13 @@ export const TemplateGallery: React.FC<TemplateGalleryProps> = ({
                 isLocked && 'opacity-60'
               )}
             >
-              <div className="bg-white border-2 border-gray-200 rounded-xl overflow-hidden">
+              <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-xl overflow-hidden hover:bg-white/15 transition-all">
                 {/* Template Header */}
-                <div className="p-4 border-b bg-gradient-to-r from-gray-50 to-gray-100">
+                <div className="p-4 border-b border-white/20 bg-gradient-to-r from-white/5 to-white/10">
                   <div className="flex items-start justify-between mb-2">
                     <div>
-                      <h3 className="font-bold text-lg">{template.name}</h3>
-                      <p className="text-sm text-gray-600">{template.description}</p>
+                      <h3 className="font-bold text-lg text-white">{template.name}</h3>
+                      <p className="text-sm text-white/70">{template.description}</p>
                     </div>
                     {isLocked ? (
                       <Lock className="w-5 h-5 text-gray-400" />
@@ -418,16 +408,16 @@ export const TemplateGallery: React.FC<TemplateGalleryProps> = ({
                   <div className="flex items-center gap-2 mt-3">
                     <span className={cn(
                       'px-2 py-1 rounded-full text-xs font-medium',
-                      template.tier === 'starter' && 'bg-gray-200 text-gray-700',
-                      template.tier === 'growth' && 'bg-blue-100 text-blue-700',
-                      template.tier === 'scale' && 'bg-purple-100 text-purple-700',
-                      template.tier === 'enterprise' && 'bg-gradient-to-r from-yellow-400 to-orange-400 text-white'
+                      template.tier === 'starter' && 'bg-gray-500/30 text-gray-300 backdrop-blur-sm',
+                      template.tier === 'growth' && 'bg-blue-500/30 text-blue-300 backdrop-blur-sm',
+                      template.tier === 'scale' && 'bg-purple-500/30 text-purple-300 backdrop-blur-sm',
+                      template.tier === 'enterprise' && 'bg-gradient-to-r from-yellow-500/30 to-orange-500/30 text-yellow-300 backdrop-blur-sm'
                     )}>
                       {template.tier.toUpperCase()}
                     </span>
 
                     {template.industry.slice(0, 2).map(ind => (
-                      <span key={ind.type} className="px-2 py-1 bg-gray-100 rounded-full text-xs">
+                      <span key={ind.type} className="px-2 py-1 bg-white/10 backdrop-blur-sm rounded-full text-xs text-white/70">
                         {ind.type}
                       </span>
                     ))}
@@ -435,7 +425,7 @@ export const TemplateGallery: React.FC<TemplateGalleryProps> = ({
                 </div>
 
                 {/* Template Preview */}
-                <div className="p-4">
+                <div className="p-4 bg-gray-900/50">
                   {renderTemplatePreview(template)}
                 </div>
 
@@ -444,19 +434,19 @@ export const TemplateGallery: React.FC<TemplateGalleryProps> = ({
                   <div className="px-4 pb-4">
                     <div className="flex items-center justify-between text-sm">
                       <div className="flex items-center gap-1">
-                        <Eye className="w-4 h-4 text-gray-400" />
-                        <span className="text-gray-600">{stats.impressions}</span>
+                        <Eye className="w-4 h-4 text-white/50" />
+                        <span className="text-white/70">{stats.impressions}</span>
                       </div>
                       <div className="flex items-center gap-1">
-                        <TrendingUp className="w-4 h-4 text-green-500" />
-                        <span className="font-medium">{stats.conversionRate}%</span>
+                        <TrendingUp className="w-4 h-4 text-green-400" />
+                        <span className="font-medium text-white">{stats.conversionRate}%</span>
                       </div>
                     </div>
                   </div>
                 )}
 
                 {/* Actions */}
-                <div className="p-4 border-t bg-gray-50">
+                <div className="p-4 border-t border-white/20 bg-white/5">
                   <div className="flex gap-2">
                     <button
                       onClick={() => !isLocked && selectTemplate(template)}
@@ -464,10 +454,10 @@ export const TemplateGallery: React.FC<TemplateGalleryProps> = ({
                       className={cn(
                         'flex-1 px-4 py-2 rounded-lg font-medium transition-colors',
                         isLocked
-                          ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                          ? 'bg-gray-500/30 text-gray-400 cursor-not-allowed backdrop-blur-sm'
                           : isSelected
-                          ? 'bg-green-500 text-white'
-                          : 'bg-black text-white hover:bg-gray-800'
+                          ? 'bg-gradient-to-r from-green-500 to-emerald-500 text-white shadow-lg'
+                          : 'bg-gradient-to-r from-cyan-500 to-blue-500 text-white hover:from-cyan-600 hover:to-blue-600 shadow-lg'
                       )}
                     >
                       {isLocked ? 'Upgrade Required' : isSelected ? 'Active' : 'Select'}
@@ -479,7 +469,7 @@ export const TemplateGallery: React.FC<TemplateGalleryProps> = ({
                           // Open live preview
                           window.open(`/preview/${template.id}?tenant=${tenantId}`, '_blank');
                         }}
-                        className="px-4 py-2 border-2 border-gray-300 rounded-lg hover:bg-gray-100"
+                        className="px-4 py-2 border border-white/30 rounded-lg hover:bg-white/10 backdrop-blur-sm transition-all"
                       >
                         <Eye className="w-4 h-4" />
                       </button>
@@ -495,12 +485,12 @@ export const TemplateGallery: React.FC<TemplateGalleryProps> = ({
         {currentTier === 'enterprise' && (
           <motion.div
             whileHover={{ scale: 1.02 }}
-            className="relative rounded-xl overflow-hidden bg-gradient-to-br from-yellow-50 via-orange-50 to-red-50 border-2 border-orange-200"
+            className="relative rounded-xl overflow-hidden bg-gradient-to-br from-yellow-500/10 via-orange-500/10 to-red-500/10 backdrop-blur-md border border-orange-500/30"
           >
             <div className="p-6 h-full flex flex-col items-center justify-center text-center">
-              <Code className="w-12 h-12 text-orange-600 mb-4" />
-              <h3 className="font-bold text-lg mb-2">Create Custom Template</h3>
-              <p className="text-sm text-gray-600 mb-6">
+              <Code className="w-12 h-12 text-orange-400 mb-4" />
+              <h3 className="font-bold text-lg mb-2 text-white">Create Custom Template</h3>
+              <p className="text-sm text-white/70 mb-6">
                 Build your own template from scratch with full control over HTML, CSS, and animations
               </p>
               <button
@@ -517,25 +507,6 @@ export const TemplateGallery: React.FC<TemplateGalleryProps> = ({
         )}
       </div>
 
-      {/* Tier Upgrade Prompt */}
-      {tierLimits[currentTier] < interventionTemplates.length && (
-        <div className="mt-8 p-6 bg-gradient-to-r from-purple-600 to-blue-600 rounded-xl text-white">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-xl font-bold mb-2">Unlock More Templates</h3>
-              <p className="text-white/80">
-                Upgrade to access {interventionTemplates.length - availableTemplates.length} more premium templates
-              </p>
-            </div>
-            <button
-              onClick={() => window.location.href = '/pricing'}
-              className="px-6 py-3 bg-white text-purple-600 rounded-lg font-bold hover:bg-gray-100"
-            >
-              Upgrade Now
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
