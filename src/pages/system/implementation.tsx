@@ -100,7 +100,7 @@ export default function SystemImplementation() {
         subtitle="Follow these steps to integrate SentientIQ into your website using Google Tag Manager"
       />
 
-      <div className="max-w-4xl mx-auto px-6 pb-20">
+      <div className="pb-20">
         {/* Configuration Section */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
