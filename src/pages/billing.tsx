@@ -232,12 +232,32 @@ export default function Billing() {
             </div>
           ) : (
             <div className="space-y-3">
-              <FeatureRow name="Unlimited API calls" enabled={currentTier !== 'starter'} />
-              <FeatureRow name="Identity resolution" enabled={true} />
-              <FeatureRow name="12 emotion detection" enabled={true} />
-              <FeatureRow name="CRM sync" enabled={currentTier === 'growth' || currentTier === 'scale' || currentTier === 'enterprise'} />
-              <FeatureRow name="API access" enabled={currentTier === 'scale' || currentTier === 'enterprise'} />
-              <FeatureRow name="Success manager" enabled={currentTier === 'enterprise'} />
+              {/* Starter features - all tiers get these */}
+              <FeatureRow name="Emotional tracking script" enabled={true} />
+              <FeatureRow name="Real-time emotion detection" enabled={true} />
+              <FeatureRow name="Behavioral pattern analysis" enabled={true} />
+              <FeatureRow name="Dashboard & reporting" enabled={true} />
+              <FeatureRow name="Email alerts" enabled={true} />
+
+              {/* Growth features */}
+              <FeatureRow name="CRM integration" enabled={currentTier === 'growth' || currentTier === 'scale' || currentTier === 'enterprise'} />
+              <FeatureRow name="Identity resolution" enabled={currentTier === 'growth' || currentTier === 'scale' || currentTier === 'enterprise'} />
+              <FeatureRow name="Automated interventions" enabled={currentTier === 'growth' || currentTier === 'scale' || currentTier === 'enterprise'} />
+              <FeatureRow name="Deal value tracking" enabled={currentTier === 'growth' || currentTier === 'scale' || currentTier === 'enterprise'} />
+              <FeatureRow name="Slack/webhook alerts" enabled={currentTier === 'growth' || currentTier === 'scale' || currentTier === 'enterprise'} />
+
+              {/* Scale features */}
+              <FeatureRow name="Unlimited sessions" enabled={currentTier === 'scale' || currentTier === 'enterprise'} />
+              <FeatureRow name="Custom intervention rules" enabled={currentTier === 'scale' || currentTier === 'enterprise'} />
+              <FeatureRow name="Full API access" enabled={currentTier === 'scale' || currentTier === 'enterprise'} />
+              <FeatureRow name="Multi-domain tracking" enabled={currentTier === 'scale' || currentTier === 'enterprise'} />
+              <FeatureRow name="Dedicated success manager" enabled={currentTier === 'scale' || currentTier === 'enterprise'} />
+
+              {/* Enterprise features */}
+              <FeatureRow name="Self-hosted option" enabled={currentTier === 'enterprise'} />
+              <FeatureRow name="Custom ML models" enabled={currentTier === 'enterprise'} />
+              <FeatureRow name="White-label capability" enabled={currentTier === 'enterprise'} />
+              <FeatureRow name="99.99% uptime SLA" enabled={currentTier === 'enterprise'} />
             </div>
           )}
         </motion.div>

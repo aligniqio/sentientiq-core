@@ -9,7 +9,6 @@ import {
   Shield,
   Zap,
   Crown,
-  BarChart3,
   Activity,
   Settings,
   Brain,
@@ -82,8 +81,6 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   }, []);
   
   const menuItems = [
-    { path: '/scorecard', icon: BarChart3, label: 'Scorecard', public: false },
-    { path: '/actions', icon: Zap, label: 'Actions', public: false },
     { path: '/emotional-dashboard', icon: Activity, label: 'Emotions', public: false },
     { path: '/usage-dashboard', icon: Activity, label: 'Usage', public: false },
     { path: '/billing', icon: Shield, label: 'Billing', public: false },

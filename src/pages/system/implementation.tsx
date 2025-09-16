@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ExternalLink, CheckCircle, Copy, Zap, Shield, BarChart3, Clock, Key, RefreshCw, HelpCircle, X } from 'lucide-react';
+import { ExternalLink, CheckCircle, Copy, Zap, Shield, BarChart3, Clock, Key, RefreshCw, HelpCircle, X, AlertCircle } from 'lucide-react';
 import PageHeader from '../../components/PageHeader';
 import { useUser } from '@clerk/clerk-react';
 import { useSageHint } from '../../hooks/useTenant';

@@ -355,8 +355,8 @@ const EmotionalLiveFeed = () => {
 
       {/* EVI and Active Users - Top Level Metrics */}
       <div className="w-full flex gap-4 mb-8">
-        {/* Emotional Volatility Index - 80% width */}
-        <div className="flex-1" style={{ maxWidth: '80%' }}>
+        {/* Emotional Volatility Index */}
+        <div className="flex-1">
           <EVIDisplay
             value={stats.volatilityIndex || 50}
             trend={stats.volatilityIndex && stats.volatilityIndex > 60 ? 'up' : stats.volatilityIndex && stats.volatilityIndex < 40 ? 'down' : 'stable'}
@@ -364,11 +364,11 @@ const EmotionalLiveFeed = () => {
           />
         </div>
 
-        {/* Active Users Card - 20% width */}
+        {/* Active Users Card */}
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="glass-card p-6 flex flex-col items-center justify-center min-w-[160px]"
+          className="glass-card p-6 flex flex-col items-center justify-center min-w-[200px]"
         >
           <Users className="w-8 h-8 text-purple-400 mb-3" />
           <div className="text-3xl font-bold text-white">{stats.activeUsers}</div>

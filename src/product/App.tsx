@@ -12,8 +12,6 @@ import Pricing from '../pages/pricing'
 import Billing from '../pages/billing'
 import UsageDashboard from '../pages/usage-dashboard'
 import SageInbox from '../pages/sage-inbox'
-import Actions from '../pages/actions'
-import AccountabilityScorecard from '../components/AccountabilityScorecard'
 import EmotionalLiveFeed from '../components/EmotionalLiveFeed'
 
 // Admin pages
@@ -73,14 +71,14 @@ function App() {
             }
           />
           
-          {/* PhD Collective - redirects to scorecard */}
+          {/* PhD Collective */}
           <Route
             path="/collective"
             element={
               <>
                 <SignedIn>
                   <Layout>
-                    <AccountabilityScorecard />
+                    <EmotionalLiveFeed />
                   </Layout>
                 </SignedIn>
                 <SignedOut>
@@ -147,35 +145,6 @@ function App() {
 
           {/* Removed legacy routes - /start and /boardroom */}
 
-          {/* Redirect old recommendations route to new actions */}
-          <Route path="/recommendations" element={<Navigate to="/actions" replace />} />
-
-          <Route path="/actions" element={
-            <>
-              <SignedIn>
-                <Layout>
-                  <Actions />
-                </Layout>
-              </SignedIn>
-              <SignedOut>
-                <Navigate to="/auth" replace />
-              </SignedOut>
-            </>
-          } />
-
-          {/* SentientIQ Scorecard - The Crystal Palace of Marketing Truth */}
-          <Route path="/scorecard" element={
-            <>
-              <SignedIn>
-                <Layout>
-                  <AccountabilityScorecard />
-                </Layout>
-              </SignedIn>
-              <SignedOut>
-                <Navigate to="/auth" replace />
-              </SignedOut>
-            </>
-          } />
 
           {/* Emotional Live Feed - Real-time Emotional Intelligence from ANY website */}
           <Route path="/emotional-dashboard" element={

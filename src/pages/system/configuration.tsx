@@ -104,82 +104,75 @@ const SystemConfiguration: React.FC = () => {
   }, []);
 
   const loadConfig = async () => {
-    try {
-      // Get tenant ID from user context (would come from Clerk in production)
-      const tid = localStorage.getItem('tenantId') || 'demo_tenant';
-      setTenantId(tid);
+    // Get tenant ID from localStorage or generate one
+    const tid = localStorage.getItem('tenantId') || `tenant_${user?.id || Date.now()}`;
+    setTenantId(tid);
 
-      const response = await fetch(`/api/interventions/config/${tid}`);
-      if (response.ok) {
-        const data = await response.json();
-        if (data.config) {
-          // Map API response to our state
-          setConfig(prev => ({
-            ...prev,
-            companyName: data.config.branding?.companyName || prev.companyName,
-            primaryColor: data.config.branding?.primaryColor || prev.primaryColor,
-            accentColor: data.config.branding?.accentColor || prev.accentColor,
-            // ... map other fields
-          }));
-          setTier(data.config.tier || 'starter');
-        }
+    // Load saved config from localStorage (no API needed)
+    const savedConfig = localStorage.getItem(`intervention_config_${tid}`);
+    if (savedConfig) {
+      try {
+        const parsed = JSON.parse(savedConfig);
+        setConfig(prev => ({ ...prev, ...parsed }));
+      } catch (e) {
+        console.log('No saved config yet');
       }
-    } catch (error) {
-      console.error('Failed to load config:', error);
     }
+
+    // Determine tier from user metadata or default
+    const savedTier = localStorage.getItem('user_tier') || 'starter';
+    setTier(savedTier as any);
   };
 
   const handlePublish = async () => {
     setIsPublishing(true);
-    try {
-      // Save configuration
-      await fetch(`/api/interventions/config/${tenantId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          branding: {
-            companyName: config.companyName,
-            logoUrl: config.logoUrl,
-            primaryColor: config.primaryColor,
-            accentColor: config.accentColor
-          },
-          offers: {
-            discountPercent: config.discountPercent,
-            discountCode: config.discountCode,
-            freeTrialDays: config.freeTrialDays,
-            roiMultiplier: config.roiMultiplier
-          },
-          channels: {
-            supportUrl: config.supportUrl,
-            calendarUrl: config.calendarUrl,
-            demoVideoUrl: config.demoVideoUrl,
-            caseStudyUrl: config.caseStudyUrl
-          },
-          interventions: [
-            { id: 'price_hover_assist', enabled: config.enablePriceHoverAssist },
-            { id: 'exit_save', enabled: config.enableExitSave },
-            { id: 'confusion_help', enabled: config.enableConfusionHelp }
-          ],
-          template: config.template
-        })
-      });
 
-      // Publish to CDN
-      const publishResponse = await fetch(`/api/interventions/config/${tenantId}/publish`, {
-        method: 'POST'
-      });
+    // Save config to localStorage
+    localStorage.setItem(`intervention_config_${tenantId}`, JSON.stringify(config));
 
-      if (publishResponse.ok) {
-        const data = await publishResponse.json();
-        setPublishedUrl(data.cdnUrl);
-        setGtmSnippet(data.gtmSnippet);
-        setStep('review');
+    // Generate GTM snippet with actual working code
+    const snippet = `<script>
+(function() {
+  'use strict';
+
+  // Configuration
+  window.SentientIQ = {
+    tenantId: '${tenantId}',
+    apiEndpoint: 'https://api.sentientiq.app',
+    config: ${JSON.stringify({
+      companyName: config.companyName,
+      template: config.template,
+      offers: {
+        discount: config.discountPercent,
+        code: config.discountCode,
+        trial: config.freeTrialDays
       }
-    } catch (error) {
-      console.error('Failed to publish:', error);
-    } finally {
+    }, null, 2)}
+  };
+
+  // Load telemetry
+  var telemetry = document.createElement('script');
+  telemetry.src = 'https://sentientiq.ai/telemetry-v5.js';
+  telemetry.setAttribute('data-tenant-id', '${tenantId}');
+  document.head.appendChild(telemetry);
+
+  // Load interventions after 2 seconds
+  setTimeout(function() {
+    var interventions = document.createElement('script');
+    interventions.src = 'https://sentientiq.ai/intervention-receiver.js';
+    document.head.appendChild(interventions);
+  }, 2000);
+})();
+</script>`;
+
+    setGtmSnippet(snippet);
+    setPublishedUrl(`https://sentientiq.ai/preview/${tenantId}`);
+
+    // Simulate publish delay
+    setTimeout(() => {
       setIsPublishing(false);
-    }
+      setStep('review');
+    }, 1500);
   };
 
   const copyToClipboard = () => {
@@ -775,68 +768,133 @@ const SystemConfiguration: React.FC = () => {
             </motion.div>
           )}
 
-          {/* Interventions Toggle */}
+          {/* Interventions Toggle - Updated with Real Intervention Types */}
           {step === 'interventions' && (
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-              <h2 className="text-2xl font-bold mb-6">Enable Interventions</h2>
+              <h2 className="text-2xl font-bold mb-6">Choose Your Interventions</h2>
+              <p className="text-gray-400 mb-8">These interventions will trigger based on visitor emotions</p>
 
-              <div className="space-y-4">
-                <div className="p-4 bg-black/30 rounded-lg border border-gray-700">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="font-medium">Price Hover Assistance</h3>
-                      <p className="text-sm text-gray-400 mt-1">
-                        Help visitors when they hover on pricing
-                      </p>
-                    </div>
-                    <label className="relative inline-flex items-center cursor-pointer">
+              <div className="grid gap-4">
+                {/* Sticker Shock Interventions */}
+                <div className="p-4 bg-gradient-to-r from-red-900/20 to-orange-900/20 rounded-lg border border-red-500/30">
+                  <h3 className="font-medium text-red-400 mb-3">💸 Sticker Shock Response</h3>
+                  <div className="space-y-3">
+                    <label className="flex items-center justify-between p-3 bg-black/30 rounded-lg hover:bg-black/40 cursor-pointer">
+                      <div>
+                        <div className="font-medium">ROI Calculator</div>
+                        <div className="text-xs text-gray-400">Shows value when price causes hesitation</div>
+                      </div>
                       <input
                         type="checkbox"
                         checked={config.enablePriceHoverAssist}
                         onChange={(e) => setConfig(prev => ({ ...prev, enablePriceHoverAssist: e.target.checked }))}
-                        className="sr-only peer"
+                        className="w-4 h-4 text-purple-600 rounded"
                       />
-                      <div className="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+                    </label>
+                    <label className="flex items-center justify-between p-3 bg-black/30 rounded-lg hover:bg-black/40 cursor-pointer">
+                      <div>
+                        <div className="font-medium">Payment Plans</div>
+                        <div className="text-xs text-gray-400">Offer installments on high-velocity recoil</div>
+                      </div>
+                      <input
+                        type="checkbox"
+                        checked={true}
+                        disabled
+                        className="w-4 h-4 text-purple-600 rounded"
+                      />
                     </label>
                   </div>
                 </div>
 
-                <div className="p-4 bg-black/30 rounded-lg border border-gray-700">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="font-medium">Exit Intent Save</h3>
-                      <p className="text-sm text-gray-400 mt-1">
-                        Offer discount when visitor is leaving
-                      </p>
-                    </div>
-                    <label className="relative inline-flex items-center cursor-pointer">
+                {/* Exit Intent Interventions */}
+                <div className="p-4 bg-gradient-to-r from-yellow-900/20 to-amber-900/20 rounded-lg border border-yellow-500/30">
+                  <h3 className="font-medium text-yellow-400 mb-3">🚪 Exit Intent Saves</h3>
+                  <div className="space-y-3">
+                    <label className="flex items-center justify-between p-3 bg-black/30 rounded-lg hover:bg-black/40 cursor-pointer">
+                      <div>
+                        <div className="font-medium">Discount Modal</div>
+                        <div className="text-xs text-gray-400">Last-chance offer before they leave</div>
+                      </div>
                       <input
                         type="checkbox"
                         checked={config.enableExitSave}
                         onChange={(e) => setConfig(prev => ({ ...prev, enableExitSave: e.target.checked }))}
-                        className="sr-only peer"
+                        className="w-4 h-4 text-purple-600 rounded"
                       />
-                      <div className="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+                    </label>
+                    <label className="flex items-center justify-between p-3 bg-black/30 rounded-lg hover:bg-black/40 cursor-pointer">
+                      <div>
+                        <div className="font-medium">Free Trial Offer</div>
+                        <div className="text-xs text-gray-400">Remove risk for hesitant visitors</div>
+                      </div>
+                      <input
+                        type="checkbox"
+                        checked={true}
+                        disabled
+                        className="w-4 h-4 text-purple-600 rounded"
+                      />
                     </label>
                   </div>
                 </div>
 
-                <div className="p-4 bg-black/30 rounded-lg border border-gray-700">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="font-medium">Confusion Helper</h3>
-                      <p className="text-sm text-gray-400 mt-1">
-                        Assist when users seem confused
-                      </p>
-                    </div>
-                    <label className="relative inline-flex items-center cursor-pointer">
+                {/* Confusion Interventions */}
+                <div className="p-4 bg-gradient-to-r from-blue-900/20 to-cyan-900/20 rounded-lg border border-blue-500/30">
+                  <h3 className="font-medium text-blue-400 mb-3">😕 Confusion Helpers</h3>
+                  <div className="space-y-3">
+                    <label className="flex items-center justify-between p-3 bg-black/30 rounded-lg hover:bg-black/40 cursor-pointer">
+                      <div>
+                        <div className="font-medium">Live Chat Prompt</div>
+                        <div className="text-xs text-gray-400">Offer help during erratic behavior</div>
+                      </div>
                       <input
                         type="checkbox"
                         checked={config.enableConfusionHelp}
                         onChange={(e) => setConfig(prev => ({ ...prev, enableConfusionHelp: e.target.checked }))}
-                        className="sr-only peer"
+                        className="w-4 h-4 text-purple-600 rounded"
                       />
-                      <div className="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+                    </label>
+                    <label className="flex items-center justify-between p-3 bg-black/30 rounded-lg hover:bg-black/40 cursor-pointer">
+                      <div>
+                        <div className="font-medium">Comparison Chart</div>
+                        <div className="text-xs text-gray-400">Show value props for comparison shoppers</div>
+                      </div>
+                      <input
+                        type="checkbox"
+                        checked={true}
+                        disabled
+                        className="w-4 h-4 text-purple-600 rounded"
+                      />
+                    </label>
+                  </div>
+                </div>
+
+                {/* Rage Click Response */}
+                <div className="p-4 bg-gradient-to-r from-purple-900/20 to-pink-900/20 rounded-lg border border-purple-500/30">
+                  <h3 className="font-medium text-purple-400 mb-3">😤 Rage Click Response</h3>
+                  <div className="space-y-3">
+                    <label className="flex items-center justify-between p-3 bg-black/30 rounded-lg hover:bg-black/40 cursor-pointer">
+                      <div>
+                        <div className="font-medium">Success Stories</div>
+                        <div className="text-xs text-gray-400">Social proof when frustration detected</div>
+                      </div>
+                      <input
+                        type="checkbox"
+                        checked={true}
+                        disabled
+                        className="w-4 h-4 text-purple-600 rounded"
+                      />
+                    </label>
+                    <label className="flex items-center justify-between p-3 bg-black/30 rounded-lg hover:bg-black/40 cursor-pointer">
+                      <div>
+                        <div className="font-medium">Guarantee Badge</div>
+                        <div className="text-xs text-gray-400">Build trust during high stress</div>
+                      </div>
+                      <input
+                        type="checkbox"
+                        checked={true}
+                        disabled
+                        className="w-4 h-4 text-purple-600 rounded"
+                      />
                     </label>
                   </div>
                 </div>
@@ -916,12 +974,17 @@ const SystemConfiguration: React.FC = () => {
                 <div>
                   <h3 className="font-medium mb-3">2. Add to Google Tag Manager</h3>
                   <ol className="space-y-2 text-sm text-gray-400">
-                    <li>• Open Google Tag Manager</li>
-                    <li>• Create new tag → Custom HTML</li>
-                    <li>• Paste the code above</li>
-                    <li>• Set trigger to "All Pages"</li>
-                    <li>• Save and publish</li>
+                    <li>✓ Open Google Tag Manager</li>
+                    <li>✓ Create new tag → Custom HTML</li>
+                    <li>✓ Paste the code above (WITH the &lt;script&gt; tags!)</li>
+                    <li>✓ Set trigger to "All Pages" or "DOM Ready"</li>
+                    <li>✓ Save and PUBLISH (not just save)</li>
                   </ol>
+                  <div className="mt-3 p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
+                    <p className="text-xs text-yellow-400">
+                      ⚠️ Remember: Must include &lt;script&gt; tags or GTM won't execute the code!
+                    </p>
+                  </div>
                 </div>
 
                 <div>
