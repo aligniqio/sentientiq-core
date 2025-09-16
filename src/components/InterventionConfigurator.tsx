@@ -11,12 +11,8 @@ import {
   Type,
   Sparkles,
   Eye,
-  Code,
-  Copy,
-  Check,
   RefreshCw,
-  Zap,
-  AlertCircle
+  Zap
 } from 'lucide-react';
 import { useUser } from '@clerk/clerk-react';
 import { getSupabaseClient } from '@/lib/supabase';
@@ -29,39 +25,162 @@ interface InterventionConfig {
   borderRadius: string;
   shadowIntensity: 'none' | 'subtle' | 'medium' | 'heavy';
 
-  // Content
-  headline: string;
-  subtext: string;
-  ctaText: string;
-  urgencyText: string;
+  // Content for each intervention type
+  interventions: {
+    [key: string]: {
+      enabled: boolean;
+      headline: string;
+      body: string;
+      ctaText: string;
+      discount?: number;
+      timing: {
+        delay: number;
+        duration: number;
+        persistence: 'sticky' | 'timed' | 'until-scroll' | 'until-interaction';
+      };
+    };
+  };
 
-  // Behavior
-  timing: number; // seconds
+  // Global behavior
   position: 'top' | 'bottom' | 'center' | 'bottom-right' | 'bottom-left';
   animation: 'fade' | 'slide' | 'bounce' | 'scale';
-  persistence: 'until-dismiss' | 'timed' | 'until-scroll';
 }
+
+// Define intervention types based on orchestrator mapping
+const INTERVENTION_TYPES = [
+  {
+    id: 'discount_offer',
+    name: 'Discount Modal',
+    emotion: 'price_shock, sticker_shock',
+    icon: '💰',
+    description: 'Offer discount when price sensitivity detected'
+  },
+  {
+    id: 'trust_signal',
+    name: 'Trust Badges',
+    emotion: 'skeptical, evaluation',
+    icon: '🔒',
+    description: 'Show security badges and guarantees'
+  },
+  {
+    id: 'urgency_scarcity',
+    name: 'Urgency Banner',
+    emotion: 'hesitation, cart_review',
+    icon: '⏰',
+    description: 'Create urgency with limited time/stock'
+  },
+  {
+    id: 'social_proof',
+    name: 'Social Toast',
+    emotion: 'evaluation, comparison_shopping',
+    icon: '🔥',
+    description: 'Show real-time activity and popularity'
+  },
+  {
+    id: 'help_offer',
+    name: 'Help Chat',
+    emotion: 'confusion, frustration',
+    icon: '💬',
+    description: 'Proactive chat support offer'
+  },
+  {
+    id: 'value_proposition',
+    name: 'Value Highlight',
+    emotion: 'cart_hesitation',
+    icon: '✨',
+    description: 'Reinforce key value propositions'
+  },
+  {
+    id: 'comparison_table',
+    name: 'Comparison Modal',
+    emotion: 'comparison_shopping, anxiety',
+    icon: '📊',
+    description: 'Show competitive advantages'
+  },
+  {
+    id: 'exit_rescue',
+    name: 'Exit Intent',
+    emotion: 'abandonment_intent, exit_risk',
+    icon: '🚪',
+    description: 'Last-chance offer before leaving'
+  }
+];
 
 export const InterventionConfigurator: React.FC = () => {
   const { user } = useUser();
+  const [selectedIntervention, setSelectedIntervention] = useState('discount_offer');
+
   const [config, setConfig] = useState<InterventionConfig>({
     primaryColor: '#0066ff',
     secondaryColor: '#ffffff',
     fontFamily: 'inherit',
     borderRadius: '8px',
     shadowIntensity: 'medium',
-    headline: 'Wait! Special offer for you',
-    subtext: 'Get 15% off your first order',
-    ctaText: 'Claim Discount',
-    urgencyText: 'Offer expires in 24 hours',
-    timing: 3,
     position: 'bottom-right',
     animation: 'slide',
-    persistence: 'until-dismiss'
+    interventions: {
+      discount_offer: {
+        enabled: true,
+        headline: 'Wait! Here\'s Something Special',
+        body: 'We noticed you\'ve been carefully considering. Here\'s an exclusive 15% off just for you.',
+        ctaText: 'Claim My Discount',
+        discount: 15,
+        timing: { delay: 0, duration: 0, persistence: 'sticky' }
+      },
+      trust_signal: {
+        enabled: true,
+        headline: '🔒 Shop with Confidence',
+        body: 'SSL Secured • Money-Back Guarantee • 50,000+ Happy Customers',
+        ctaText: 'Continue Securely',
+        timing: { delay: 1000, duration: 10000, persistence: 'timed' }
+      },
+      urgency_scarcity: {
+        enabled: true,
+        headline: '⏰ Limited Time Offer',
+        body: 'Only 3 items left at this price! Sale ends in 2 hours.',
+        ctaText: 'Secure My Order',
+        timing: { delay: 0, duration: 20000, persistence: 'until-interaction' }
+      },
+      social_proof: {
+        enabled: true,
+        headline: '🔥 Trending Now',
+        body: '12 people are viewing this • 5 purchased in the last hour',
+        ctaText: '',
+        timing: { delay: 2000, duration: 8000, persistence: 'timed' }
+      },
+      help_offer: {
+        enabled: true,
+        headline: 'Need Help Deciding?',
+        body: 'Our product experts are here to help you find the perfect fit.',
+        ctaText: 'Chat with Expert',
+        timing: { delay: 3000, duration: 0, persistence: 'sticky' }
+      },
+      value_proposition: {
+        enabled: true,
+        headline: 'Still Considering Your Options?',
+        body: 'Here\'s why thousands choose us: ✓ 30-day guarantee ✓ Free shipping ✓ 24/7 support',
+        ctaText: 'See Why We\'re Different',
+        timing: { delay: 500, duration: 15000, persistence: 'until-scroll' }
+      },
+      comparison_table: {
+        enabled: true,
+        headline: 'See How We Compare',
+        body: 'We\'ve done the research for you. See why we\'re the #1 choice.',
+        ctaText: 'View Comparison',
+        timing: { delay: 1000, duration: 0, persistence: 'sticky' }
+      },
+      exit_rescue: {
+        enabled: true,
+        headline: 'Before You Go...',
+        body: 'We\'d hate to see you leave empty-handed. How about 20% off your entire order?',
+        ctaText: 'Yes, I\'ll Take It!',
+        discount: 20,
+        timing: { delay: 0, duration: 0, persistence: 'sticky' }
+      }
+    }
   });
 
   const [isLivePreview, setIsLivePreview] = useState(false);
-  const [copiedCSS, setCopiedCSS] = useState(false);
   const [saving, setSaving] = useState(false);
   const previewRef = useRef<HTMLDivElement>(null);
   const supabase = getSupabaseClient();
@@ -114,8 +233,23 @@ export const InterventionConfigurator: React.FC = () => {
 }`;
   };
 
+  // Update intervention config
+  const updateIntervention = (field: string, value: any) => {
+    setConfig(prev => ({
+      ...prev,
+      interventions: {
+        ...prev.interventions,
+        [selectedIntervention]: {
+          ...prev.interventions[selectedIntervention],
+          [field]: value
+        }
+      }
+    }));
+  };
+
   // Live preview component
   const LivePreview = () => {
+    const intervention = config.interventions[selectedIntervention];
     const previewStyles = {
       fontFamily: config.fontFamily,
       backgroundColor: config.secondaryColor,
@@ -143,20 +277,22 @@ export const InterventionConfigurator: React.FC = () => {
         className="p-6 max-w-sm mx-auto"
         style={previewStyles}
       >
-        <h3 className="text-lg font-bold mb-2">{config.headline}</h3>
-        <p className="text-sm mb-4 opacity-90">{config.subtext}</p>
-        {config.urgencyText && (
+        <h3 className="text-lg font-bold mb-2">{intervention.headline}</h3>
+        <p className="text-sm mb-4 opacity-90">{intervention.body}</p>
+        {intervention.discount && (
           <p className="text-xs mb-4 flex items-center gap-2">
-            <AlertCircle className="w-3 h-3" />
-            {config.urgencyText}
+            <Sparkles className="w-3 h-3" />
+            {intervention.discount}% OFF
           </p>
         )}
-        <button
-          className="px-6 py-2.5 text-sm font-medium transition-all hover:scale-105"
-          style={buttonStyles}
-        >
-          {config.ctaText}
-        </button>
+        {intervention.ctaText && (
+          <button
+            className="px-6 py-2.5 text-sm font-medium transition-all hover:scale-105"
+            style={buttonStyles}
+          >
+            {intervention.ctaText}
+          </button>
+        )}
       </motion.div>
     );
   };
@@ -179,9 +315,7 @@ export const InterventionConfigurator: React.FC = () => {
 
       if (error) throw error;
 
-      // Flash success
-      setCopiedCSS(true);
-      setTimeout(() => setCopiedCSS(false), 2000);
+      // Success - configuration saved
     } catch (error) {
       console.error('Save failed:', error);
     } finally {
@@ -189,11 +323,6 @@ export const InterventionConfigurator: React.FC = () => {
     }
   };
 
-  const copyCSS = async () => {
-    await navigator.clipboard.writeText(generateCSS());
-    setCopiedCSS(true);
-    setTimeout(() => setCopiedCSS(false), 2000);
-  };
 
   return (
     <div className="space-y-8">
@@ -325,7 +454,7 @@ export const InterventionConfigurator: React.FC = () => {
             </div>
           </motion.div>
 
-          {/* Content Section */}
+          {/* Intervention Types Selector */}
           <motion.div
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
@@ -333,8 +462,59 @@ export const InterventionConfigurator: React.FC = () => {
             className="glass-card p-6 space-y-4"
           >
             <h3 className="font-semibold text-white flex items-center gap-2">
+              <Zap className="w-4 h-4 text-purple-400" />
+              Intervention Types
+            </h3>
+
+            <div className="space-y-3">
+              {INTERVENTION_TYPES.map(type => {
+                const intervention = config.interventions[type.id];
+                return (
+                  <div
+                    key={type.id}
+                    className={`p-4 rounded-lg border transition-all cursor-pointer ${
+                      selectedIntervention === type.id
+                        ? 'bg-white/20 border-cyan-400'
+                        : 'bg-white/10 border-white/20 hover:bg-white/15'
+                    }`}
+                    onClick={() => setSelectedIntervention(type.id)}
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-xl">{type.icon}</span>
+                          <h4 className="font-medium text-white">{type.name}</h4>
+                        </div>
+                        <p className="text-xs text-white/60 mb-2">{type.description}</p>
+                        <p className="text-xs text-cyan-400">Triggers on: {type.emotion}</p>
+                      </div>
+                      <input
+                        type="checkbox"
+                        checked={intervention.enabled}
+                        onChange={(e) => {
+                          e.stopPropagation();
+                          updateIntervention('enabled', e.target.checked);
+                        }}
+                        className="mt-1"
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </motion.div>
+
+          {/* Content Editor for Selected Intervention */}
+          <motion.div
+            key={selectedIntervention}
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.3 }}
+            className="glass-card p-6 space-y-4"
+          >
+            <h3 className="font-semibold text-white flex items-center gap-2">
               <Type className="w-4 h-4 text-blue-400" />
-              Your Message
+              Configure: {INTERVENTION_TYPES.find(t => t.id === selectedIntervention)?.name}
             </h3>
 
             <div>
@@ -343,23 +523,20 @@ export const InterventionConfigurator: React.FC = () => {
               </label>
               <input
                 type="text"
-                value={config.headline}
-                onChange={(e) => setConfig({ ...config, headline: e.target.value })}
+                value={config.interventions[selectedIntervention].headline}
+                onChange={(e) => updateIntervention('headline', e.target.value)}
                 className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded text-white"
-                placeholder="Grab their attention..."
               />
             </div>
 
             <div>
               <label className="block text-sm text-white/70 mb-2">
-                Supporting Text
+                Body Text
               </label>
-              <input
-                type="text"
-                value={config.subtext}
-                onChange={(e) => setConfig({ ...config, subtext: e.target.value })}
-                className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded text-white"
-                placeholder="Make it compelling..."
+              <textarea
+                value={config.interventions[selectedIntervention].body}
+                onChange={(e) => updateIntervention('body', e.target.value)}
+                className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded text-white h-20 resize-none"
               />
             </div>
 
@@ -370,87 +547,64 @@ export const InterventionConfigurator: React.FC = () => {
                 </label>
                 <input
                   type="text"
-                  value={config.ctaText}
-                  onChange={(e) => setConfig({ ...config, ctaText: e.target.value })}
+                  value={config.interventions[selectedIntervention].ctaText}
+                  onChange={(e) => updateIntervention('ctaText', e.target.value)}
                   className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded text-white"
+                  placeholder="Leave empty for no button"
                 />
               </div>
 
-              <div>
-                <label className="block text-sm text-white/70 mb-2">
-                  Urgency (Optional)
-                </label>
-                <input
-                  type="text"
-                  value={config.urgencyText}
-                  onChange={(e) => setConfig({ ...config, urgencyText: e.target.value })}
-                  className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded text-white"
-                  placeholder="Limited time..."
-                />
-              </div>
+              {(selectedIntervention === 'discount_offer' || selectedIntervention === 'exit_rescue') && (
+                <div>
+                  <label className="block text-sm text-white/70 mb-2">
+                    Discount %
+                  </label>
+                  <input
+                    type="number"
+                    min="5"
+                    max="50"
+                    value={config.interventions[selectedIntervention].discount || 0}
+                    onChange={(e) => updateIntervention('discount', parseInt(e.target.value))}
+                    className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded text-white"
+                  />
+                </div>
+              )}
             </div>
-          </motion.div>
 
-          {/* Behavior Section */}
-          <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.3 }}
-            className="glass-card p-6 space-y-4"
-          >
-            <h3 className="font-semibold text-white flex items-center gap-2">
-              <Zap className="w-4 h-4 text-purple-400" />
-              Behavior
-            </h3>
-
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-3 gap-4">
               <div>
                 <label className="block text-sm text-white/70 mb-2">
-                  Show After (seconds)
+                  Delay (ms)
                 </label>
                 <input
                   type="number"
                   min="0"
-                  max="60"
-                  value={config.timing}
-                  onChange={(e) => setConfig({ ...config, timing: parseInt(e.target.value) })}
+                  max="10000"
+                  value={config.interventions[selectedIntervention].timing.delay}
+                  onChange={(e) => updateIntervention('timing', {
+                    ...config.interventions[selectedIntervention].timing,
+                    delay: parseInt(e.target.value)
+                  })}
                   className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded text-white"
                 />
               </div>
 
               <div>
                 <label className="block text-sm text-white/70 mb-2">
-                  Position
+                  Duration (ms)
                 </label>
-                <select
-                  value={config.position}
-                  onChange={(e) => setConfig({ ...config, position: e.target.value as any })}
+                <input
+                  type="number"
+                  min="0"
+                  max="60000"
+                  value={config.interventions[selectedIntervention].timing.duration}
+                  onChange={(e) => updateIntervention('timing', {
+                    ...config.interventions[selectedIntervention].timing,
+                    duration: parseInt(e.target.value)
+                  })}
                   className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded text-white"
-                >
-                  <option value="bottom-right">Bottom Right</option>
-                  <option value="bottom-left">Bottom Left</option>
-                  <option value="top">Top Bar</option>
-                  <option value="bottom">Bottom Bar</option>
-                  <option value="center">Center Modal</option>
-                </select>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm text-white/70 mb-2">
-                  Animation
-                </label>
-                <select
-                  value={config.animation}
-                  onChange={(e) => setConfig({ ...config, animation: e.target.value as any })}
-                  className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded text-white"
-                >
-                  <option value="fade">Fade In</option>
-                  <option value="slide">Slide In</option>
-                  <option value="bounce">Bounce</option>
-                  <option value="scale">Scale Up</option>
-                </select>
+                  placeholder="0 = manual dismiss"
+                />
               </div>
 
               <div>
@@ -458,17 +612,22 @@ export const InterventionConfigurator: React.FC = () => {
                   Persistence
                 </label>
                 <select
-                  value={config.persistence}
-                  onChange={(e) => setConfig({ ...config, persistence: e.target.value as any })}
+                  value={config.interventions[selectedIntervention].timing.persistence}
+                  onChange={(e) => updateIntervention('timing', {
+                    ...config.interventions[selectedIntervention].timing,
+                    persistence: e.target.value as any
+                  })}
                   className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded text-white"
                 >
-                  <option value="until-dismiss">Until Dismissed</option>
-                  <option value="timed">Auto-hide (10s)</option>
+                  <option value="sticky">Sticky</option>
+                  <option value="timed">Timed</option>
                   <option value="until-scroll">Until Scroll</option>
+                  <option value="until-interaction">Until Interaction</option>
                 </select>
               </div>
             </div>
           </motion.div>
+
         </div>
 
         {/* Right: Preview & Export */}
@@ -503,34 +662,6 @@ export const InterventionConfigurator: React.FC = () => {
               </AnimatePresence>
             </div>
 
-            {/* CSS Output */}
-            <div className="mt-6 space-y-3">
-              <div className="flex items-center justify-between">
-                <h4 className="text-sm font-medium text-white/70">
-                  Generated CSS
-                </h4>
-                <button
-                  onClick={copyCSS}
-                  className="flex items-center gap-2 text-sm text-cyan-400 hover:text-cyan-300"
-                >
-                  {copiedCSS ? (
-                    <>
-                      <Check className="w-3 h-3" />
-                      Copied!
-                    </>
-                  ) : (
-                    <>
-                      <Copy className="w-3 h-3" />
-                      Copy CSS
-                    </>
-                  )}
-                </button>
-              </div>
-
-              <pre className="bg-black/50 border border-white/10 rounded p-4 text-xs text-white/70 overflow-x-auto">
-                <code>{generateCSS()}</code>
-              </pre>
-            </div>
 
             {/* Save Button */}
             <motion.button
