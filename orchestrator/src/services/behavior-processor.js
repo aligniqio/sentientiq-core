@@ -1032,12 +1032,13 @@ export class BehaviorProcessor {
     patternMetrics.triggered++;
 
     // Broadcast metrics update via WebSocket
-    if (this.wsServer) {
-      this.wsServer.broadcast({
-        type: 'intervention_metrics',
-        metrics: this.getInterventionMetrics()
-      });
-    }
+    // TODO: Implement broadcast method in unified-websocket
+    // if (this.wsServer) {
+    //   this.wsServer.broadcast({
+    //     type: 'intervention_metrics',
+    //     metrics: this.getInterventionMetrics()
+    //   });
+    // }
   }
 
   /**
@@ -1092,12 +1093,13 @@ export class BehaviorProcessor {
     );
 
     // Broadcast update
-    if (this.wsServer) {
-      this.wsServer.broadcast({
-        type: 'intervention_metrics',
-        metrics: this.getInterventionMetrics()
-      });
-    }
+    // TODO: Implement broadcast method in unified-websocket
+    // if (this.wsServer) {
+    //   this.wsServer.broadcast({
+    //     type: 'intervention_metrics',
+    //     metrics: this.getInterventionMetrics()
+    //   });
+    // }
   }
 
   /**

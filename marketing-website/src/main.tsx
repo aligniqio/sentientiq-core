@@ -7,6 +7,7 @@ import Thanks from './pages/Thanks';
 import WhyDifferent from './pages/WhyDifferent';
 import Auth from './pages/Auth';
 import HowItWorks from './pages/HowItWorks';
+import WhatsBehindThis from './pages/WhatsBehindThis';
 
 function App() {
   const path = typeof window !== 'undefined' ? window.location.pathname : '/';
@@ -14,6 +15,7 @@ function App() {
   if (path.startsWith('/thanks')) return <Thanks />;
   if (path.startsWith('/why-different')) return <WhyDifferent />;
   if (path.startsWith('/how-it-works')) return <HowItWorks />;
+  if (path.startsWith('/whats-behind-this')) return <WhatsBehindThis />;
   return <Landing />;
 }
 

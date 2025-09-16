@@ -9,6 +9,7 @@ export default function Navbar() {
         </a>
         <nav className="hidden md:flex items-center gap-6 text-sm text-white/80">
           <a href="/how-it-works">How it works</a>
+          <a href="/whats-behind-this">What's behind this</a>
           <a href="/why-different">Why it's different</a>
           <a href="/#pricing">Pricing</a>
           <a href="/#faq">FAQ</a>
