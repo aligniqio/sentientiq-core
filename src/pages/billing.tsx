@@ -1,16 +1,43 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { CreditCard, Calendar, Shield, Lock, Crown } from 'lucide-react';
+import { CreditCard, Calendar, Shield, Lock, Crown, Sparkles, Palette, Eye } from 'lucide-react';
 import { useUser } from '@clerk/clerk-react';
 import { useSubscription } from '../hooks/useSubscription';
 import { useSuperAdmin } from '../hooks/useSuperAdmin';
 import PageHeader from '../components/PageHeader';
+import { interventionTemplates } from '../data/intervention-templates';
+import { getSupabaseClient } from '../lib/supabase';
 
 export default function Billing() {
   const { user } = useUser();
   const subscription = useSubscription();
   const { isSuperAdmin } = useSuperAdmin();
   const [loading, setLoading] = useState(false);
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
+  const supabase = getSupabaseClient();
+
+  // Load selected template
+  useEffect(() => {
+    if (user?.id && supabase) {
+      loadSelectedTemplate();
+    }
+  }, [user?.id]);
+
+  const loadSelectedTemplate = async () => {
+    try {
+      const { data } = await supabase
+        ?.from('tenant_templates')
+        .select('selected_template_id')
+        .eq('tenant_id', user?.id)
+        .single();
+
+      if (data) {
+        setSelectedTemplateId(data.selected_template_id);
+      }
+    } catch (error) {
+      console.log('No template selected yet');
+    }
+  };
   
   const handleManageSubscription = async () => {
     setLoading(true);
@@ -219,7 +246,7 @@ export default function Billing() {
           transition={{ delay: 0.1 }}
           className="glass-card p-6"
         >
-          <h2 className="mb-4 text-xl font-bold">Your Features</h2>
+          <h2 className="mb-4 text-xl font-bold">Included Features</h2>
           {isSuperAdmin ? (
             <div className="space-y-3">
               <div className="p-3 rounded-lg bg-gradient-to-r from-yellow-500/10 to-amber-500/10 border border-yellow-500/20">
@@ -232,36 +259,144 @@ export default function Billing() {
             </div>
           ) : (
             <div className="space-y-3">
-              {/* Starter features - all tiers get these */}
+              {/* Intervention Templates by Tier */}
+              <div className="pb-3 mb-3 border-b border-white/10">
+                <div className="flex items-center gap-2 mb-2">
+                  <Sparkles className="h-4 w-4 text-purple-400" />
+                  <span className="text-sm font-semibold text-purple-400">Intervention Templates</span>
+                </div>
+                <FeatureRow
+                  name={`${currentTier === 'starter' ? '1' : currentTier === 'growth' ? '3' : currentTier === 'scale' ? '10' : 'Unlimited'} Premium Templates`}
+                  enabled={true}
+                />
+                <FeatureRow name="Visual Template Gallery" enabled={true} />
+                <FeatureRow name="Live Preview Mode" enabled={true} />
+                <FeatureRow name="Brand Customization" enabled={true} />
+                <FeatureRow name="A/B Testing" enabled={currentTier === 'growth' || currentTier === 'scale' || currentTier === 'enterprise'} />
+                <FeatureRow name="Custom HTML/CSS" enabled={currentTier === 'enterprise'} />
+              </div>
+
+              {/* Core features - all tiers get these */}
               <FeatureRow name="Emotional tracking script" enabled={true} />
               <FeatureRow name="Real-time emotion detection" enabled={true} />
-              <FeatureRow name="Behavioral pattern analysis" enabled={true} />
-              <FeatureRow name="Dashboard & reporting" enabled={true} />
-              <FeatureRow name="Email alerts" enabled={true} />
+              <FeatureRow name="Behavioral interventions" enabled={true} />
+              <FeatureRow name="Dashboard & analytics" enabled={true} />
+              <FeatureRow name="GTM integration" enabled={true} />
 
               {/* Growth features */}
               <FeatureRow name="CRM integration" enabled={currentTier === 'growth' || currentTier === 'scale' || currentTier === 'enterprise'} />
               <FeatureRow name="Identity resolution" enabled={currentTier === 'growth' || currentTier === 'scale' || currentTier === 'enterprise'} />
-              <FeatureRow name="Automated interventions" enabled={currentTier === 'growth' || currentTier === 'scale' || currentTier === 'enterprise'} />
-              <FeatureRow name="Deal value tracking" enabled={currentTier === 'growth' || currentTier === 'scale' || currentTier === 'enterprise'} />
-              <FeatureRow name="Slack/webhook alerts" enabled={currentTier === 'growth' || currentTier === 'scale' || currentTier === 'enterprise'} />
+              <FeatureRow name="Email interventions" enabled={currentTier === 'growth' || currentTier === 'scale' || currentTier === 'enterprise'} />
+              <FeatureRow name="Slack alerts" enabled={currentTier === 'growth' || currentTier === 'scale' || currentTier === 'enterprise'} />
 
               {/* Scale features */}
-              <FeatureRow name="Unlimited sessions" enabled={currentTier === 'scale' || currentTier === 'enterprise'} />
-              <FeatureRow name="Custom intervention rules" enabled={currentTier === 'scale' || currentTier === 'enterprise'} />
-              <FeatureRow name="Full API access" enabled={currentTier === 'scale' || currentTier === 'enterprise'} />
-              <FeatureRow name="Multi-domain tracking" enabled={currentTier === 'scale' || currentTier === 'enterprise'} />
-              <FeatureRow name="Dedicated success manager" enabled={currentTier === 'scale' || currentTier === 'enterprise'} />
+              <FeatureRow name="Unlimited events" enabled={currentTier === 'scale' || currentTier === 'enterprise'} />
+              <FeatureRow name="Custom webhooks" enabled={currentTier === 'scale' || currentTier === 'enterprise'} />
+              <FeatureRow name="API access" enabled={currentTier === 'scale' || currentTier === 'enterprise'} />
+              <FeatureRow name="Multi-domain" enabled={currentTier === 'scale' || currentTier === 'enterprise'} />
 
               {/* Enterprise features */}
-              <FeatureRow name="Self-hosted option" enabled={currentTier === 'enterprise'} />
+              <FeatureRow name="Executive alerts" enabled={currentTier === 'enterprise'} />
               <FeatureRow name="Custom ML models" enabled={currentTier === 'enterprise'} />
-              <FeatureRow name="White-label capability" enabled={currentTier === 'enterprise'} />
-              <FeatureRow name="99.99% uptime SLA" enabled={currentTier === 'enterprise'} />
+              <FeatureRow name="White-label" enabled={currentTier === 'enterprise'} />
+              <FeatureRow name="99.99% SLA" enabled={currentTier === 'enterprise'} />
             </div>
           )}
         </motion.div>
       </div>
+
+      {/* Active Intervention Templates */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2 }}
+        className="mt-6 glass-card p-6"
+      >
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-xl font-bold">Intervention Templates</h2>
+          <Palette className="h-5 w-5 text-purple-400" />
+        </div>
+
+        <div className="grid gap-4">
+          {/* Active Template */}
+          {selectedTemplateId && (() => {
+            const template = interventionTemplates.find(t => t.id === selectedTemplateId);
+            if (!template) return null;
+            return (
+              <div className="p-4 rounded-xl bg-gradient-to-r from-purple-500/10 to-blue-500/10 border border-purple-500/20">
+                <div className="flex items-start justify-between mb-2">
+                  <div>
+                    <h3 className="font-semibold text-lg">{template.name}</h3>
+                    <p className="text-sm text-white/60">{template.description}</p>
+                  </div>
+                  <span className="px-2 py-1 rounded-full bg-green-500/20 text-green-400 text-xs font-semibold">ACTIVE</span>
+                </div>
+                <div className="flex items-center gap-4 mt-3">
+                  <a
+                    href="/system/configuration?step=interventions"
+                    className="text-sm text-purple-400 hover:text-purple-300"
+                  >
+                    Change Template →
+                  </a>
+                  <a
+                    href={`/preview/${template.id}?tenant=${user?.id}`}
+                    target="_blank"
+                    className="text-sm text-blue-400 hover:text-blue-300 flex items-center gap-1"
+                  >
+                    <Eye className="h-3 w-3" />
+                    Preview
+                  </a>
+                </div>
+              </div>
+            );
+          })()}
+
+          {/* Available Templates Count */}
+          <div className="p-4 rounded-xl bg-white/5 border border-white/10">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-white/60">Available Templates</p>
+                <p className="text-2xl font-bold">
+                  {currentTier === 'starter' ? '1' : currentTier === 'growth' ? '3' : currentTier === 'scale' ? '10' : 'Unlimited'}
+                  <span className="text-sm text-white/40 ml-2">templates</span>
+                </p>
+              </div>
+              <div className="text-right">
+                <p className="text-sm text-white/60">Template Types</p>
+                <p className="text-sm font-semibold">Modal • Banner • Toast • Badge</p>
+              </div>
+            </div>
+            {currentTier !== 'enterprise' && (
+              <div className="mt-3 pt-3 border-t border-white/10">
+                <a
+                  href="/pricing"
+                  className="text-sm text-purple-400 hover:text-purple-300"
+                >
+                  Upgrade to unlock more templates →
+                </a>
+              </div>
+            )}
+          </div>
+
+          {/* Template Performance */}
+          {selectedTemplateId && (
+            <div className="grid grid-cols-3 gap-3">
+              <div className="p-3 rounded-lg bg-white/5 border border-white/10 text-center">
+                <p className="text-2xl font-bold text-green-400">—</p>
+                <p className="text-xs text-white/60 mt-1">Conversions</p>
+              </div>
+              <div className="p-3 rounded-lg bg-white/5 border border-white/10 text-center">
+                <p className="text-2xl font-bold text-blue-400">—</p>
+                <p className="text-xs text-white/60 mt-1">Impressions</p>
+              </div>
+              <div className="p-3 rounded-lg bg-white/5 border border-white/10 text-center">
+                <p className="text-2xl font-bold text-purple-400">—%</p>
+                <p className="text-xs text-white/60 mt-1">CTR</p>
+              </div>
+            </div>
+          )}
+        </div>
+      </motion.div>
 
       {/* Invoice History - Only for tenant admins */}
       {isTenantAdmin && !isSuperAdmin && (
