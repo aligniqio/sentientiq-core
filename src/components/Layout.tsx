@@ -82,6 +82,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   
   const menuItems = [
     { path: '/pulse', icon: Activity, label: 'Pulse', public: false },
+    { path: '/intervention', icon: Zap, label: 'Interventions', public: false },
     { path: '/billing', icon: Shield, label: 'Billing', public: false },
     ...(isSuperAdmin ? [
       { path: '/super-admin', icon: Crown, label: 'Super Admin', public: false }

@@ -10,6 +10,7 @@ import { useUser } from '@clerk/clerk-react';
 import { Users, AlertCircle, Zap, Brain, Lightbulb, TrendingUp, Target } from 'lucide-react';
 import PageHeader from './PageHeader';
 import EVIDisplay from './EVIDisplay';
+import InterventionIntelligence from './InterventionIntelligence';
 
 interface EmotionalEvent {
   id: string;
@@ -502,7 +503,16 @@ const EmotionalLiveFeed = () => {
           </div>
         </div>
 
-        {/* Pattern Insights */}
+        {/* INTERVENTION INTELLIGENCE - THE CROWN JEWEL */}
+        <div className="mb-8">
+          <InterventionIntelligence
+            events={events}
+            stats={stats}
+            interventionMetrics={interventionMetrics}
+          />
+        </div>
+
+        {/* Original Pattern Insights */}
         <div className="space-y-4">
           {tenantInsights && tenantInsights.insights.length > 0 ? (
             tenantInsights.insights.map((insight: any, index: number) => (
