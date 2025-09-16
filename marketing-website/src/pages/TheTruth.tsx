@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Helmet } from 'react-helmet-async';
 import NavBar from '../components/NavBar';
 import Footer from '../components/Footer';
+import NeuralBackground from '../components/NeuralBackground';
 import { motion } from 'framer-motion';
 import { Eye, TrendingDown, Calculator, Brain, Target, DollarSign } from 'lucide-react';
 
@@ -26,7 +27,9 @@ const TheTruth: React.FC = () => {
         <meta name="description" content="Why your marketing analytics are lying to you. A manifesto on measuring shadows vs. substance." />
       </Helmet>
 
-      <div className="min-h-screen bg-gradient-to-b from-gray-900 to-black text-white">
+      <NeuralBackground />
+
+      <div className="min-h-screen bg-black text-white relative z-10">
         <NavBar />
 
         <div className="container mx-auto px-4 pt-24 pb-20">
