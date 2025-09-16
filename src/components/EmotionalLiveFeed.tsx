@@ -725,99 +725,6 @@ const EmotionalLiveFeed = () => {
         </motion.div>
       )}
 
-      {/* Live Event Feed */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.4 }}
-        className="glass-card p-6"
-      >
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-bold text-white">Live Emotional Feed</h2>
-          <div className="flex items-center gap-2">
-            <Zap className="w-4 h-4 text-yellow-400" />
-            <span className="text-sm text-white/60">Real-time</span>
-          </div>
-        </div>
-
-        <div className="space-y-3 max-h-[600px] overflow-y-auto">
-          <AnimatePresence mode="popLayout">
-            {events.length === 0 ? (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="text-center py-12 text-white/40"
-              >
-                <AlertCircle className="w-12 h-12 mx-auto mb-4 text-white/20" />
-                <p className="text-lg mb-2">No emotional events detected yet</p>
-                <p className="text-sm mb-4">
-                  Add detect.js to start contributing to the Emotional Volatility Index™
-                </p>
-                <code className="block p-4 bg-black/30 rounded-lg text-xs font-mono text-purple-400">
-                  {/* NEVER expose user IDs as API keys - always use YOUR_KEY placeholder */}
-                  &lt;script src="https://cdn.sentientiq.ai/v2/detect.js" data-api-key="YOUR_KEY"&gt;&lt;/script&gt;
-                </code>
-              </motion.div>
-            ) : (
-              events.map((event, index) => (
-                <motion.div
-                  key={event.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.95 }}
-                  transition={{ delay: index * 0.05 }}
-                  className="flex items-center gap-4 p-4 bg-white/5 rounded-xl hover:bg-white/10 transition-all border border-white/10"
-                >
-                  {/* Emotion Badge */}
-                  <div className={`px-3 py-1 rounded-full bg-gradient-to-r ${EMOTION_COLORS[event.emotion] || EMOTION_COLORS.default} shadow-lg`}>
-                    <span className="text-xs font-semibold text-white drop-shadow">
-                      {EMOTION_LABELS[event.emotion] || event.emotion}
-                    </span>
-                  </div>
-
-                  {/* Event Details */}
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3">
-                      <span className="text-white font-medium">
-                        Session {event.session_id ? event.session_id.slice(-6) : 'Unknown'}
-                      </span>
-                      <span className="text-white/40">•</span>
-                      <span className="text-white/60 text-sm">
-                        {event.confidence || 0}% confidence
-                      </span>
-                      {event.intervention_triggered && (
-                        <>
-                          <span className="text-white/40">•</span>
-                          <span className="text-green-400 text-sm">Intervention deployed</span>
-                        </>
-                      )}
-                    </div>
-                    {event.url && (
-                      <div className="text-xs text-white/40 mt-1">
-                        {new URL(event.url).pathname}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Timestamp */}
-                  <div className="text-xs text-white/40">
-                    {new Date(event.timestamp).toLocaleTimeString()}
-                  </div>
-                </motion.div>
-              ))
-            )}
-          </AnimatePresence>
-        </div>
-
-        {events.length > 0 && (
-          <div className="mt-4 pt-4 border-t border-white/10 text-center">
-            <p className="text-xs text-white/40">
-              Showing last {events.length} events • Powered by Emotional Volatility Index™
-            </p>
-          </div>
-        )}
-      </motion.div>
-
       {/* Intervention Intelligence Flow - Real-time Metrics */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -946,6 +853,99 @@ const EmotionalLiveFeed = () => {
             </motion.div>
           ))}
         </div>
+      </motion.div>
+
+      {/* Live Event Feed */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.4 }}
+        className="glass-card p-6"
+      >
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-xl font-bold text-white">Live Emotional Feed</h2>
+          <div className="flex items-center gap-2">
+            <Zap className="w-4 h-4 text-yellow-400" />
+            <span className="text-sm text-white/60">Real-time</span>
+          </div>
+        </div>
+
+        <div className="space-y-3 max-h-[600px] overflow-y-auto">
+          <AnimatePresence mode="popLayout">
+            {events.length === 0 ? (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="text-center py-12 text-white/40"
+              >
+                <AlertCircle className="w-12 h-12 mx-auto mb-4 text-white/20" />
+                <p className="text-lg mb-2">No emotional events detected yet</p>
+                <p className="text-sm mb-4">
+                  Add detect.js to start contributing to the Emotional Volatility Index™
+                </p>
+                <code className="block p-4 bg-black/30 rounded-lg text-xs font-mono text-purple-400">
+                  {/* NEVER expose user IDs as API keys - always use YOUR_KEY placeholder */}
+                  &lt;script src="https://cdn.sentientiq.ai/v2/detect.js" data-api-key="YOUR_KEY"&gt;&lt;/script&gt;
+                </code>
+              </motion.div>
+            ) : (
+              events.map((event, index) => (
+                <motion.div
+                  key={event.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  transition={{ delay: index * 0.05 }}
+                  className="flex items-center gap-4 p-4 bg-white/5 rounded-xl hover:bg-white/10 transition-all border border-white/10"
+                >
+                  {/* Emotion Badge */}
+                  <div className={`px-3 py-1 rounded-full bg-gradient-to-r ${EMOTION_COLORS[event.emotion] || EMOTION_COLORS.default} shadow-lg`}>
+                    <span className="text-xs font-semibold text-white drop-shadow">
+                      {EMOTION_LABELS[event.emotion] || event.emotion}
+                    </span>
+                  </div>
+
+                  {/* Event Details */}
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3">
+                      <span className="text-white font-medium">
+                        Session {event.session_id ? event.session_id.slice(-6) : 'Unknown'}
+                      </span>
+                      <span className="text-white/40">•</span>
+                      <span className="text-white/60 text-sm">
+                        {event.confidence || 0}% confidence
+                      </span>
+                      {event.intervention_triggered && (
+                        <>
+                          <span className="text-white/40">•</span>
+                          <span className="text-green-400 text-sm">Intervention deployed</span>
+                        </>
+                      )}
+                    </div>
+                    {event.url && (
+                      <div className="text-xs text-white/40 mt-1">
+                        {new URL(event.url).pathname}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Timestamp */}
+                  <div className="text-xs text-white/40">
+                    {new Date(event.timestamp).toLocaleTimeString()}
+                  </div>
+                </motion.div>
+              ))
+            )}
+          </AnimatePresence>
+        </div>
+
+        {events.length > 0 && (
+          <div className="mt-4 pt-4 border-t border-white/10 text-center">
+            <p className="text-xs text-white/40">
+              Showing last {events.length} events • Powered by Emotional Volatility Index™
+            </p>
+          </div>
+        )}
       </motion.div>
 
       {/* Active Interventions - Matching the Live Emotional Feed styling */}
