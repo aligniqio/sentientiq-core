@@ -886,25 +886,60 @@
         position: fixed;
         bottom: 80px;
         right: 20px;
-        padding: 20px;
-        border-radius: 12px;
-        max-width: 320px;
+        padding: 24px;
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%);
+        backdrop-filter: blur(20px) saturate(180%);
+        -webkit-backdrop-filter: blur(20px) saturate(180%);
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        border-radius: 16px;
+        box-shadow:
+          0 8px 32px 0 rgba(31, 38, 135, 0.37),
+          0 0 0 1px rgba(255, 255, 255, 0.1) inset;
+        max-width: 360px;
         z-index: 10000;
         animation: slideUp 0.3s ease-out;
       ">
-        <div style="color: #10b981; font-weight: 600; margin-bottom: 12px; font-size: 16px;">
-          ✓ Why it's worth it:
+        <div style="
+          color: rgba(16, 185, 129, 0.95);
+          font-weight: 600;
+          margin-bottom: 14px;
+          font-size: 17px;
+          text-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        ">
+          ✨ Why This Matters
         </div>
-        <ul style="margin: 0; padding-left: 20px; font-size: 14px; line-height: 1.6;">
-          <li>Save 10+ hours per week</li>
-          <li>30-day money-back guarantee</li>
-          <li>Trusted by 10,000+ businesses</li>
+        <ul style="
+          margin: 0;
+          padding-left: 22px;
+          font-size: 14px;
+          line-height: 1.8;
+          color: rgba(255, 255, 255, 0.9);
+        ">
+          <li style="margin-bottom: 8px;">
+            <strong>Know what visitors really feel</strong> - not what they say in surveys
+          </li>
+          <li style="margin-bottom: 8px;">
+            <strong>Convert 37% more browsers</strong> with perfectly-timed interventions
+          </li>
+          <li style="margin-bottom: 8px;">
+            <strong>Stop losing customers</strong> to competitors who "just get them"
+          </li>
         </ul>
+        <div style="
+          margin-top: 16px;
+          padding-top: 16px;
+          border-top: 1px solid rgba(255, 255, 255, 0.1);
+          font-size: 13px;
+          color: rgba(255, 255, 255, 0.7);
+          text-align: center;
+        ">
+          🧠 Reading emotions. Changing outcomes.
+        </div>
       </div>
     `;
     document.body.appendChild(value);
     addStyles();
-    setTimeout(() => value.remove(), 10000);
+    setTimeout(() => value.remove(), 12000);
   }
 
   function showComparisonChart() {
