@@ -15,7 +15,7 @@ export default function Navbar() {
         </nav>
         <div className="flex items-center gap-3">
           <a className="btn-ghost" href="https://sentientiq.app/auth">Sign in</a>
-          <a className="btn-primary" href="#pricing">Get Started</a>
+          <a className="btn-primary" href="/#pricing">Get Started</a>
         </div>
       </div>
     </header>

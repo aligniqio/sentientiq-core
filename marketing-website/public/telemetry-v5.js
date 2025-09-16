@@ -48,7 +48,12 @@
 
   // Record telemetry event
   function record(type, data) {
-    if (state.suspended || state.mouseOffCanvas) return; // HALT when mouse is off canvas
+    if (state.suspended || state.mouseOffCanvas) {
+      if (config.debug) {
+        console.log(`⛔ Event blocked: ${type}, suspended: ${state.suspended}, mouseOffCanvas: ${state.mouseOffCanvas}`);
+      }
+      return; // HALT when mouse is off canvas
+    }
 
     const now = Date.now();
     const sessionAge = now - sessionStart;
@@ -83,28 +88,26 @@
   function initializeSiteMapping() {
     if (!config.useMapping) return;
 
-    // Load site mapper if available
-    if (window.SentientIQSiteMapper) {
-      siteMap = window.SentientIQSiteMapper.init();
-      if (config.debug) {
-        console.log('📍 Site map loaded:', siteMap);
-        if (siteMap.warnings?.length > 0) {
-          console.warn('⚠️ Site map warnings:', siteMap.warnings);
-        }
-      }
-    } else {
-      // Fallback: load site mapper dynamically
-      const script = document.createElement('script');
-      script.src = scriptTag?.src?.replace('telemetry-v5.js', 'site-mapper.js') || '/site-mapper.js';
-      script.onload = () => {
-        if (window.SentientIQSiteMapper) {
-          siteMap = window.SentientIQSiteMapper.init();
-          if (config.debug) {
-            console.log('📍 Site mapper loaded dynamically:', siteMap);
+    // Only load site mapper on marketing site (.ai domain)
+    const isMarketingSite = window.location.hostname.includes('sentientiq.ai') ||
+                            window.location.hostname === 'localhost';
+
+    if (isMarketingSite) {
+      // Load site mapper if available (from GTM)
+      if (window.SentientIQSiteMapper) {
+        siteMap = window.SentientIQSiteMapper.init();
+        if (config.debug) {
+          console.log('📍 Site map loaded:', siteMap);
+          if (siteMap.warnings?.length > 0) {
+            console.warn('⚠️ Site map warnings:', siteMap.warnings);
           }
         }
-      };
-      document.head.appendChild(script);
+      }
+      // No fallback loading - site mapper only comes from GTM on .ai domain
+    } else {
+      if (config.debug) {
+        console.log('📍 Site mapper not needed on app domain');
+      }
     }
   }
 
@@ -166,6 +169,15 @@
   // Get element context (what user is interacting with)
   function getElementContext(el) {
     const ctx = {};
+
+    // Skip heavy context analysis on dashboard/app pages
+    if (window.location.hostname.includes('app') ||
+        window.location.hostname.includes('dashboard') ||
+        window.location.pathname.includes('/dashboard')) {
+      ctx.tag = el.tagName?.toLowerCase();
+      ctx.text = el.textContent?.slice(0, 50);
+      return ctx;
+    }
 
     // First check mapped elements for high confidence
     const mapped = checkMappedElement(el);
@@ -491,6 +503,9 @@
 
   // Send telemetry to backend
   function flush() {
+    if (config.debug) {
+      console.log(`🔄 Flush timer fired. Buffer length: ${buffer.length}, suspended: ${state.suspended}, mouseOffCanvas: ${state.mouseOffCanvas}`);
+    }
     if (buffer.length === 0) return;
 
     const batch = buffer.splice(0, config.batchSize);

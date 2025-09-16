@@ -897,24 +897,16 @@ if (patterns.includes('STICKER_SHOCK') && session.dealValue > 50000) {
                   </code>
                 </div>
 
-                <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                  <a
-                    href="/auth"
-                    className="px-8 py-4 bg-gradient-to-r from-purple-600 to-blue-600 rounded-lg font-semibold text-lg hover:from-purple-700 hover:to-blue-700 transition-all"
-                  >
-                    Get Your Script Tag
-                  </a>
-                  <a
-                    href="https://github.com/sentientiq/demo"
-                    className="px-8 py-4 glass-card hover:bg-white/10 rounded-lg font-semibold text-lg transition-all"
-                  >
-                    View on GitHub
-                  </a>
-                </div>
+                <a
+                  href="/auth"
+                  className="inline-block px-8 py-4 bg-gradient-to-r from-purple-600 to-blue-600 rounded-lg font-semibold text-lg hover:from-purple-700 hover:to-blue-700 transition-all"
+                >
+                  Get Your Script Tag
+                </a>
               </div>
 
               <p className="text-sm text-white/50 mt-8">
-                No credit card required. GDPR compliant. SOC2 Type II certified.
+                No credit card required. Start tracking emotions today.
               </p>
             </div>
           </section>
