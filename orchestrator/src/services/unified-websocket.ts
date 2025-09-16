@@ -3,28 +3,45 @@
  * Single server, multiple channels for different client types
  */
 
-import { WebSocketServer } from 'ws';
+import { WebSocketServer, WebSocket } from 'ws';
 import { EventEmitter } from 'events';
+import { Server } from 'http';
+import { IncomingMessage } from 'http';
+
+interface Client {
+  ws: WebSocket;
+  sessionId: string;
+  tenantId: string;
+  type: string;
+  connectedAt?: Date;
+}
 
 class UnifiedWebSocketServer extends EventEmitter {
+  private wss: WebSocketServer | null;
+  private channels: {
+    emotions: Set<Client>;
+    interventions: Map<string, Client>;
+    telemetry: Map<string, Client>;
+  };
+
   constructor() {
     super();
     this.wss = null;
     this.channels = {
-      emotions: new Set(),      // Dashboard clients watching emotions
-      interventions: new Map(), // Marketing site clients receiving interventions
-      telemetry: new Map()      // Bundled script clients (telemetry + interventions in one)
+      emotions: new Set<Client>(),      // Dashboard clients watching emotions
+      interventions: new Map<string, Client>(), // Marketing site clients receiving interventions
+      telemetry: new Map<string, Client>()      // Bundled script clients (telemetry + interventions in one)
     };
   }
 
-  init(server) {
+  init(server: Server): void {
     this.wss = new WebSocketServer({
       server,
       path: '/ws'
     });
 
-    this.wss.on('connection', (ws, req) => {
-      const url = new URL(req.url, `http://${req.headers.host}`);
+    this.wss.on('connection', (ws: WebSocket, req: IncomingMessage) => {
+      const url = new URL(req.url || '', `http://${req.headers.host}`);
       const channel = url.searchParams.get('channel') || 'interventions';
       const sessionId = url.searchParams.get('session') || `ws_${Date.now()}`;
       const tenantId = url.searchParams.get('tenant_id') || url.searchParams.get('tenant') || 'unknown';
@@ -51,7 +68,7 @@ class UnifiedWebSocketServer extends EventEmitter {
     console.log('✅ Unified WebSocket server initialized on /ws');
   }
 
-  handleEmotionClient(ws, sessionId, tenantId) {
+  private handleEmotionClient(ws: WebSocket, sessionId: string, tenantId: string): void {
     const client = { ws, sessionId, tenantId, type: 'emotions' };
     this.channels.emotions.add(client);
 
@@ -68,7 +85,7 @@ class UnifiedWebSocketServer extends EventEmitter {
       this.channels.emotions.delete(client);
     });
 
-    ws.on('error', (error) => {
+    ws.on('error', (error: Error) => {
       console.error(`Emotion client error ${sessionId}:`, error);
       this.channels.emotions.delete(client);
     });
@@ -83,7 +100,7 @@ class UnifiedWebSocketServer extends EventEmitter {
     }, 30000);
   }
 
-  handleInterventionClient(ws, sessionId, tenantId) {
+  private handleInterventionClient(ws: WebSocket, sessionId: string, tenantId: string): void {
     const client = {
       ws,
       sessionId,
@@ -103,7 +120,7 @@ class UnifiedWebSocketServer extends EventEmitter {
     }));
 
     // Handle messages from client
-    ws.on('message', (message) => {
+    ws.on('message', (message: Buffer) => {
       try {
         const data = JSON.parse(message.toString());
         this.handleClientMessage(sessionId, data);
@@ -118,7 +135,7 @@ class UnifiedWebSocketServer extends EventEmitter {
       this.channels.interventions.delete(sessionId);
     });
 
-    ws.on('error', (error) => {
+    ws.on('error', (error: Error) => {
       console.error(`Intervention client error ${sessionId}:`, error);
       this.channels.interventions.delete(sessionId);
     });
@@ -133,7 +150,7 @@ class UnifiedWebSocketServer extends EventEmitter {
     }, 30000);
   }
 
-  handleClientMessage(sessionId, data) {
+  private handleClientMessage(sessionId: string, data: any): void {
     switch(data.type) {
       case 'ping':
         // Check both intervention and telemetry channels
@@ -171,7 +188,7 @@ class UnifiedWebSocketServer extends EventEmitter {
     }
   }
 
-  handleTelemetryClient(ws, sessionId, tenantId) {
+  private handleTelemetryClient(ws: WebSocket, sessionId: string, tenantId: string): void {
     const client = {
       ws,
       sessionId,
@@ -191,9 +208,9 @@ class UnifiedWebSocketServer extends EventEmitter {
     }));
 
     // Handle messages from bundled script
-    ws.on('message', (message) => {
+    ws.on('message', (message: Buffer) => {
       try {
-        const data = JSON.parse(message);
+        const data = JSON.parse(message.toString());
         this.handleClientMessage(sessionId, data);
       } catch (error) {
         console.error(`Failed to parse telemetry message from ${sessionId}:`, error);
@@ -206,7 +223,7 @@ class UnifiedWebSocketServer extends EventEmitter {
       this.channels.telemetry.delete(sessionId);
     });
 
-    ws.on('error', (error) => {
+    ws.on('error', (error: Error) => {
       console.error(`Telemetry client error ${sessionId}:`, error);
       this.channels.telemetry.delete(sessionId);
     });
@@ -222,7 +239,7 @@ class UnifiedWebSocketServer extends EventEmitter {
   }
 
   // Broadcast emotion to all dashboard clients
-  broadcastEmotion(emotionData) {
+  broadcastEmotion(emotionData: any): void {
     const message = JSON.stringify({
       type: 'event',
       payload: {
@@ -244,7 +261,7 @@ class UnifiedWebSocketServer extends EventEmitter {
   }
 
   // Send intervention to specific session
-  sendIntervention(sessionId, interventionType) {
+  sendIntervention(sessionId: string, interventionType: string): boolean {
     // Check both channels - telemetry channel handles both telemetry and interventions
     const telemetryClient = this.channels.telemetry.get(sessionId);
     const interventionClient = this.channels.interventions.get(sessionId);

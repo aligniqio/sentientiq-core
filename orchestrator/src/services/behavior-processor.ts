@@ -9,12 +9,18 @@ import crypto from 'crypto';
 
 // Initialize Supabase client
 const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
+  process.env.SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
 export class BehaviorProcessor {
-  constructor(websocketServer = null) {
+  private sessions: Map<string, any>;
+  private wsServer: any;
+  private patternMemory: any;
+  private interventionMetrics: any;
+  private behaviorMap: any;
+
+  constructor(websocketServer: any = null) {
     // Session buffers for context
     this.sessions = new Map();
 
