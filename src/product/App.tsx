@@ -11,11 +11,9 @@ import Settings from '../pages/settings'
 import Pricing from '../pages/pricing'
 import Billing from '../pages/billing'
 // import EmotionalLiveFeed from '../components/EmotionalLiveFeed' // Old API-based component
-// TEMPORARY: Using original WebSocket components until NATS SSL is configured
-import EmotionalStream from '../components/EmotionalStream'
-import InterventionStream from '../components/InterventionStream'
-// import NATSEmotionalStream from '../components/NATSEmotionalStream'
-// import NATSInterventionStream from '../components/NATSInterventionStream'
+// Using NATS components with SSL proxy
+import NATSEmotionalStream from '../components/NATSEmotionalStream'
+import NATSInterventionStream from '../components/NATSInterventionStream'
 
 // Admin pages
 import TenantsPage from './admin/TenantsPage'
@@ -51,8 +49,8 @@ function App() {
                 <OnboardingRouter>
                   <Layout>
                     <div className="space-y-6">
-                      <EmotionalStream />
-                      <InterventionStream />
+                      <NATSEmotionalStream />
+                      <NATSInterventionStream />
                     </div>
                   </Layout>
                 </OnboardingRouter>
@@ -75,8 +73,8 @@ function App() {
                 <SignedIn>
                   <Layout>
                     <div className="space-y-6">
-                      <EmotionalStream />
-                      <InterventionStream />
+                      <NATSEmotionalStream />
+                      <NATSInterventionStream />
                     </div>
                   </Layout>
                 </SignedIn>

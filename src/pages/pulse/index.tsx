@@ -5,11 +5,9 @@
 
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-// TEMPORARY: Using original WebSocket components until NATS SSL is configured
-import EmotionalStream from '@/components/EmotionalStream';
-import InterventionStream from '@/components/InterventionStream';
-// import NATSEmotionalStream from '@/components/NATSEmotionalStream';
-// import NATSInterventionStream from '@/components/NATSInterventionStream';
+// Using NATS components with SSL proxy
+import NATSEmotionalStream from '@/components/NATSEmotionalStream';
+import NATSInterventionStream from '@/components/NATSInterventionStream';
 import EVIDisplay from '@/components/EVIDisplay';
 import PipelineDiagnostic from '@/components/PipelineDiagnostic';
 import PageHeader from '@/components/PageHeader';
@@ -126,14 +124,14 @@ const PulseDashboard: React.FC = () => {
 
             {/* Broadcast Streams */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Broadcast Point #1: Emotional Stream (WebSocket until NATS SSL) */}
+              {/* Broadcast Point #1: NATS Emotional Stream */}
               <div className="h-full">
-                <EmotionalStream />
+                <NATSEmotionalStream />
               </div>
 
-              {/* Broadcast Point #2: Intervention Stream (WebSocket until NATS SSL) */}
+              {/* Broadcast Point #2: NATS Intervention Stream */}
               <div className="h-full">
-                <InterventionStream />
+                <NATSInterventionStream />
               </div>
             </div>
           </div>

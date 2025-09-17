@@ -36,13 +36,14 @@ export const useNATSEmotions = (onEvent: (event: EmotionalEvent) => void) => {
   const ncRef = useRef<NatsConnection | null>(null);
   const jsRef = useRef<JetStreamClient | null>(null);
 
-  // TEMPORARY: Use localhost for dev, disable for production until SSL is configured
+  // Use SSL proxy for production, direct connection for local dev
   const isProduction = window.location.hostname === 'sentientiq.app';
+  const wsUrl = isProduction
+    ? 'wss://api.sentientiq.app/ws/nats'  // SSL proxy through nginx
+    : 'ws://localhost:9222';               // Direct connection for local dev
 
   const config: NATSConfig = {
-    servers: isProduction
-      ? ['wss://localhost:9222'] // This will fail but won't break the app
-      : [`ws://localhost:9222`],  // Local development
+    servers: [wsUrl],
     streamName: 'EMOTIONAL_EVENTS',
     subject: 'emotions.events',
     consumerName: `dashboard-${Date.now()}` // Unique consumer per session
