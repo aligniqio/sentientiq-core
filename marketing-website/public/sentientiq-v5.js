@@ -374,8 +374,16 @@
       },
 
       show(data) {
-        // Remove existing
+        // Remove ANY existing interventions first
         document.querySelectorAll('.sq-intervention').forEach(el => el.remove());
+
+        // Prevent duplicate interventions within 30 seconds
+        const now = Date.now();
+        if (this.lastInterventionTime && (now - this.lastInterventionTime < 30000)) {
+          console.log('Intervention cooldown active, skipping');
+          return;
+        }
+        this.lastInterventionTime = now;
 
         // Add styles if needed
         if (!document.getElementById('sq-styles')) {
@@ -475,9 +483,9 @@
         // Simple interventions
         const templates = {
           exit_intent: `
-            <div class="sq-modal-overlay"></div>
+            <div class="sq-modal-overlay" onclick="this.parentElement.remove()"></div>
             <div class="sq-modal-content">
-              <button onclick="this.closest('.sq-intervention').remove()" style="position: absolute; top: 15px; right: 15px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); font-size: 20px; cursor: pointer; color: #fff; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; transition: all 0.3s;">&times;</button>
+              <button onclick="event.stopPropagation(); this.closest('.sq-intervention').remove()" style="position: absolute; top: 15px; right: 15px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); font-size: 20px; cursor: pointer; color: #fff; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; transition: all 0.3s; z-index: 1000000;">&times;</button>
               <h2>We noticed you're comparing options</h2>
               <p>See what makes us different - real patterns from real users.</p>
               <button onclick="window.location.href='/demo'" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; padding: 15px 30px; border-radius: 10px; font-size: 16px; cursor: pointer; font-weight: 600; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);">See Live Demo</button>

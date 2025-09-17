@@ -84,9 +84,10 @@ app.post('/api/telemetry/stream', async (req, res) => {
       });
     }
 
-    // Check patterns for interventions
-    for (const pattern of patterns) {
-      console.log(`🎯 Pattern detected: ${pattern.type} → ${pattern.intervention}`);
+    // Check patterns for interventions - ONLY TRIGGER THE FIRST ONE
+    if (patterns.length > 0) {
+      const pattern = patterns[0]; // Take only the highest priority pattern
+      console.log(`🎯 Pattern detected: ${pattern.type} → ${pattern.intervention} (${patterns.length} total patterns)`);
 
       try {
         // Pass emotional context from the processor

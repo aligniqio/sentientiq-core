@@ -1062,6 +1062,15 @@ export class BehaviorProcessor {
 
     if (history.length < 3) return patterns;
 
+    // CRITICAL: Only allow ONE intervention per session at a time
+    const now = Date.now();
+    const lastInterventionTime = session?.lastInterventionTime || 0;
+    const interventionCooldown = 30000; // 30 seconds minimum between interventions
+
+    if (now - lastInterventionTime < interventionCooldown) {
+      return patterns; // Still in cooldown, no new interventions
+    }
+
     // Recent emotions (last 5-10 for cart patterns)
     const recent = history.slice(-5).map(h => h.emotion);
     const extended = history.slice(-10).map(h => h.emotion);
