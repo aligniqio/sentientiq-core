@@ -46,8 +46,61 @@ app.post('/api/telemetry/stream', async (req, res) => {
 
     console.log(`📡 Telemetry received: ${events.length} events from ${session_id}`);
 
-    // Process behaviors into emotions
-    const { emotions, patterns } = behaviorProcessor.processBatch(session_id, events);
+    // Debug: Log first event structure
+    if (events.length > 0) {
+      console.log('First event structure:', JSON.stringify(events[0], null, 2));
+    }
+
+    // Normalize telemetry events - map various field names to expected format
+    const normalizedEvents = events.map(event => {
+      // Handle various telemetry formats
+      const normalized = {
+        ...event,
+        // Map possible field names to 'type'
+        type: event.type || event.e || event.event || event.action || event.eventType || 'unknown',
+        // Ensure timestamp exists
+        timestamp: event.timestamp || event.t || event.time || Date.now(),
+        // Ensure coordinates exist for mouse events
+        x: event.x || event.clientX || event.pageX || 0,
+        y: event.y || event.clientY || event.pageY || 0,
+        // Velocity might come as v, velocity, speed
+        velocity: event.velocity || event.v || event.speed || 0
+      };
+
+      // If type is still unknown, try to infer from other fields
+      if (normalized.type === 'unknown') {
+        if (event.x !== undefined || event.y !== undefined) {
+          normalized.type = 'mousemove';
+        } else if (event.scrollY !== undefined) {
+          normalized.type = 'scroll';
+        } else if (event.key !== undefined) {
+          normalized.type = 'keypress';
+        }
+      }
+
+      return normalized;
+    });
+
+    // Process behaviors into emotions with error handling
+    let emotions = [];
+    let patterns = [];
+
+    try {
+      const result = behaviorProcessor.processBatch(session_id, normalizedEvents);
+      emotions = result.emotions || [];
+      patterns = result.patterns || [];
+    } catch (error) {
+      console.error(`❌ Behavior processor error: ${error.message}`);
+      // Still broadcast telemetry stage even if processing fails
+      normalizedEvents.forEach(event => {
+        unifiedWS.broadcastPipelineEvent('telemetry', {
+          sessionId: session_id,
+          behavior: event.type,
+          timestamp: event.timestamp,
+          error: 'processing_failed'
+        });
+      });
+    }
 
     // Broadcast processor stage events
     if (emotions.length > 0) {
@@ -90,35 +143,47 @@ app.post('/api/telemetry/stream', async (req, res) => {
     for (const pattern of patterns) {
       console.log(`🎯 Pattern detected: ${pattern.type} → ${pattern.intervention}`);
 
-      // Pass emotional context from the processor
-      const emotionalContext = {
-        emotion: emotions[emotions.length - 1]?.emotion || 'unknown',
-        confidence: emotions[emotions.length - 1]?.confidence || 0,
-        frustration: emotions[emotions.length - 1]?.context?.frustration || 0,
-        urgency: emotions[emotions.length - 1]?.context?.urgency || 0
-      };
+      try {
+        // Pass emotional context from the processor
+        const emotionalContext = {
+          emotion: emotions[emotions.length - 1]?.emotion || 'unknown',
+          confidence: emotions[emotions.length - 1]?.confidence || 0,
+          frustration: emotions[emotions.length - 1]?.context?.frustration || 0,
+          urgency: emotions[emotions.length - 1]?.context?.urgency || 0
+        };
 
-      // Broadcast engine stage event
-      unifiedWS.broadcastPipelineEvent('engine', {
-        sessionId: session_id,
-        interventionType: pattern.intervention,
-        patternType: pattern.type,
-        emotion: emotionalContext.emotion,
-        confidence: emotionalContext.confidence
-      });
+        // Broadcast engine stage event
+        unifiedWS.broadcastPipelineEvent('engine', {
+          sessionId: session_id,
+          interventionType: pattern.intervention,
+          patternType: pattern.type,
+          emotion: emotionalContext.emotion,
+          confidence: emotionalContext.confidence
+        });
 
-      const sent = unifiedWS.sendIntervention(session_id, pattern.intervention, emotionalContext);
+        const sent = unifiedWS.sendIntervention(session_id, pattern.intervention, emotionalContext);
 
-      if (sent) {
-        await supabase
-          .from('intervention_logs')
-          .insert({
-            session_id,
-            tenant_id,
-            intervention_type: pattern.intervention,
-            pattern_type: pattern.type,
-            triggered_at: new Date().toISOString()
-          });
+        if (sent) {
+          await supabase
+            .from('intervention_logs')
+            .insert({
+              session_id,
+              tenant_id,
+              intervention_type: pattern.intervention,
+              pattern_type: pattern.type,
+              triggered_at: new Date().toISOString()
+            });
+        } else {
+          console.warn(`⚠️ Failed to send intervention to ${session_id} - client not connected`);
+        }
+      } catch (error) {
+        console.error(`❌ Intervention engine error for ${session_id}: ${error.message}`);
+        // Broadcast error state
+        unifiedWS.broadcastPipelineEvent('engine', {
+          sessionId: session_id,
+          error: 'intervention_failed',
+          message: error.message
+        });
       }
     }
 
