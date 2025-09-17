@@ -28,65 +28,31 @@ export default function SystemImplementation() {
     }
   };
 
-  const generateTelemetryScript = () => {
+  const generateSentientIQScript = () => {
     const id = tenantId || '{{TENANT_ID}}';
 
     return `<script>
   (function() {
     'use strict';
 
-    // Set config for telemetry script
-    window.SentientIQ = {
-      tenantId: '${id}',
-      apiEndpoint: 'https://api.sentientiq.app'
-    };
+    // SentientIQ Configuration
+    window.SENTIENTIQ_TENANT_ID = '${id}';
+    window.SENTIENTIQ_DEBUG = ${debugMode};
+    window.SENTIENTIQ_ENABLE_INTERVENTIONS = true;
 
-    // Load telemetry
+    // Store tenant ID for persistence
+    localStorage.setItem('tenantId', '${id}');
+
+    // Load SentientIQ Bundle (telemetry + interventions)
     var script = document.createElement('script');
-    script.src = 'https://sentientiq.ai/telemetry-v5.js';
-    script.setAttribute('data-tenant-id', '${id}');
-    script.setAttribute('data-debug', '${debugMode}');
+    script.src = 'https://sentientiq.ai/sentientiq-v5.js';
+    script.async = true;
     document.head.appendChild(script);
   })();
 </script>`;
   };
 
-  const generateInterventionScript = () => {
-    const id = tenantId || '{{TENANT_ID}}';
-
-    return `<script>
-  (function() {
-    'use strict';
-
-    console.log('[GTM] Intervention tag fired at DOM Ready!');
-
-    // Set config
-    window.SentientIQ = window.SentientIQ || {
-      tenantId: '${id}',
-      apiEndpoint: 'https://api.sentientiq.app'
-    };
-
-    // Wait a bit for telemetry to set session
-    setTimeout(function() {
-      console.log('[GTM] Loading intervention after delay...');
-      console.log('[GTM] Session:', sessionStorage.getItem('sq_session_id'));
-
-      var script = document.createElement('script');
-      script.src = 'https://sentientiq.ai/intervention-receiver.js';
-      script.onload = function() {
-        console.log('[GTM] ✅ Intervention script loaded!');
-      };
-      script.onerror = function() {
-        console.log('[GTM] ❌ Failed to load intervention script');
-      };
-      document.head.appendChild(script);
-    }, 2000); // 2 second delay to ensure telemetry has initialized
-  })();
-</script>`;
-  };
-
-  const telemetryScript = generateTelemetryScript();
-  const interventionScript = generateInterventionScript();
+  const sentientIQScript = generateSentientIQScript();
 
   const sendHelpRequest = async () => {
     if (!supabase || !helpMessage.trim()) return;
@@ -180,16 +146,16 @@ export default function SystemImplementation() {
           </div>
         </motion.div>
 
-        {/* Step 1: Telemetry Script */}
+        {/* ONE SCRIPT TO RULE THEM ALL */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="bg-gray-800/50 backdrop-blur-sm rounded-2xl p-8 mb-8 border border-gray-700"
+          className="bg-gradient-to-r from-purple-900/20 to-blue-900/20 backdrop-blur-sm rounded-2xl p-8 mb-8 border border-purple-500/30"
         >
-          <h2 className="text-2xl font-semibold mb-6 flex items-center gap-2">
-            <Code className="w-6 h-6 text-green-400" />
-            Step 1: Add Telemetry Script
+          <h2 className="text-3xl font-bold mb-6 flex items-center gap-3">
+            <Zap className="w-8 h-8 text-purple-400" />
+            ONE Script. That's It. You're Done.
           </h2>
 
           <div className="space-y-4">
@@ -202,7 +168,7 @@ export default function SystemImplementation() {
                 </li>
                 <li className="flex items-start gap-2">
                   <ChevronRight className="w-4 h-4 mt-1 text-blue-400" />
-                  <span>Tag Name: SentientIQ Telemetry</span>
+                  <span>Tag Name: SentientIQ Bundle (Everything)</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <ChevronRight className="w-4 h-4 mt-1 text-blue-400" />
@@ -216,10 +182,10 @@ export default function SystemImplementation() {
                 <div className="flex items-center justify-between mb-2">
                   <h3 className="font-medium">Script to Copy:</h3>
                   <button
-                    onClick={() => copyToClipboard(telemetryScript, 'telemetry')}
+                    onClick={() => copyToClipboard(sentientIQScript, 'sentientiq')}
                     className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
                   >
-                    {copiedScript === 'telemetry' ? (
+                    {copiedScript === 'sentientiq' ? (
                       <>
                         <Check className="w-4 h-4" />
                         Copied!
@@ -233,70 +199,79 @@ export default function SystemImplementation() {
                   </button>
                 </div>
                 <pre className="bg-gray-900 p-4 rounded-lg overflow-x-auto text-sm text-gray-300">
-                  <code>{telemetryScript}</code>
+                  <code>{sentientIQScript}</code>
                 </pre>
               </div>
             }
           </div>
         </motion.div>
 
-        {/* Step 2: Intervention Script */}
+        {/* What You Get */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
-          className="bg-gray-800/50 backdrop-blur-sm rounded-2xl p-8 mb-8 border border-gray-700"
+          className="bg-gradient-to-r from-green-900/20 to-emerald-900/20 backdrop-blur-sm rounded-2xl p-8 mb-8 border border-green-500/30"
         >
           <h2 className="text-2xl font-semibold mb-6 flex items-center gap-2">
-            <Zap className="w-6 h-6 text-purple-400" />
-            Step 2: Add Intervention Script
+            <Check className="w-6 h-6 text-green-400" />
+            What This ONE Script Does
           </h2>
 
-          <div className="space-y-4">
-            <div>
-              <h3 className="font-medium mb-2">GTM Configuration:</h3>
+          <div className="grid md:grid-cols-2 gap-6">
+            <div className="space-y-4">
+              <h3 className="font-semibold text-green-400 mb-3">✅ Real-Time Tracking</h3>
               <ul className="space-y-2 text-gray-300">
                 <li className="flex items-start gap-2">
-                  <ChevronRight className="w-4 h-4 mt-1 text-blue-400" />
-                  <span>Tag Type: Custom HTML</span>
+                  <ChevronRight className="w-4 h-4 mt-1 text-green-400" />
+                  <span>Every click, hover, and scroll</span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <ChevronRight className="w-4 h-4 mt-1 text-blue-400" />
-                  <span>Tag Name: SentientIQ Interventions</span>
+                  <ChevronRight className="w-4 h-4 mt-1 text-green-400" />
+                  <span>Text selection detection</span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <ChevronRight className="w-4 h-4 mt-1 text-blue-400" />
-                  <span>Trigger: All Pages - DOM Ready</span>
+                  <ChevronRight className="w-4 h-4 mt-1 text-green-400" />
+                  <span>Rage click detection</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <ChevronRight className="w-4 h-4 mt-1 text-green-400" />
+                  <span>Exit intent tracking</span>
                 </li>
               </ul>
             </div>
 
-            {
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className="font-medium">Script to Copy:</h3>
-                  <button
-                    onClick={() => copyToClipboard(interventionScript, 'intervention')}
-                    className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg transition-colors"
-                  >
-                    {copiedScript === 'intervention' ? (
-                      <>
-                        <Check className="w-4 h-4" />
-                        Copied!
-                      </>
-                    ) : (
-                      <>
-                        <Copy className="w-4 h-4" />
-                        Copy Script
-                      </>
-                    )}
-                  </button>
-                </div>
-                <pre className="bg-gray-900 p-4 rounded-lg overflow-x-auto text-sm text-gray-300">
-                  <code>{interventionScript}</code>
-                </pre>
-              </div>
-            }
+            <div className="space-y-4">
+              <h3 className="font-semibold text-purple-400 mb-3">🎯 Automatic Interventions</h3>
+              <ul className="space-y-2 text-gray-300">
+                <li className="flex items-start gap-2">
+                  <ChevronRight className="w-4 h-4 mt-1 text-purple-400" />
+                  <span>Sticker shock → Price reassurance</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <ChevronRight className="w-4 h-4 mt-1 text-purple-400" />
+                  <span>Hesitation → Urgency messages</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <ChevronRight className="w-4 h-4 mt-1 text-purple-400" />
+                  <span>Comparison → Competitive advantage</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <ChevronRight className="w-4 h-4 mt-1 text-purple-400" />
+                  <span>Frustration → Help offers</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          <div className="mt-8 p-6 bg-gradient-to-r from-blue-900/30 to-purple-900/30 rounded-xl border border-purple-500/20">
+            <h3 className="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-400 mb-3">
+              🚀 That's It. Seriously.
+            </h3>
+            <p className="text-gray-300">
+              Copy the script below. Paste it in GTM or directly on your site. Watch real-time emotions flow in.
+              No complex setup. No multiple scripts. No waiting for initialization. Just instant behavioral intelligence.
+            </p>
           </div>
         </motion.div>
 

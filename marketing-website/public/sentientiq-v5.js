@@ -480,9 +480,115 @@
         const container = document.createElement('div');
         container.className = 'sq-intervention';
 
-        // Simple interventions
+        // Map backend intervention types to configuration IDs
+        const interventionMap = {
+          // Discount interventions (discount_offer)
+          'discount_offer': 'discount_offer',
+          'limited_offer': 'discount_offer',
+          'price_reassurance': 'discount_offer',
+          'price_assist': 'discount_offer',
+
+          // Trust interventions (trust_signal)
+          'money_back_guarantee': 'trust_signal',
+          'risk_free_trial': 'trust_signal',
+          'success_stories': 'trust_signal',
+
+          // Urgency interventions (urgency_scarcity)
+          'urgency_message': 'urgency_scarcity',
+          'save_cart_urgent': 'urgency_scarcity',
+          'free_shipping': 'urgency_scarcity',
+          'one_click_checkout': 'urgency_scarcity',
+
+          // Social proof (social_proof)
+          'value_proposition': 'social_proof',
+          'feature_highlight': 'social_proof',
+
+          // Help interventions (help_offer)
+          'help_offer': 'help_offer',
+          'frustration_acknowledgment': 'help_offer',
+          'personalized_guide': 'help_offer',
+          'expense_report_help': 'help_offer',
+          'instant_demo': 'help_offer',
+
+          // Value interventions (value_proposition)
+          'value_popup': 'value_proposition',
+          'value_comparison': 'value_proposition',
+          'simple_pricing': 'value_proposition',
+          'payment_plan_offer': 'value_proposition',
+          'custom_package': 'value_proposition',
+
+          // Comparison interventions (comparison_table)
+          'competitive_advantage': 'comparison_table',
+          'comparison_chart': 'comparison_table',
+          'switching_incentive': 'comparison_table',
+
+          // Exit interventions (exit_rescue)
+          'exit_intent': 'exit_rescue',
+          'save_for_monday': 'exit_rescue',
+          'send_to_desktop': 'exit_rescue'
+        };
+
+        const templateType = interventionMap[data.intervention_type] || 'exit_rescue';
+
+        // Template content based on intervention type (matching config IDs exactly)
         const templates = {
-          exit_intent: `
+          discount_offer: `
+            <div class="sq-modal-overlay" onclick="this.parentElement.remove()"></div>
+            <div class="sq-modal-content">
+              <button onclick="event.stopPropagation(); this.closest('.sq-intervention').remove()" style="position: absolute; top: 15px; right: 15px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); font-size: 20px; cursor: pointer; color: #fff; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; transition: all 0.3s; z-index: 1000000;">&times;</button>
+              <h2>💰 Special offer just for you</h2>
+              <p>Get 15% off when you start today. This offer expires in 24 hours.</p>
+              <button onclick="window.location.href='/pricing?discount=SAVE15'" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; padding: 15px 30px; border-radius: 10px; font-size: 16px; cursor: pointer; font-weight: 600; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);">Claim Your Discount</button>
+            </div>
+          `,
+
+          trust_signal: `
+            <div class="sq-toast">
+              <h4>🔒 Enterprise-grade security</h4>
+              <p>SOC2 certified • 99.9% uptime • 30-day money back guarantee</p>
+            </div>
+          `,
+
+          urgency_scarcity: `
+            <div class="sq-toast" style="top: auto; bottom: 20px; background: linear-gradient(135deg, rgba(236, 72, 153, 0.9), rgba(239, 68, 68, 0.9)); backdrop-filter: blur(20px);">
+              <h4 style="color: #fff;">⏰ Limited time offer</h4>
+              <p style="color: rgba(255,255,255,0.9);">Only 3 spots left at this price. Offer ends tonight.</p>
+            </div>
+          `,
+
+          social_proof: `
+            <div class="sq-toast">
+              <h4>🔥 Others are signing up</h4>
+              <p>12 companies started using SentientIQ in the last hour</p>
+            </div>
+          `,
+
+          help_offer: `
+            <div class="sq-toast" style="bottom: 20px; top: auto; right: 20px;">
+              <h4>💬 Need help deciding?</h4>
+              <p>Our team is here to answer your questions</p>
+              <button onclick="window.location.href='/chat'" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; padding: 8px 16px; border-radius: 6px; font-size: 14px; cursor: pointer; font-weight: 600; margin-top: 8px;">Start Chat</button>
+            </div>
+          `,
+
+          value_proposition: `
+            <div class="sq-toast" style="bottom: 20px; top: auto;">
+              <h4>✨ Why teams choose us</h4>
+              <p>10x ROI average • Setup in 5 minutes • No credit card required</p>
+            </div>
+          `,
+
+          comparison_table: `
+            <div class="sq-modal-overlay" onclick="this.parentElement.remove()"></div>
+            <div class="sq-modal-content">
+              <button onclick="event.stopPropagation(); this.closest('.sq-intervention').remove()" style="position: absolute; top: 15px; right: 15px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); font-size: 20px; cursor: pointer; color: #fff; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; transition: all 0.3s; z-index: 1000000;">&times;</button>
+              <h2>📊 See how we compare</h2>
+              <p>We're the only platform with real-time behavioral intelligence. No other solution can predict and prevent abandonment like we do.</p>
+              <button onclick="window.location.href='/comparison'" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; padding: 15px 30px; border-radius: 10px; font-size: 16px; cursor: pointer; font-weight: 600; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);">View Comparison</button>
+            </div>
+          `,
+
+          exit_rescue: `
             <div class="sq-modal-overlay" onclick="this.parentElement.remove()"></div>
             <div class="sq-modal-content">
               <button onclick="event.stopPropagation(); this.closest('.sq-intervention').remove()" style="position: absolute; top: 15px; right: 15px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); font-size: 20px; cursor: pointer; color: #fff; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; transition: all 0.3s; z-index: 1000000;">&times;</button>
@@ -491,37 +597,9 @@
               <button onclick="window.location.href='/demo'" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; padding: 15px 30px; border-radius: 10px; font-size: 16px; cursor: pointer; font-weight: 600; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);">See Live Demo</button>
             </div>
           `,
-          save_cart_urgent: `
-            <div class="sq-toast">
-              <h4>✓ Your cart is saved</h4>
-              <p>Complete checkout when ready</p>
-            </div>
-          `,
-          value_proposition: `
-            <div class="sq-toast" style="bottom: 20px; top: auto;">
-              <h4>💡 About our pricing</h4>
-              <p>Average ROI within 2 weeks. See how we compare.</p>
-            </div>
-          `,
-          price_reassurance: `
-            <div class="sq-modal-overlay" onclick="this.parentElement.remove()"></div>
-            <div class="sq-modal-content">
-              <button onclick="event.stopPropagation(); this.closest('.sq-intervention').remove()" style="position: absolute; top: 15px; right: 15px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); font-size: 20px; cursor: pointer; color: #fff; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; transition: all 0.3s; z-index: 1000000;">&times;</button>
-              <h2>💰 Let's talk about value</h2>
-              <p>Our pricing reflects the 10x ROI our customers typically see within 30 days.</p>
-              <button onclick="window.location.href='/roi-calculator'" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; padding: 15px 30px; border-radius: 10px; font-size: 16px; cursor: pointer; font-weight: 600; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);">Calculate Your ROI</button>
-            </div>
-          `,
-          competitive_advantage: `
-            <div class="sq-toast">
-              <h4>📊 Comparing us to others?</h4>
-              <p>We're the only solution with real-time behavioral intelligence. See why we're different.</p>
-              <button onclick="window.location.href='/comparison'" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; padding: 10px 20px; border-radius: 6px; font-size: 14px; cursor: pointer; font-weight: 600; margin-top: 10px;">See Comparison</button>
-            </div>
-          `
         };
 
-        container.innerHTML = templates[data.intervention_type] || templates.exit_intent;
+        container.innerHTML = templates[templateType] || templates.exit_rescue;
         document.body.appendChild(container);
 
         // Send acknowledgment
