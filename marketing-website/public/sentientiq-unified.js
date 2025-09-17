@@ -670,6 +670,63 @@
       });
     }
 
+    // ============ VIEWPORT TRACKING ============
+    setupViewportTracking() {
+      // Track viewport resize events
+      let resizeTimer = null;
+      window.addEventListener('resize', () => {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(() => {
+          this.track('viewport_resize', {
+            width: window.innerWidth,
+            height: window.innerHeight,
+            orientation: window.innerWidth > window.innerHeight ? 'landscape' : 'portrait'
+          });
+        }, 250);
+      });
+
+      // Track scroll to top/bottom boundaries
+      window.addEventListener('scroll', () => {
+        const scrollTop = window.scrollY;
+        const scrollHeight = document.documentElement.scrollHeight;
+        const clientHeight = window.innerHeight;
+
+        // Check if at top
+        if (scrollTop <= 50 && !this.viewportState.atTop) {
+          this.viewportState.atTop = true;
+          this.viewportState.atBottom = false;
+          this.track('viewport_boundary', {
+            boundary: 'top',
+            scrollDepth: 0
+          });
+        }
+
+        // Check if at bottom
+        else if (scrollTop + clientHeight >= scrollHeight - 50 && !this.viewportState.atBottom) {
+          this.viewportState.atBottom = true;
+          this.viewportState.atTop = false;
+          this.track('viewport_boundary', {
+            boundary: 'bottom',
+            scrollDepth: 100
+          });
+        }
+
+        // Neither at top nor bottom
+        else if (scrollTop > 50 && scrollTop + clientHeight < scrollHeight - 50) {
+          this.viewportState.atTop = false;
+          this.viewportState.atBottom = false;
+        }
+      });
+
+      // Initialize viewport state
+      this.viewportState = {
+        atTop: true,
+        atBottom: false,
+        width: window.innerWidth,
+        height: window.innerHeight
+      };
+    }
+
     // ============ TAB SWITCHING TRACKING ============
     setupTabTracking() {
       document.addEventListener('visibilitychange', () => {
