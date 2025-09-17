@@ -23,6 +23,9 @@ export class BehaviorProcessor {
     // WebSocket server for sending interventions
     this.wsServer = websocketServer;
 
+    // Sitemap cache for context enrichment
+    this.sitemapCache = new Map();
+
     // PATTERN LEARNING - The predictive engine
     this.patternMemory = {
       // Success patterns: what led to conversion
@@ -392,8 +395,17 @@ export class BehaviorProcessor {
   /**
    * Process batch of telemetry events from a session
    */
-  processBatch(sessionId, events) {
+  async processBatch(sessionId, events, url = null) {
     const diagnosed = [];
+
+    // Load sitemap if URL provided
+    let sitemap = null;
+    if (url) {
+      sitemap = await this.loadSitemap(url);
+      if (sitemap) {
+        console.log(`🗺️ Loaded sitemap for ${url} with ${Object.keys(sitemap).length} categories`);
+      }
+    }
 
     // Debug log to see event structure (commented out for production)
     // if (events && events.length > 0) {
@@ -413,6 +425,34 @@ export class BehaviorProcessor {
     const session = this.sessions.get(sessionId);
 
     for (const event of events) {
+      // Enrich event with element context from sitemap
+      if (sitemap && event.data) {
+        const x = event.data.x || event.data.position?.x;
+        const y = event.data.y || event.data.position?.y;
+
+        if (x !== undefined && y !== undefined) {
+          const element = this.findElementAtPosition(sitemap, x, y);
+          if (element) {
+            // Add element context to the event
+            event.ctx = event.ctx || {};
+            event.ctx[element.category] = true;
+            event.ctx.element = element;
+
+            // Specific context flags for better emotion diagnosis
+            if (element.category === 'pricing') {
+              event.ctx.hovering_pricing = true;
+              console.log(`💰 User hovering over pricing element at (${x}, ${y})`);
+            } else if (element.category === 'cta') {
+              event.ctx.hovering_cta = true;
+              console.log(`🎯 User near CTA: ${element.type} at (${x}, ${y})`);
+            } else if (element.category === 'cart') {
+              event.ctx.hovering_cart = true;
+              console.log(`🛒 User near cart element at (${x}, ${y})`);
+            }
+          }
+        }
+      }
+
       const diagnosis = this.diagnoseEvent(event, session);
 
       if (diagnosis) {
@@ -449,6 +489,7 @@ export class BehaviorProcessor {
 
     // Send emotional state to intervention engine if we have any diagnoses
     if (diagnosed.length > 0) {
+      console.log(`✅ Diagnosed ${diagnosed.length} emotions for session ${sessionId}:`, diagnosed.map(d => d.emotion));
       this.sendToInterventionEngine(sessionId, diagnosed, session);
     }
 
@@ -456,9 +497,235 @@ export class BehaviorProcessor {
   }
 
   /**
+   * Load sitemap for a URL from Supabase
+   */
+  async loadSitemap(url) {
+    // Extract base URL and path
+    const urlObj = new URL(url);
+    const baseUrl = urlObj.origin;
+    const path = urlObj.pathname;
+
+    const cacheKey = `${baseUrl}${path}`;
+
+    // Check cache first
+    if (this.sitemapCache.has(cacheKey)) {
+      return this.sitemapCache.get(cacheKey);
+    }
+
+    try {
+      // Query Supabase for sitemap
+      const { data, error } = await supabase
+        .from('sitemaps')
+        .select('map')
+        .eq('url', cacheKey)
+        .single();
+
+      if (data && data.map) {
+        const sitemap = typeof data.map === 'string' ? JSON.parse(data.map) : data.map;
+        this.sitemapCache.set(cacheKey, sitemap);
+        return sitemap;
+      }
+    } catch (error) {
+      console.log(`No sitemap found for ${cacheKey}`);
+    }
+
+    return null;
+  }
+
+  /**
+   * Find which element is at a given position using sitemap
+   */
+  findElementAtPosition(sitemap, x, y) {
+    if (!sitemap) return null;
+
+    // Check all element categories
+    const categories = ['pricing', 'cta', 'navigation', 'demo', 'cart'];
+
+    for (const category of categories) {
+      if (sitemap[category]) {
+        for (const element of sitemap[category]) {
+          if (element.position) {
+            const pos = element.position;
+            // Simple proximity check (within 50px)
+            if (Math.abs(pos.x - x) < 50 && Math.abs(pos.y - y) < 50) {
+              return {
+                category,
+                type: element.type,
+                selector: element.selector,
+                confidence: element.confidence
+              };
+            }
+          }
+        }
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * Interpret raw telemetry physics into behavioral events
+   */
+  interpretTelemetry(event) {
+    // If it already has a behavior type, return as-is
+    if (event.type || event.behavior) {
+      return event;
+    }
+
+    // Interpret physics-based telemetry
+    if (event.event === 'mouse_deceleration') {
+      const velocity = event.data?.velocity || 0;
+      const deceleration = event.data?.deceleration || 0;
+      const position = event.data?.position || {};
+      const target = event.target || event.data?.target || '';
+
+      // Extract context from target element
+      const targetLower = target.toLowerCase();
+      const isPricing = targetLower.includes('price') || targetLower.includes('pricing') ||
+                       targetLower.includes('tier') || targetLower.includes('plan') ||
+                       targetLower.includes('buy') || targetLower.includes('checkout');
+      const isDemo = targetLower.includes('demo') || targetLower.includes('try');
+      const isNav = targetLower.includes('nav') || targetLower.includes('menu');
+
+      // Sudden stop: high negative deceleration
+      if (Math.abs(deceleration) > 5000) {
+        // Context-aware sudden stops
+        if (isPricing) {
+          return {
+            ...event,
+            type: 'sudden_stop',
+            velocity,
+            after_pricing: true,
+            ctx: { ...event.ctx, pricing: true },
+            target
+          };
+        }
+        return {
+          ...event,
+          type: 'sudden_stop',
+          velocity,
+          ctx: event.ctx,
+          target
+        };
+      }
+
+      // Erratic movement: multiple rapid changes
+      if (Math.abs(deceleration) > 1500 && velocity > 2000) {
+        return {
+          ...event,
+          type: 'erratic_movement',
+          changes: Math.floor(Math.abs(deceleration) / 1000),
+          ctx: { ...event.ctx, pricing: isPricing, demo: isDemo }
+        };
+      }
+
+      // Slow movement near stop - this is hovering behavior
+      if (velocity < 500 && Math.abs(deceleration) > 100) {
+        // Hovering over pricing = strong purchase signal
+        if (isPricing) {
+          return {
+            ...event,
+            type: 'hover',
+            duration: 2000, // Longer duration for pricing hover
+            ctx: { ...event.ctx, pricing: true },
+            target
+          };
+        }
+        return {
+          ...event,
+          type: 'hover',
+          duration: 1000,
+          ctx: event.ctx,
+          target
+        };
+      }
+
+      // Normal deceleration - just slowing down
+      return null; // Don't diagnose normal movement
+    }
+
+    if (event.event === 'click') {
+      const target = event.target || event.data?.target || '';
+      const targetLower = target.toLowerCase();
+
+      // Clicking pricing = checkout intent
+      if (targetLower.includes('price') || targetLower.includes('pricing') ||
+          targetLower.includes('buy') || targetLower.includes('checkout')) {
+        return {
+          ...event,
+          type: 'click',
+          target,
+          ctx: { ...event.ctx, pricing: true, cta: true }
+        };
+      }
+
+      // Clicking demo = high engagement
+      if (targetLower.includes('demo') || targetLower.includes('try')) {
+        return {
+          ...event,
+          type: 'click',
+          target,
+          ctx: { ...event.ctx, demo: true }
+        };
+      }
+
+      return {
+        ...event,
+        type: 'click',
+        target,
+        ctx: event.ctx
+      };
+    }
+
+    if (event.event === 'scroll') {
+      const velocity = event.data?.velocity || 0;
+
+      // Fast erratic scrolling = confusion
+      if (velocity > 3000) {
+        return {
+          ...event,
+          type: 'erratic_movement',
+          changes: 5,
+          ctx: { ...event.ctx, scrolling: true }
+        };
+      }
+
+      // Slow scrolling = reading
+      return null; // Normal scrolling, don't diagnose
+    }
+
+    if (event.event === 'rage_scroll') {
+      return {
+        ...event,
+        type: 'rage_click', // Map rage_scroll to rage_click pattern
+        ctx: event.ctx
+      };
+    }
+
+    if (event.event === 'exit_intent') {
+      // Exit intent is already emotional - check boundaries
+      return {
+        ...event,
+        type: 'hover',
+        duration: 10000, // Long hover = leaving
+        ctx: { ...event.ctx, exit: true }
+      };
+    }
+
+    // Unknown telemetry type
+    return null;
+  }
+
+  /**
    * Diagnose a single telemetry event
    */
   diagnoseEvent(event, session) {
+    // First interpret raw telemetry
+    const interpretedEvent = this.interpretTelemetry(event);
+    if (!interpretedEvent) {
+      return null; // Not a meaningful event
+    }
+    event = interpretedEvent;
     // Session age affects interpretation
     const sessionAge = event.session_age || 0;
     const isEarlySession = sessionAge < 5000; // First 5 seconds
@@ -479,7 +746,14 @@ export class BehaviorProcessor {
     }
 
     // Support both 'type' and 'behavior' fields from telemetry
-    const eventType = event.type || event.behavior || event.event_type;
+    const eventType = event.type || event.behavior || event.event_type || event.event;
+
+    // Debug log to see what we're getting
+    if (!eventType) {
+      console.log(`⚠️ Event has no type/behavior field:`, JSON.stringify(event));
+      return null;
+    }
+
     const mapping = this.behaviorMap[eventType];
     if (!mapping) {
       console.log(`⚠️ No behavior mapping for event type: ${eventType}`);

@@ -42,77 +42,19 @@ app.get('/health', (req, res) => {
 // NEW: Telemetry stream endpoint (behaviors → emotions)
 app.post('/api/telemetry/stream', async (req, res) => {
   try {
-    const { session_id, tenant_id, events } = req.body;
+    const { session_id, tenant_id, events, url } = req.body;
 
     console.log(`📡 Telemetry received: ${events.length} events from ${session_id}`);
 
-    // Debug: Log first event structure
-    if (events.length > 0) {
-      console.log('First event structure:', JSON.stringify(events[0], null, 2));
+    // Debug: Log first event structure to see what we're getting
+    if (events && events.length > 0) {
+      console.log('🔍 First telemetry event:', JSON.stringify(events[0], null, 2));
     }
 
-    // Normalize telemetry events - map various field names to expected format
-    const normalizedEvents = events.map(event => {
-      // Handle various telemetry formats
-      const normalized = {
-        ...event,
-        // Map possible field names to 'type'
-        type: event.type || event.e || event.event || event.action || event.eventType || 'unknown',
-        // Ensure timestamp exists
-        timestamp: event.timestamp || event.t || event.time || Date.now(),
-        // Ensure coordinates exist for mouse events
-        x: event.x || event.clientX || event.pageX || 0,
-        y: event.y || event.clientY || event.pageY || 0,
-        // Velocity might come as v, velocity, speed
-        velocity: event.velocity || event.v || event.speed || 0
-      };
+    // Process behaviors into emotions - DIRECT, no normalization
+    const { emotions, patterns } = await behaviorProcessor.processBatch(session_id, events, url);
 
-      // If type is still unknown, try to infer from other fields
-      if (normalized.type === 'unknown') {
-        if (event.x !== undefined || event.y !== undefined) {
-          normalized.type = 'mousemove';
-        } else if (event.scrollY !== undefined) {
-          normalized.type = 'scroll';
-        } else if (event.key !== undefined) {
-          normalized.type = 'keypress';
-        }
-      }
-
-      return normalized;
-    });
-
-    // Process behaviors into emotions with error handling
-    let emotions = [];
-    let patterns = [];
-
-    try {
-      const result = behaviorProcessor.processBatch(session_id, normalizedEvents);
-      emotions = result.emotions || [];
-      patterns = result.patterns || [];
-    } catch (error) {
-      console.error(`❌ Behavior processor error: ${error.message}`);
-      // Still broadcast telemetry stage even if processing fails
-      normalizedEvents.forEach(event => {
-        unifiedWS.broadcastPipelineEvent('telemetry', {
-          sessionId: session_id,
-          behavior: event.type,
-          timestamp: event.timestamp,
-          error: 'processing_failed'
-        });
-      });
-    }
-
-    // Broadcast processor stage events
-    if (emotions.length > 0) {
-      emotions.forEach(emotion => {
-        unifiedWS.broadcastPipelineEvent('processor', {
-          sessionId: session_id,
-          emotion: emotion.emotion,
-          confidence: emotion.confidence,
-          behavior: emotion.behavior
-        });
-      });
-    }
+    // Don't broadcast individual emotion events to pipeline - EmotionalLiveFeed handles that
 
     // Store and broadcast each diagnosed emotion
     for (const emotion of emotions) {

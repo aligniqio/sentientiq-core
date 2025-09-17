@@ -6,6 +6,7 @@
 
 import React, { useState } from 'react';
 import { InterventionDashboard } from '@/components/InterventionDashboard';
+import EmotionalLiveFeed from '@/components/EmotionalLiveFeed';
 import { motion } from 'framer-motion';
 import {
   Activity,
@@ -81,7 +82,14 @@ const PulseDashboard: React.FC = () => {
 
       {/* Content */}
       {activeView === 'interventions' && (
-        <InterventionDashboard />
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 p-6 max-w-[1920px] mx-auto">
+          <div className="h-full">
+            <EmotionalLiveFeed />
+          </div>
+          <div className="h-full">
+            <InterventionDashboard />
+          </div>
+        </div>
       )}
 
       {activeView === 'overview' && (

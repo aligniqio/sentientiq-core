@@ -172,16 +172,8 @@ class UnifiedWebSocketServer extends EventEmitter {
         // Handle telemetry data from bundled script
         console.log(`📡 Telemetry received via WebSocket: ${data.events?.length || 0} events`);
 
-        // Broadcast to dashboard for pipeline monitoring
-        if (data.events && data.events.length > 0) {
-          data.events.forEach((event: any) => {
-            this.broadcastPipelineEvent('telemetry', {
-              sessionId,
-              behavior: event.behavior || event.type || event.event_type,
-              timestamp: event.timestamp || Date.now()
-            });
-          });
-        }
+        // Don't broadcast raw telemetry to dashboard - it's just physics data (velocity, coordinates)
+        // Only meaningful emotions and interventions should reach the dashboard
 
         this.emit('telemetry_received', {
           sessionId,
