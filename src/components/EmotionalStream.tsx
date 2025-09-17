@@ -212,7 +212,7 @@ const EmotionalStream = () => {
                   // Use single shared timeout for all batching
                   if (!batchTimeout.current) {
                     batchTimeout.current = setTimeout(() => {
-                      batchTimeout.current = null;
+                      batchTimeout.current = undefined;
                       processBatch();
                     }, 150); // Increased to 150ms
                   }
@@ -345,7 +345,7 @@ const EmotionalStream = () => {
 
       {/* Event Feed */}
       <div className="space-y-2 max-h-[500px] overflow-y-auto overflow-x-hidden scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
-        <AnimatePresence mode="popLayout">
+        <AnimatePresence>
           {events.length === 0 ? (
             <motion.div
               initial={{ opacity: 0 }}
