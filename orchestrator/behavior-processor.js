@@ -395,11 +395,6 @@ export class BehaviorProcessor {
   processBatch(sessionId, events) {
     const diagnosed = [];
 
-    // Debug log to see event structure (commented out for production)
-    // if (events && events.length > 0) {
-    //   console.log(`🔍 First event structure:`, JSON.stringify(events[0], null, 2).substring(0, 200));
-    // }
-
     // Get or create session context
     if (!this.sessions.has(sessionId)) {
       this.sessions.set(sessionId, {
@@ -417,19 +412,18 @@ export class BehaviorProcessor {
 
       if (diagnosis) {
         // Apply cooldowns (backend controls the rate now)
-        const eventTime = event.t || event.timestamp || Date.now();
         const lastTime = session.lastEmotionTime[diagnosis.emotion] || 0;
         const cooldown = this.getCooldown(diagnosis.emotion);
 
-        if (eventTime - lastTime > cooldown) {
+        if (event.t - lastTime > cooldown) {
           diagnosed.push({
             ...diagnosis,
-            behavior: event.type || event.behavior,
-            timestamp: eventTime,
+            behavior: event.type,
+            timestamp: event.t,
             context: event.ctx
           });
 
-          session.lastEmotionTime[diagnosis.emotion] = eventTime;
+          session.lastEmotionTime[diagnosis.emotion] = event.t;
           session.history.push(diagnosis);
         }
       }
@@ -485,7 +479,6 @@ export class BehaviorProcessor {
       console.log(`⚠️ No behavior mapping for event type: ${eventType}`);
       return null;
     }
-    // console.log(`✅ Found mapping for ${eventType}, event:`, { duration: event.duration, target: event.target });
 
     // Handle dynamic mappings (functions)
     let emotion;
@@ -500,9 +493,6 @@ export class BehaviorProcessor {
     if (!emotion) {
       console.log(`⚠️ No emotion diagnosed for event type: ${eventType}, ctx:`, event.ctx);
     }
-    // else {
-    //   console.log(`🎯 Diagnosed emotion:`, emotion, `for ${eventType}`);
-    // }
 
     // Reduce confidence for price-related emotions in warming period
     if (isWarmingUp && emotion && event.ctx?.pricing) {

@@ -430,6 +430,44 @@ const EmotionalLiveFeed = () => {
     };
 
     const handleIncomingInterventionEvent = (data: any) => {
+      // Handle pipeline events
+      if (data.type === 'pipeline_event') {
+        const event: InterventionEvent = {
+          id: `${data.sessionId || 'unknown'}_${Date.now()}`,
+          timestamp: data.timestamp || Date.now(),
+          sessionId: data.sessionId || data.session_id,
+          type: mapInterventionEventType(data.payload?.behavior || data.payload?.interventionType || data.stage),
+          stage: data.stage as InterventionEvent['stage'],
+          data: data.payload || {},
+          correlationId: data.correlationId
+        };
+
+        setInterventionEvents(prev => [event, ...prev].slice(0, 50));
+        return;
+      }
+
+      // Handle intervention events
+      if (data.type === 'intervention_event') {
+        const event: InterventionEvent = {
+          id: `${data.sessionId || 'unknown'}_${Date.now()}`,
+          timestamp: Date.now(),
+          sessionId: data.sessionId || data.session_id,
+          type: 'intervention',
+          stage: 'engine',
+          data: data.payload || data,
+          correlationId: data.correlationId
+        };
+
+        setInterventionEvents(prev => [event, ...prev].slice(0, 50));
+        setActiveInterventions(prev => {
+          const next = new Map(prev);
+          next.set(event.sessionId, event);
+          return next;
+        });
+        return;
+      }
+
+      // Handle legacy events
       const event: InterventionEvent = {
         id: `${data.sessionId || 'unknown'}_${Date.now()}`,
         timestamp: Date.now(),

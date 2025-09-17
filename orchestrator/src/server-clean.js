@@ -49,6 +49,18 @@ app.post('/api/telemetry/stream', async (req, res) => {
     // Process behaviors into emotions
     const { emotions, patterns } = behaviorProcessor.processBatch(session_id, events);
 
+    // Broadcast processor stage events
+    if (emotions.length > 0) {
+      emotions.forEach(emotion => {
+        unifiedWS.broadcastPipelineEvent('processor', {
+          sessionId: session_id,
+          emotion: emotion.emotion,
+          confidence: emotion.confidence,
+          behavior: emotion.behavior
+        });
+      });
+    }
+
     // Store and broadcast each diagnosed emotion
     for (const emotion of emotions) {
       // Store in database
@@ -85,6 +97,16 @@ app.post('/api/telemetry/stream', async (req, res) => {
         frustration: emotions[emotions.length - 1]?.context?.frustration || 0,
         urgency: emotions[emotions.length - 1]?.context?.urgency || 0
       };
+
+      // Broadcast engine stage event
+      unifiedWS.broadcastPipelineEvent('engine', {
+        sessionId: session_id,
+        interventionType: pattern.intervention,
+        patternType: pattern.type,
+        emotion: emotionalContext.emotion,
+        confidence: emotionalContext.confidence
+      });
+
       const sent = unifiedWS.sendIntervention(session_id, pattern.intervention, emotionalContext);
 
       if (sent) {
@@ -277,6 +299,52 @@ app.post('/api/track-discount', async (req, res) => {
 });
 
 // Create Stripe discount (optional - requires Stripe integration)
+// GET /api/tenant-templates - Get tenant intervention configuration
+app.get('/api/tenant-templates', async (req, res) => {
+  try {
+    const { tenantId } = req.query;
+
+    if (!tenantId) {
+      return res.status(400).json({ error: 'tenantId is required' });
+    }
+
+    console.log(`🔧 Fetching intervention config for tenant: ${tenantId}`);
+
+    // Fetch intervention configuration from database
+    const { data, error } = await supabase
+      .from('intervention_configs')
+      .select('*')
+      .eq('tenant_id', tenantId)
+      .single();
+
+    if (error) {
+      if (error.code === 'PGRST116') {
+        // No config found - return defaults
+        console.log(`📝 No config found for ${tenantId}, returning defaults`);
+        return res.json({
+          tenant_id: tenantId,
+          config: {
+            discountOffer: { enabled: true, style: 'modal', discount: 15 },
+            trustSignals: { enabled: true, style: 'badges' },
+            socialProof: { enabled: true, style: 'toast' },
+            urgencyScarcity: { enabled: true, style: 'banner' },
+            valueProposition: { enabled: true, style: 'highlight' },
+            helpOffer: { enabled: true, style: 'floating' },
+            comparisonTable: { enabled: false, style: 'modal' },
+            exitRescue: { enabled: true, style: 'modal' }
+          }
+        });
+      }
+      throw error;
+    }
+
+    res.json(data);
+  } catch (error) {
+    console.error('Error fetching tenant config:', error);
+    res.status(500).json({ error: 'Failed to fetch configuration' });
+  }
+});
+
 app.post('/api/create-discount', async (req, res) => {
   try {
     const { code, percent_off, duration, max_redemptions, metadata } = req.body;

@@ -41,6 +41,14 @@ export const InterventionDashboard: React.FC = () => {
   const [activeInterventions, setActiveInterventions] = useState<Map<string, any>>(new Map());
   const [showFlowViz, setShowFlowViz] = useState(false);
   const [flowIconPressed, setFlowIconPressed] = useState(false);
+  const [stageCounts, setStageCounts] = useState({
+    telemetry: 0,
+    processor: 0,
+    engine: 0,
+    websocket: 0,
+    choreographer: 0,
+    renderer: 0
+  });
   const wsRef = useRef<WebSocket | null>(null);
   const longPressTimer = useRef<NodeJS.Timeout | null>(null);
 
@@ -73,6 +81,47 @@ export const InterventionDashboard: React.FC = () => {
   };
 
   const handleIncomingEvent = (data: any) => {
+    // Handle pipeline events separately
+    if (data.type === 'pipeline_event') {
+      const stage = data.stage as keyof typeof stageCounts;
+
+      // Update stage counts
+      setStageCounts(prev => ({
+        ...prev,
+        [stage]: prev[stage] + 1
+      }));
+
+      // Also add to event stream for visibility
+      const event: InterventionEvent = {
+        id: `${data.sessionId || 'unknown'}_${Date.now()}`,
+        timestamp: data.timestamp || Date.now(),
+        sessionId: data.sessionId || data.session_id,
+        type: mapEventType(data.payload?.behavior || data.payload?.interventionType || stage),
+        stage: stage,
+        data: data.payload || {},
+        correlationId: data.correlationId
+      };
+
+      setEvents(prev => [event, ...prev].slice(0, 100));
+      return;
+    }
+
+    // Handle intervention events
+    if (data.type === 'intervention_event') {
+      setStageCounts(prev => ({
+        ...prev,
+        engine: prev.engine + 1
+      }));
+
+      setActiveInterventions(prev => {
+        const next = new Map(prev);
+        next.set(data.sessionId, data.payload);
+        return next;
+      });
+      return;
+    }
+
+    // Handle legacy events
     const event: InterventionEvent = {
       id: `${data.sessionId || 'unknown'}_${Date.now()}`,
       timestamp: Date.now(),
@@ -84,15 +133,6 @@ export const InterventionDashboard: React.FC = () => {
     };
 
     setEvents(prev => [event, ...prev].slice(0, 100)); // Keep last 100
-
-    // Track active interventions
-    if (event.type === 'intervention') {
-      setActiveInterventions(prev => {
-        const next = new Map(prev);
-        next.set(event.sessionId, event);
-        return next;
-      });
-    }
 
     if (event.data.result === 'converted' || event.data.result === 'dismissed') {
       setActiveInterventions(prev => {

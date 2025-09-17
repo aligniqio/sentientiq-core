@@ -109,6 +109,10 @@ class UnifiedWebSocketServer extends EventEmitter {
       connectedAt: new Date()
     };
 
+    // Dashboard clients connect with generic session IDs, website clients have specific sessions
+    // Store dashboard clients separately so we can broadcast to them
+    const isDashboard = sessionId.startsWith('ws_') || sessionId.includes('dashboard');
+
     this.channels.interventions.set(sessionId, client);
 
     // Send connection confirmation
@@ -116,7 +120,8 @@ class UnifiedWebSocketServer extends EventEmitter {
       type: 'connected',
       channel: 'interventions',
       sessionId,
-      message: 'Ready to receive interventions'
+      isDashboard,
+      message: isDashboard ? 'Dashboard ready to monitor interventions' : 'Ready to receive interventions'
     }));
 
     // Handle messages from client
@@ -166,6 +171,18 @@ class UnifiedWebSocketServer extends EventEmitter {
       case 'telemetry':
         // Handle telemetry data from bundled script
         console.log(`📡 Telemetry received via WebSocket: ${data.events?.length || 0} events`);
+
+        // Broadcast to dashboard for pipeline monitoring
+        if (data.events && data.events.length > 0) {
+          data.events.forEach((event: any) => {
+            this.broadcastPipelineEvent('telemetry', {
+              sessionId,
+              behavior: event.behavior || event.type || event.event_type,
+              timestamp: event.timestamp || Date.now()
+            });
+          });
+        }
+
         this.emit('telemetry_received', {
           sessionId,
           tenantId: data.tenant_id,
@@ -269,12 +286,12 @@ class UnifiedWebSocketServer extends EventEmitter {
 
     if (client && client.ws.readyState === client.ws.OPEN) {
       // Generate correlation ID for tracking
-      const correlationId = `int-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      const correlationId = `int-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
 
       // Get intervention content
       const interventionContent = this.getInterventionContent(interventionType, context);
 
-      client.ws.send(JSON.stringify({
+      const interventionData = {
         type: 'intervention',
         intervention_type: interventionType,
         interventionType, // Both formats for compatibility
@@ -290,9 +307,28 @@ class UnifiedWebSocketServer extends EventEmitter {
           frustration: context.frustration,
           urgency: context.urgency
         }
-      }));
+      };
+
+      // Send to the specific client (website)
+      client.ws.send(JSON.stringify(interventionData));
 
       console.log(`🎯 Sent ${interventionType} intervention to ${sessionId} (${client.type} channel) - ${correlationId}`);
+
+      // Broadcast websocket delivery stage
+      this.broadcastPipelineEvent('websocket', {
+        sessionId,
+        interventionType,
+        correlationId,
+        delivered: true
+      });
+
+      // ALSO broadcast to all dashboard clients on the interventions channel for monitoring
+      this.broadcastInterventionToDashboard({
+        sessionId,
+        ...interventionData,
+        stage: 'engine',  // Mark this as coming from the intervention engine
+        component: 'intervention-engine'
+      });
 
       // Emit for diagnostics
       this.emit('intervention_sent', {
@@ -316,6 +352,63 @@ class UnifiedWebSocketServer extends EventEmitter {
       interventions: this.channels.interventions.size,
       total: this.channels.emotions.size + this.channels.interventions.size
     };
+  }
+
+  // Broadcast pipeline stage events to dashboard for monitoring
+  broadcastPipelineEvent(stage: string, eventData: any): void {
+    const message = JSON.stringify({
+      type: 'pipeline_event',
+      component: stage,
+      stage: stage,
+      timestamp: Date.now(),
+      sessionId: eventData.sessionId || eventData.session_id,
+      payload: eventData
+    });
+
+    let sent = 0;
+    // Send to all dashboard clients watching the intervention channel
+    this.channels.interventions.forEach((client) => {
+      const isDashboard = client.sessionId.startsWith('ws_') || client.sessionId.includes('dashboard');
+      if (isDashboard && client.ws.readyState === client.ws.OPEN) {
+        client.ws.send(message);
+        sent++;
+      }
+    });
+
+    if (sent > 0) {
+      console.log(`📊 Pipeline [${stage}] event broadcast to ${sent} dashboard clients`);
+    }
+  }
+
+  // Broadcast intervention event to all dashboard clients
+  broadcastInterventionToDashboard(interventionData: any): void {
+    const message = JSON.stringify({
+      type: 'intervention_event',  // Changed from 'event' to distinguish from telemetry
+      component: 'intervention-engine',
+      stage: 'engine',
+      sessionId: interventionData.sessionId,
+      payload: {
+        ...interventionData,
+        behavior: 'intervention_triggered',
+        event: 'intervention_triggered',
+        interventionType: interventionData.interventionType || interventionData.intervention_type
+      }
+    });
+
+    let sent = 0;
+    // Broadcast to all dashboard clients on the interventions channel
+    this.channels.interventions.forEach((client) => {
+      // Send to dashboard clients (those with generic session IDs)
+      const isDashboard = client.sessionId.startsWith('ws_') || client.sessionId.includes('dashboard');
+      if (isDashboard && client.ws.readyState === client.ws.OPEN) {
+        client.ws.send(message);
+        sent++;
+      }
+    });
+
+    if (sent > 0) {
+      console.log(`📊 Broadcasted intervention ${interventionData.interventionType} to ${sent} dashboard clients`);
+    }
   }
 
   private getInterventionContent(type: string, context: any = {}): any {
