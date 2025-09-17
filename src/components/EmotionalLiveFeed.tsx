@@ -421,6 +421,8 @@ const EmotionalLiveFeed = () => {
 
       ws.onerror = (error) => {
         console.error('Intervention WebSocket error:', error);
+        console.log('WebSocket URL:', `wss://api.sentientiq.app/ws?channel=interventions&tenant_id=${tenantId}&session=${sessionId}`);
+        console.log('WebSocket readyState:', ws.readyState);
       };
 
       ws.onclose = () => {
