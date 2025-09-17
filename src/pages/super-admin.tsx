@@ -120,7 +120,73 @@ export default function SuperAdmin() {
 
   const handleAddTenant = async () => {
     if (!supabase) return; // Skip if no Supabase client
-    
+
+    // Handle house account creation - bypass Stripe, go straight to setup
+    if (newTenant.tenant_type === 'house') {
+      try {
+        // Create organization in Clerk first
+        const apiUrl = import.meta.env.DEV
+          ? 'http://localhost:8888/.netlify/functions/create-organization'
+          : '/.netlify/functions/create-organization';
+
+        const clerkResponse = await fetch(apiUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            companyName: newTenant.name,
+            adminEmail: newTenant.email,
+            tenantType: 'house',
+            subscriptionTier: 'starter', // Give them starter features
+            userId: user?.id
+          })
+        });
+
+        if (!clerkResponse.ok) {
+          const errorData = await clerkResponse.json();
+          throw new Error(errorData.error || 'Failed to create Clerk organization');
+        }
+
+        const { organizationId } = await clerkResponse.json();
+
+        // Create in Supabase with special house account flags
+        const { error } = await supabase
+          .from('organizations')
+          .insert({
+            name: newTenant.name,
+            domain: newTenant.email.split('@')[1],
+            admin_email: newTenant.email,
+            clerk_organization_id: organizationId,
+            subscription_tier: 'starter',
+            subscription_status: 'house_account',
+            features: {
+              white_label: false,
+              api_access: true,
+              sage_assistant: true,
+              emotional_detection: true,
+              behavioral_analytics: true,
+              is_house_account: true
+            },
+            created_at: new Date().toISOString()
+          });
+
+        if (error) throw error;
+
+        // Send welcome email with direct link to onboarding
+        alert(`✅ House account created for ${newTenant.name}\n\nThey'll receive an email with:\n• Direct link to sign up\n• Bypass payment flow\n• Straight to GTM setup\n\nFull Starter tier features enabled!`);
+
+        fetchTenants();
+        setShowAddTenant(false);
+        setNewTenant({ name: '', email: '', tenant_type: 'standard', revenue_share: 0.30, demo_days: 7 });
+        return;
+      } catch (error) {
+        console.error('Failed to create house account:', error);
+        alert('Failed to create house account. Check console for details.');
+        return;
+      }
+    }
+
     // Handle demo account creation differently
     if (newTenant.tenant_type === 'demo') {
       try {
@@ -550,13 +616,15 @@ export default function SuperAdmin() {
                       <td className="py-4 text-white/80">{tenant.slug || tenant.tenant_id}</td>
                       <td className="py-4">
                         <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                          tenant.subscription_tier === 'free'
+                          tenant.subscription_status === 'house_account'
+                            ? 'bg-gradient-to-r from-cyan-500/20 to-blue-500/20 text-cyan-300 border border-cyan-500/30'
+                            : tenant.subscription_tier === 'free'
                             ? 'bg-gradient-to-r from-green-500/20 to-emerald-500/20 text-green-300 border border-green-500/30'
-                            : tenant.features?.white_label 
+                            : tenant.features?.white_label
                             ? 'bg-gradient-to-r from-purple-500/20 to-pink-500/20 text-purple-300 border border-purple-500/30'
                             : 'bg-blue-500/20 text-blue-300 border border-blue-500/30'
                         }`}>
-                          {tenant.subscription_tier === 'free' ? '🎭 Demo' : tenant.features?.white_label ? '👑 Agency' : 'Standard'}
+                          {tenant.subscription_status === 'house_account' ? '🏠 House' : tenant.subscription_tier === 'free' ? '🎭 Demo' : tenant.features?.white_label ? '👑 Agency' : 'Standard'}
                         </span>
                       </td>
                       <td className="py-4">
@@ -661,6 +729,7 @@ export default function SuperAdmin() {
                       <option value="enterprise" className="bg-gray-900">Enterprise - Custom everything ($9,997/mo+)</option>
                       <option value="agency" className="bg-gray-900">Agency - White-label & resell ($999/mo + revenue share)</option>
                       <option value="demo" className="bg-gray-900">Demo - Time-limited clickaround (FREE)</option>
+                      <option value="house" className="bg-gray-900">🏠 House Account - Full Starter (FREE)</option>
                     </select>
                   </div>
 
@@ -682,9 +751,11 @@ export default function SuperAdmin() {
                     </div>
                   )}
 
-                  {newTenant.tenant_type === 'demo' && (
+                  {(newTenant.tenant_type === 'demo' || newTenant.tenant_type === 'trial') && (
                     <div>
-                      <label className="block text-white/60 mb-2 text-sm font-medium">Demo Duration (days)</label>
+                      <label className="block text-white/60 mb-2 text-sm font-medium">
+                        {newTenant.tenant_type === 'trial' ? 'Trial Duration (days)' : 'Demo Duration (days)'}
+                      </label>
                       <input
                         type="number"
                         min="1"
@@ -695,14 +766,24 @@ export default function SuperAdmin() {
                         placeholder="7"
                       />
                       <p className="text-xs text-white/40 mt-1">
-                        Demo account will expire after {newTenant.demo_days} days
+                        {newTenant.tenant_type === 'trial' ? 'Full access trial' : 'Demo account'} will expire after {newTenant.demo_days} days
                       </p>
                     </div>
                   )}
 
                   <div className="bg-gradient-to-r from-purple-500/10 to-pink-500/10 rounded-xl p-4 border border-purple-500/20">
                     <p className="text-sm text-white/80">
-                      {newTenant.tenant_type === 'demo' ? (
+                      {newTenant.tenant_type === 'house' ? (
+                        <>
+                          <span className="font-bold text-cyan-400">🏠 House Account (FREE):</span>
+                          <br />• Friends, family, investors, or trials
+                          <br />• Full Starter tier features
+                          <br />• GTM implementation + interventions
+                          <br />• No payment required
+                          <br />• No expiration
+                          <br />• You manually control access
+                        </>
+                      ) : newTenant.tenant_type === 'demo' ? (
                         <>
                           <span className="font-bold text-green-400">Demo Account (FREE):</span>
                           <br />• Read-only clickaround access
