@@ -10,7 +10,9 @@ import Auth from '../pages/auth'
 import Settings from '../pages/settings'
 import Pricing from '../pages/pricing'
 import Billing from '../pages/billing'
-import EmotionalLiveFeed from '../components/EmotionalLiveFeed'
+// import EmotionalLiveFeed from '../components/EmotionalLiveFeed' // Old API-based component
+import EmotionalStream from '../components/EmotionalStream'
+import InterventionStream from '../components/InterventionStream'
 
 // Admin pages
 import TenantsPage from './admin/TenantsPage'
@@ -45,7 +47,10 @@ function App() {
               <SignedIn>
                 <OnboardingRouter>
                   <Layout>
-                    <EmotionalLiveFeed /> {/* Main dashboard - real emotions from real users */}
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                      <EmotionalStream />
+                      <InterventionStream />
+                    </div>
                   </Layout>
                 </OnboardingRouter>
               </SignedIn>
@@ -66,7 +71,10 @@ function App() {
               <>
                 <SignedIn>
                   <Layout>
-                    <EmotionalLiveFeed />
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                      <EmotionalStream />
+                      <InterventionStream />
+                    </div>
                   </Layout>
                 </SignedIn>
                 <SignedOut>
@@ -138,7 +146,10 @@ function App() {
             <>
               <SignedIn>
                 <Layout>
-                  <EmotionalLiveFeed />
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <EmotionalStream />
+                    <InterventionStream />
+                  </div>
                 </Layout>
               </SignedIn>
               <SignedOut>
