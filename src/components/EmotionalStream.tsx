@@ -154,9 +154,20 @@ const EmotionalStream = () => {
                   timestamp: state.timestamp
                 };
 
-                setEvents(prev => [emotionalEvent, ...prev].slice(0, 50));
+                // Rate limit: only add event if enough time has passed
+                setEvents(prev => {
+                  const now = Date.now();
+                  const lastEvent = prev[0];
+                  const timeSinceLastEvent = lastEvent ? now - new Date(lastEvent.timestamp).getTime() : 1000;
 
-                // Update stats
+                  // Only add if at least 100ms since last event (10 events/sec max)
+                  if (timeSinceLastEvent >= 100) {
+                    return [emotionalEvent, ...prev].slice(0, 100); // Increased limit to 100
+                  }
+                  return prev;
+                });
+
+                // Always update stats
                 setStats(prev => ({
                   ...prev,
                   totalEvents: prev.totalEvents + 1,
@@ -275,7 +286,7 @@ const EmotionalStream = () => {
       </div>
 
       {/* Event Feed */}
-      <div className="space-y-2 max-h-[500px] overflow-y-auto">
+      <div className="space-y-2 max-h-[500px] overflow-y-auto overflow-x-hidden scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
         <AnimatePresence mode="popLayout">
           {events.length === 0 ? (
             <motion.div
@@ -291,11 +302,16 @@ const EmotionalStream = () => {
             events.map((event, index) => (
               <motion.div
                 key={`${event.sessionId}-${event.timestamp}-${index}`}
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, scale: 0.95 }}
-                transition={{ delay: index * 0.02 }}
-                className="flex items-center gap-3 p-3 bg-white/5 rounded-lg hover:bg-white/10 transition-all border border-white/10"
+                initial={{ opacity: 0, y: 20, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, x: -20 }}
+                transition={{
+                  type: "spring",
+                  stiffness: 500,
+                  damping: 30,
+                  delay: Math.min(index * 0.05, 0.2)
+                }}
+                className="flex items-center gap-3 p-3 bg-white/5 rounded-lg hover:bg-white/10 transition-all border border-white/10 overflow-hidden"
               >
                 {/* Emotion Badge */}
                 <div className={`px-2 py-1 rounded-full bg-gradient-to-r ${EMOTION_COLORS[event.emotion] || EMOTION_COLORS.default} shadow-lg`}>
@@ -305,7 +321,7 @@ const EmotionalStream = () => {
                 </div>
 
                 {/* Session Info */}
-                <div className="flex-1">
+                <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 text-sm">
                     <span className="font-mono text-white/60">
                       {event.sessionId.substring(0, 8)}...
@@ -314,7 +330,7 @@ const EmotionalStream = () => {
                       {event.confidence}% confidence
                     </span>
                     {event.pageUrl && (
-                      <span className="text-white/40 text-xs">
+                      <span className="text-white/40 text-xs truncate max-w-[200px] inline-block">
                         {new URL(event.pageUrl).pathname}
                       </span>
                     )}
