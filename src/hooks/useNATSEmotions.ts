@@ -77,12 +77,9 @@ export const useNATSEmotions = (onEvent: (event: EmotionalEvent) => void) => {
       const stream = await jsm.streams.info(config.streamName);
       console.log(`Stream ${config.streamName} has ${stream.state.messages} messages`);
 
-      // Subscribe to emotional events with push consumer
-      // NATS requires a deliver_subject for push consumers
-      const sub = await js.subscribe(config.subject, {
-        deliver_subject: `deliver.emotions.${Date.now()}`,
-        ack_policy: 'explicit'
-      } as any);
+      // Subscribe directly to the subject without JetStream consumer
+      // This creates a simple subscription
+      const sub = nc.subscribe(config.subject);
 
       setConnectionStatus('Subscribed to emotional events');
       console.log('📡 Subscribed to emotional events');
@@ -95,15 +92,11 @@ export const useNATSEmotions = (onEvent: (event: EmotionalEvent) => void) => {
             const event = jc.decode(msg.data) as EmotionalEvent;
             console.log('🎯 Emotional event:', event);
 
-            // Acknowledge the message
-            msg.ack();
-
             // Pass to handler
             onEvent(event);
 
           } catch (err) {
             console.error('Error processing message:', err);
-            msg.nak(); // Negative acknowledge for retry
           }
         }
       })();

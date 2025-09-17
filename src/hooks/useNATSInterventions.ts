@@ -87,12 +87,9 @@ export const useNATSInterventions = (onEvent: (event: InterventionEvent) => void
         });
       }
 
-      // Subscribe to intervention events with push consumer
-      // NATS requires a deliver_subject for push consumers
-      const sub = await js.subscribe(config.subject, {
-        deliver_subject: `deliver.interventions.${Date.now()}`,
-        ack_policy: 'explicit'
-      } as any);
+      // Subscribe directly to the subject without JetStream consumer
+      // This creates a simple subscription
+      const sub = nc.subscribe(config.subject);
 
       setConnectionStatus('Subscribed to intervention events');
       console.log('📡 Subscribed to intervention events');
@@ -105,15 +102,11 @@ export const useNATSInterventions = (onEvent: (event: InterventionEvent) => void
             const event = jc.decode(msg.data) as InterventionEvent;
             console.log('🎯 Intervention event:', event);
 
-            // Acknowledge the message
-            msg.ack();
-
             // Pass to handler
             onEvent(event);
 
           } catch (err) {
             console.error('Error processing intervention message:', err);
-            msg.nak(); // Negative acknowledge for retry
           }
         }
       })();
