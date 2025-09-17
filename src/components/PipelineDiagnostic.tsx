@@ -19,18 +19,18 @@ const PipelineDiagnostic = () => {
   const [isRunning, setIsRunning] = useState(false);
   const [steps, setSteps] = useState<DiagnosticStep[]>([
     {
-      name: 'Telemetry WebSocket',
+      name: 'NATS Emotional Stream',
+      endpoint: `ws://${window.location.hostname}:9222`,
+      status: 'pending'
+    },
+    {
+      name: 'NATS Intervention Stream',
+      endpoint: `ws://${window.location.hostname}:9222`,
+      status: 'pending'
+    },
+    {
+      name: 'Legacy Telemetry Gateway',
       endpoint: 'wss://api.sentientiq.app/ws/telemetry',
-      status: 'pending'
-    },
-    {
-      name: 'Emotional Broadcaster',
-      endpoint: 'wss://api.sentientiq.app/ws/emotions',
-      status: 'pending'
-    },
-    {
-      name: 'Intervention Broadcaster',
-      endpoint: 'wss://api.sentientiq.app/ws/interventions',
       status: 'pending'
     }
   ]);
@@ -247,8 +247,8 @@ const PipelineDiagnostic = () => {
     >
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h2 className="text-xl font-bold text-white">Pipeline Diagnostic</h2>
-          <p className="text-sm text-white/60 mt-1">Test WebSocket connections in the event pipeline</p>
+          <h2 className="text-xl font-bold text-white">System Health Monitor</h2>
+          <p className="text-sm text-white/60 mt-1">Real-time connection status and diagnostics</p>
         </div>
         <div className="flex gap-2">
           <button

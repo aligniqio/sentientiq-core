@@ -9,8 +9,8 @@ import NATSEmotionalStream from '@/components/NATSEmotionalStream';
 import NATSInterventionStream from '@/components/NATSInterventionStream';
 import EVIDisplay from '@/components/EVIDisplay';
 import PipelineDiagnostic from '@/components/PipelineDiagnostic';
+import PageHeader from '@/components/PageHeader';
 import {
-  Brain,
   BarChart3,
   Zap,
   TrendingUp,
@@ -35,20 +35,17 @@ const PulseDashboard: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-black">
-      {/* Header */}
+      {/* Page Header */}
+      <PageHeader
+        title="SentientIQ Pulse"
+        subtitle="Real-time Emotional Intelligence Dashboard"
+      />
+
+      {/* Navigation Bar */}
       <header className="border-b border-gray-800 bg-black/50 backdrop-blur-xl sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-8">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-gradient-to-br from-blue-600 to-purple-600">
-                  <Brain className="w-6 h-6 text-white" />
-                </div>
-                <div>
-                  <h1 className="text-xl font-bold text-white">SentientIQ Pulse</h1>
-                  <p className="text-xs text-gray-400">Emotional Intelligence Dashboard</p>
-                </div>
-              </div>
 
               {/* Navigation */}
               <nav className="flex gap-1">
