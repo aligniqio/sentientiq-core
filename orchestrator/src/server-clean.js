@@ -90,11 +90,22 @@ app.post('/api/telemetry/stream', async (req, res) => {
 
       try {
         // Pass emotional context from the processor
+        const latestEmotion = emotions[emotions.length - 1];
+        const emotionName = latestEmotion?.emotion || 'unknown';
+
+        // Map emotion types to frustration/urgency/anxiety levels
+        const frustrationEmotions = ['frustration', 'rage', 'rage_click', 'confusion', 'cart_shock'];
+        const urgencyEmotions = ['abandonment_intent', 'exit_risk', 'abandonment_warning', 'cart_abandonment',
+                                  'cart_hesitation', 'hesitation'];
+        const anxietyEmotions = ['price_shock', 'sticker_shock', 'price_hesitation', 'price_consideration',
+                                  'anxiety', 'skeptical', 'trust_hesitation', 'comparison_shopping'];
+
         const emotionalContext = {
-          emotion: emotions[emotions.length - 1]?.emotion || 'unknown',
-          confidence: emotions[emotions.length - 1]?.confidence || 0,
-          frustration: emotions[emotions.length - 1]?.context?.frustration || 0,
-          urgency: emotions[emotions.length - 1]?.context?.urgency || 0
+          emotion: emotionName,
+          confidence: latestEmotion?.confidence || 0,
+          frustration: frustrationEmotions.includes(emotionName) ? (latestEmotion?.confidence || 0) : 0,
+          urgency: urgencyEmotions.includes(emotionName) ? (latestEmotion?.confidence || 0) : 0,
+          anxiety: anxietyEmotions.includes(emotionName) ? (latestEmotion?.confidence || 0) : 0
         };
 
         // Don't broadcast engine events - only final interventions should be visible

@@ -567,6 +567,28 @@ export class BehaviorProcessor {
    * Interpret raw telemetry physics into behavioral events
    */
   interpretTelemetry(event) {
+    // CRITICAL: Pass through click and hover events UNCHANGED
+    if (event.type === 'click' || event.type === 'hover') {
+      // Just add the context if it's missing, but keep the damn type
+      const target = event.target || event.el || event.text || event.href || '';
+      const targetLower = target.toLowerCase ? target.toLowerCase() : String(target).toLowerCase();
+
+      // Enhance context for pricing-related interactions
+      const isPricing = targetLower.includes('pric') ||
+                       (event.href && event.href.includes('pricing')) ||
+                       event.ctx?.pricing;
+
+      return {
+        ...event,
+        ctx: {
+          ...event.ctx,
+          pricing: isPricing,
+          cta: isPricing || targetLower.includes('buy') || targetLower.includes('checkout')
+        },
+        target: target
+      };
+    }
+
     // If it already has a behavior type, return as-is
     if (event.type || event.behavior) {
       return event;
@@ -626,7 +648,6 @@ export class BehaviorProcessor {
           return {
             ...event,
             type: 'hover',
-            duration: 2000, // Longer duration for pricing hover
             ctx: { ...event.ctx, pricing: true },
             target
           };
@@ -634,7 +655,6 @@ export class BehaviorProcessor {
         return {
           ...event,
           type: 'hover',
-          duration: 1000,
           ctx: event.ctx,
           target
         };
@@ -723,6 +743,10 @@ export class BehaviorProcessor {
     // First interpret raw telemetry
     const interpretedEvent = this.interpretTelemetry(event);
     if (!interpretedEvent) {
+      // Skip events we don't care about
+      if (event.event === 'mouse_deceleration' || event.event === 'rage_scroll') {
+        return null; // These are noisy, ignore them
+      }
       return null; // Not a meaningful event
     }
     event = interpretedEvent;
@@ -1005,6 +1029,29 @@ export class BehaviorProcessor {
     } catch (error) {
       console.error('Failed to log intervention:', error);
     }
+  }
+
+  /**
+   * Get the user's journey stage based on their history
+   */
+  getJourneyStage(session) {
+    const history = session.history || [];
+    const emotions = history.map(h => h.emotion).filter(Boolean);
+
+    // Journey stages
+    if (emotions.includes('checkout_intent') || emotions.includes('conversion_imminent')) {
+      return 'checkout';
+    }
+    if (emotions.includes('purchase_intent') || emotions.includes('price_consideration')) {
+      return 'evaluation';
+    }
+    if (emotions.includes('deep_engagement') || emotions.includes('demo_intent')) {
+      return 'interest';
+    }
+    if (emotions.includes('browsing') || emotions.includes('exploring')) {
+      return 'discovery';
+    }
+    return 'arrival';
   }
 
   /**
