@@ -77,9 +77,12 @@ export const useNATSEmotions = (onEvent: (event: EmotionalEvent) => void) => {
       const stream = await jsm.streams.info(config.streamName);
       console.log(`Stream ${config.streamName} has ${stream.state.messages} messages`);
 
-      // Subscribe to emotional events
-      // @ts-ignore - NATS.ws API requires options but works with undefined
-      const sub = await js.subscribe(config.subject, undefined);
+      // Subscribe to emotional events with push consumer
+      // NATS requires a deliver_subject for push consumers
+      const sub = await js.subscribe(config.subject, {
+        deliver_subject: `deliver.emotions.${Date.now()}`,
+        ack_policy: 'explicit'
+      } as any);
 
       setConnectionStatus('Subscribed to emotional events');
       console.log('📡 Subscribed to emotional events');

@@ -87,9 +87,12 @@ export const useNATSInterventions = (onEvent: (event: InterventionEvent) => void
         });
       }
 
-      // Subscribe to intervention events
-      // @ts-ignore - NATS.ws API requires options but works with undefined
-      const sub = await js.subscribe(config.subject, undefined);
+      // Subscribe to intervention events with push consumer
+      // NATS requires a deliver_subject for push consumers
+      const sub = await js.subscribe(config.subject, {
+        deliver_subject: `deliver.interventions.${Date.now()}`,
+        ack_policy: 'explicit'
+      } as any);
 
       setConnectionStatus('Subscribed to intervention events');
       console.log('📡 Subscribed to intervention events');
