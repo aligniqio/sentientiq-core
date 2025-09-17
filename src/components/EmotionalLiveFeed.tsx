@@ -410,22 +410,36 @@ const EmotionalLiveFeed = () => {
     if (!user) return;
 
     const connectInterventionWs = () => {
-      const tenantId = window.location.hostname === 'localhost' ? user.id : 'demo';
+      const tenantId = user.id || 'demo';
       const sessionId = `dashboard_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      const ws = new WebSocket(`wss://api.sentientiq.app/ws?channel=interventions&tenant_id=${tenantId}&session=${sessionId}`);
+      const wsUrl = `wss://api.sentientiq.app/ws?channel=interventions&tenant_id=${tenantId}&session=${sessionId}`;
+
+      console.log('Connecting to intervention WebSocket:', wsUrl);
+      const ws = new WebSocket(wsUrl);
+
+      ws.onopen = () => {
+        console.log('Intervention WebSocket connected successfully');
+      };
 
       ws.onmessage = (event) => {
-        const data = JSON.parse(event.data);
-        handleIncomingInterventionEvent(data);
+        try {
+          const data = JSON.parse(event.data);
+          console.log('Intervention WebSocket message received:', data.type);
+          handleIncomingInterventionEvent(data);
+        } catch (e) {
+          console.error('Failed to parse intervention message:', e);
+        }
       };
 
       ws.onerror = (error) => {
-        console.error('Intervention WebSocket error:', error);
-        console.log('WebSocket URL:', `wss://api.sentientiq.app/ws?channel=interventions&tenant_id=${tenantId}&session=${sessionId}`);
+        console.error('Intervention WebSocket error event:', error);
         console.log('WebSocket readyState:', ws.readyState);
+        console.log('WebSocket URL:', wsUrl);
       };
 
-      ws.onclose = () => {
+      ws.onclose = (event) => {
+        console.log(`Intervention WebSocket closed. Code: ${event.code}, Reason: ${event.reason}`);
+        // Reconnect after 3 seconds
         setTimeout(connectInterventionWs, 3000);
       };
 
