@@ -36,12 +36,6 @@ const PulseDashboard: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-black">
-      {/* Page Header */}
-      <PageHeader
-        title="SentientIQ Pulse"
-        subtitle="Real-time Emotional Intelligence Dashboard"
-      />
-
       {/* Navigation Bar */}
       <header className="border-b border-gray-800 bg-black/50 backdrop-blur-xl sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-6 py-4">
@@ -83,6 +77,14 @@ const PulseDashboard: React.FC = () => {
 
       {/* Content */}
       <div className="max-w-[1920px] mx-auto">
+        {/* Page Header */}
+        <div className="p-6 pb-0">
+          <PageHeader
+            title="SentientIQ Pulse"
+            subtitle="Real-time Emotional Intelligence Dashboard"
+          />
+        </div>
+
         {activeView === 'streams' && (
           <div className="p-6">
             {/* Top Level Metrics */}
