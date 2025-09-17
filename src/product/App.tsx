@@ -47,7 +47,7 @@ function App() {
               <SignedIn>
                 <OnboardingRouter>
                   <Layout>
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div className="space-y-6">
                       <EmotionalStream />
                       <InterventionStream />
                     </div>
@@ -71,7 +71,7 @@ function App() {
               <>
                 <SignedIn>
                   <Layout>
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div className="space-y-6">
                       <EmotionalStream />
                       <InterventionStream />
                     </div>
@@ -146,7 +146,7 @@ function App() {
             <>
               <SignedIn>
                 <Layout>
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <div className="space-y-6">
                     <EmotionalStream />
                     <InterventionStream />
                   </div>
