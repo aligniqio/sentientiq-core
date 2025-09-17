@@ -4,7 +4,7 @@
  * Broadcast Point #1: Real-time emotions from behavior processor
  */
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Activity, AlertCircle, Zap, Brain } from 'lucide-react';
 
@@ -95,6 +95,45 @@ const EmotionalStream = () => {
   const [isLoading, setIsLoading] = useState(true);
   const ws = useRef<WebSocket | null>(null);
   const reconnectTimeout = useRef<NodeJS.Timeout>();
+  const eventQueue = useRef<EmotionalEvent[]>([]);
+  const batchTimeout = useRef<NodeJS.Timeout>();
+  const lastFlushTime = useRef<number>(Date.now());
+
+  // Clear all events and reset
+  const flushEvents = useCallback(() => {
+    console.log('Flushing events - queue size:', eventQueue.current.length, 'displayed:', events.length);
+    eventQueue.current = [];
+    setEvents([]);
+    if (batchTimeout.current) {
+      clearTimeout(batchTimeout.current);
+      batchTimeout.current = undefined;
+    }
+    lastFlushTime.current = Date.now();
+  }, [events.length]);
+
+  // Batch process queued events
+  const processBatch = useCallback(() => {
+    // Auto-flush if queue is too large
+    if (eventQueue.current.length > 50) {
+      console.log('Queue overflow - auto-flushing');
+      flushEvents();
+      return;
+    }
+
+    if (eventQueue.current.length > 0) {
+      const batch = eventQueue.current.splice(0, 3); // Process max 3 at a time (reduced from 5)
+      setEvents(prev => {
+        // Auto-flush if display is overwhelmed
+        if (prev.length > 30) {
+          console.log('Display overflow - auto-flushing');
+          flushEvents();
+          return [];
+        }
+        const newEvents = [...batch, ...prev].slice(0, 30); // Reduced from 100 to 30
+        return newEvents;
+      });
+    }
+  }, [flushEvents]);
 
   useEffect(() => {
     let isCleaningUp = false;
@@ -124,66 +163,71 @@ const EmotionalStream = () => {
         };
 
         ws.current.onmessage = (event) => {
-          try {
-            const message = JSON.parse(event.data);
+          // Defer ALL processing to next tick to keep handler fast
+          setTimeout(() => {
+            try {
+              const message = JSON.parse(event.data);
 
-            switch(message.type) {
-              case 'connection':
-                console.log('Connection established:', message.connectionId);
-                break;
+              switch(message.type) {
+                case 'connection':
+                  console.log('Connection established:', message.connectionId);
+                  break;
 
-              case 'subscribed':
-                console.log('Subscription confirmed');
-                break;
+                case 'subscribed':
+                  console.log('Subscription confirmed');
+                  break;
 
-              case 'emotional_state':
-                const state = message.data;
-                const emotionalEvent: EmotionalEvent = {
-                  sessionId: state.sessionId,
-                  tenantId: state.tenantId,
-                  emotion: state.emotion,
-                  confidence: state.confidence,
-                  intensity: state.intensity,
-                  frustration: state.vectors?.frustration,
-                  anxiety: state.vectors?.anxiety,
-                  urgency: state.vectors?.urgency,
-                  excitement: state.vectors?.excitement,
-                  trust: state.vectors?.trust,
-                  pageUrl: state.pageUrl,
-                  sessionAge: state.sessionAge,
-                  timestamp: state.timestamp
-                };
-
-                // Rate limit: only add event if enough time has passed
-                setEvents(prev => {
+                case 'emotional_state':
+                  // Rate limiting - skip if we're getting flooded
                   const now = Date.now();
-                  const lastEvent = prev[0];
-                  const timeSinceLastEvent = lastEvent ? now - new Date(lastEvent.timestamp).getTime() : 1000;
-
-                  // Only add if at least 100ms since last event (10 events/sec max)
-                  if (timeSinceLastEvent >= 100) {
-                    return [emotionalEvent, ...prev].slice(0, 100); // Increased limit to 100
+                  if (now - lastFlushTime.current < 100) {
+                    // Skip events for 100ms after a flush
+                    return;
                   }
-                  return prev;
-                });
 
-                // Always update stats
-                setStats(prev => ({
-                  ...prev,
-                  totalEvents: prev.totalEvents + 1,
-                  volatilityIndex: calculateVolatility(state)
-                }));
-                break;
+                  // Skip if queue is already too large
+                  if (eventQueue.current.length > 30) {
+                    return;
+                  }
 
-              case 'stats':
-                if (message.data) {
-                  setStats(message.data);
-                }
-                break;
+                  const state = message.data;
+
+                  // Simple push to queue - no object creation if we're overwhelmed
+                  eventQueue.current.push({
+                    sessionId: state.sessionId,
+                    tenantId: state.tenantId,
+                    emotion: state.emotion,
+                    confidence: state.confidence,
+                    intensity: state.intensity,
+                    frustration: state.vectors?.frustration,
+                    anxiety: state.vectors?.anxiety,
+                    urgency: state.vectors?.urgency,
+                    excitement: state.vectors?.excitement,
+                    trust: state.vectors?.trust,
+                    pageUrl: state.pageUrl,
+                    sessionAge: state.sessionAge,
+                    timestamp: state.timestamp
+                  });
+
+                  // Use single shared timeout for all batching
+                  if (!batchTimeout.current) {
+                    batchTimeout.current = setTimeout(() => {
+                      batchTimeout.current = null;
+                      processBatch();
+                    }, 150); // Increased to 150ms
+                  }
+                  break;
+
+                case 'stats':
+                  if (message.data) {
+                    setStats(message.data);
+                  }
+                  break;
+              }
+            } catch (error) {
+              // Silent fail - don't even log in production
             }
-          } catch (error) {
-            console.error('Failed to parse emotional message:', error);
-          }
+          }, 0);
         };
 
         ws.current.onerror = (error) => {
@@ -222,12 +266,16 @@ const EmotionalStream = () => {
         clearTimeout(reconnectTimeout.current);
       }
 
+      if (batchTimeout.current) {
+        clearTimeout(batchTimeout.current);
+      }
+
       if (ws.current) {
         ws.current.close();
         ws.current = null;
       }
     };
-  }, []);
+  }, [processBatch]);
 
   const calculateVolatility = (state: any): number => {
     // Simple volatility calculation based on emotional vectors
@@ -259,11 +307,21 @@ const EmotionalStream = () => {
           <h2 className="text-xl font-bold text-white">Live Emotional Stream</h2>
           <p className="text-sm text-white/60 mt-1">Real-time emotions from behavior processor</p>
         </div>
-        <div className="flex items-center gap-2">
-          <div className={`h-2 w-2 rounded-full ${isConnected ? 'bg-green-400 animate-pulse' : 'bg-red-400'}`} />
-          <span className="text-sm text-white/60">
-            {isConnected ? 'Connected' : 'Reconnecting...'}
-          </span>
+        <div className="flex items-center gap-4">
+          {events.length > 10 && (
+            <button
+              onClick={flushEvents}
+              className="px-3 py-1 bg-red-500/20 hover:bg-red-500/30 text-red-400 text-sm rounded-lg transition-colors"
+            >
+              Clear ({events.length})
+            </button>
+          )}
+          <div className="flex items-center gap-2">
+            <div className={`h-2 w-2 rounded-full ${isConnected ? 'bg-green-400 animate-pulse' : 'bg-red-400'}`} />
+            <span className="text-sm text-white/60">
+              {isConnected ? 'Connected' : 'Reconnecting...'}
+            </span>
+          </div>
         </div>
       </div>
 
@@ -302,16 +360,11 @@ const EmotionalStream = () => {
             events.map((event, index) => (
               <motion.div
                 key={`${event.sessionId}-${event.timestamp}-${index}`}
-                initial={{ opacity: 0, y: 20, scale: 0.95 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, x: -20 }}
-                transition={{
-                  type: "spring",
-                  stiffness: 500,
-                  damping: 30,
-                  delay: Math.min(index * 0.05, 0.2)
-                }}
-                className="flex items-center gap-3 p-3 bg-white/5 rounded-lg hover:bg-white/10 transition-all border border-white/10 overflow-hidden"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                className="flex items-center gap-3 p-3 bg-white/5 rounded-lg hover:bg-white/10 transition-colors border border-white/10 overflow-hidden"
               >
                 {/* Emotion Badge */}
                 <div className={`px-2 py-1 rounded-full bg-gradient-to-r ${EMOTION_COLORS[event.emotion] || EMOTION_COLORS.default} shadow-lg`}>
