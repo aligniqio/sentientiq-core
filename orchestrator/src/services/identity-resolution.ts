@@ -9,7 +9,7 @@
 
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import crypto from 'crypto';
-import type { AuthenticatedUser } from '../auth/clerk-middleware';
+import type { AuthenticatedUser } from '../auth/clerk-middleware.js';
 
 // Lazy-initialize Supabase client
 let supabase: SupabaseClient | null = null;

@@ -21,6 +21,7 @@ import SystemImplementation from '../pages/system/implementation'
 import { Configuration as SystemConfiguration } from '../pages/system/configuration'
 import OnboardingWelcome from '../pages/onboarding-welcome'
 import OnboardingRouter from '../components/OnboardingRouter'
+import PaymentRequired from '../pages/payment-required'
 
 // Candy Kit UI enhancements
 import { SenseiCandyProvider } from '../components/ui/SenseiCandy'
@@ -114,7 +115,7 @@ function App() {
           {/* Auth page - explicit route */}
           <Route path="/auth" element={<Auth />} />
 
-          {/* Onboarding flow */}
+          {/* Onboarding flow - only accessible with valid payment */}
           <Route path="/onboarding-welcome" element={
             <>
               <SignedIn>
@@ -125,6 +126,9 @@ function App() {
               </SignedOut>
             </>
           } />
+
+          {/* Payment required page */}
+          <Route path="/payment-required" element={<PaymentRequired />} />
 
           {/* Removed legacy routes - /start and /boardroom */}
 

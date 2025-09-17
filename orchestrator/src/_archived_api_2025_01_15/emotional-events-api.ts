@@ -5,8 +5,8 @@
 
 import { Router, Request, Response } from 'express';
 import { createClient } from '@supabase/supabase-js';
-import { patternEngine } from '../services/pattern-engine';
-import { wsManager } from '../services/websocket-manager';
+import { patternEngine } from '../services/pattern-engine.js';
+import { wsManager } from '../services/_archived_2025_01_15/websocket-manager.js';
 
 const router = Router();
 

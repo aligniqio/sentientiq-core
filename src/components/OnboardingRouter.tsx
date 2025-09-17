@@ -31,6 +31,32 @@ export const OnboardingRouter: React.FC<OnboardingRouterProps> = ({ children }) 
     }
 
     try {
+      // First check if organization has valid subscription or is a house account
+      const { data: orgData, error: orgError } = await supabase
+        .from('organizations')
+        .select('subscription_status, subscription_tier, features')
+        .eq('id', organization.id)
+        .single();
+
+      if (orgError || !orgData) {
+        console.error('Error checking organization subscription:', orgError);
+        setLoading(false);
+        return;
+      }
+
+      // Check if they have valid access (paid, house account, or trial)
+      const hasValidAccess =
+        orgData.subscription_status === 'active' ||
+        orgData.subscription_status === 'house_account' ||
+        orgData.subscription_status === 'trialing' ||
+        orgData.features?.is_house_account === true;
+
+      if (!hasValidAccess) {
+        // No valid subscription - redirect to payment required page
+        window.location.href = '/payment-required';
+        return;
+      }
+
       // Check organization member's onboarding status
       const { data, error } = await supabase
         .from('organization_members')

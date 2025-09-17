@@ -14,7 +14,7 @@ import {
   RefreshCw,
   Zap
 } from 'lucide-react';
-import { useUser } from '@clerk/clerk-react';
+import { useUser, useOrganization } from '@clerk/clerk-react';
 import { getSupabaseClient } from '@/lib/supabase';
 
 interface ComparisonData {
@@ -120,6 +120,7 @@ const INTERVENTION_TYPES = [
 
 export const InterventionConfigurator: React.FC = () => {
   const { user } = useUser();
+  const { organization } = useOrganization();
   const [selectedIntervention, setSelectedIntervention] = useState('discount_offer');
 
   const [config, setConfig] = useState<InterventionConfig>({
@@ -364,14 +365,14 @@ export const InterventionConfigurator: React.FC = () => {
   };
 
   const saveConfiguration = async () => {
-    if (!supabase || !user) return;
+    if (!supabase || !organization) return;
 
     setSaving(true);
     try {
       const { error } = await supabase
-        .from('intervention_config')
+        .from('intervention_configs')
         .upsert({
-          tenant_id: user.id,
+          tenant_id: organization.id,  // Use organization ID, not user ID
           config: config,
           css: generateCSS(),
           updated_at: new Date().toISOString()
@@ -381,6 +382,7 @@ export const InterventionConfigurator: React.FC = () => {
 
       if (error) throw error;
 
+      console.log('✅ Intervention configuration saved for tenant:', organization.id);
       // Success - configuration saved
     } catch (error) {
       console.error('Save failed:', error);

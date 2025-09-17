@@ -24,6 +24,9 @@ export default function OnboardingWelcome() {
   useEffect(() => {
     if (!userLoaded) return;
 
+    // Check if we're coming from Stripe (valid payment path)
+    const validPaymentPath = fromStripe && sessionId;
+
     if (organization) {
       // Already has org, mark as new and go to implementation
       markAsNewUser();
@@ -31,11 +34,14 @@ export default function OnboardingWelcome() {
       setTimeout(() => {
         navigate('/system/implementation');
       }, 2000);
-    } else {
-      // Need to create organization
+    } else if (validPaymentPath) {
+      // Coming from Stripe - allow org creation
       setStep('create-org');
+    } else {
+      // No payment, no org - redirect to pricing
+      window.location.href = '/pricing';
     }
-  }, [userLoaded, organization]);
+  }, [userLoaded, organization, fromStripe, sessionId]);
 
   const markAsNewUser = async () => {
     if (!supabase || !organization || !user) return;

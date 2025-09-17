@@ -9,7 +9,7 @@
  */
 
 import { createClient } from '@supabase/supabase-js';
-import { EventLakeRecord, EventBatch } from './event-lake';
+import { EventLakeRecord, EventBatch } from './event-lake.js';
 import { getDeploymentConfig, isFeatureEnabled } from '../config/deployment-mode.js';
 
 // Initialize Supabase client for stub storage
