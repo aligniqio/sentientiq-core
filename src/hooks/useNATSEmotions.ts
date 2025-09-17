@@ -36,8 +36,13 @@ export const useNATSEmotions = (onEvent: (event: EmotionalEvent) => void) => {
   const ncRef = useRef<NatsConnection | null>(null);
   const jsRef = useRef<JetStreamClient | null>(null);
 
+  // TEMPORARY: Use localhost for dev, disable for production until SSL is configured
+  const isProduction = window.location.hostname === 'sentientiq.app';
+
   const config: NATSConfig = {
-    servers: [`ws://${window.location.hostname}:9222`], // Direct WebSocket connection
+    servers: isProduction
+      ? ['wss://localhost:9222'] // This will fail but won't break the app
+      : [`ws://localhost:9222`],  // Local development
     streamName: 'EMOTIONAL_EVENTS',
     subject: 'emotions.events',
     consumerName: `dashboard-${Date.now()}` // Unique consumer per session

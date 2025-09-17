@@ -32,8 +32,9 @@ export const useNATSInterventions = (onEvent: (event: InterventionEvent) => void
   const ncRef = useRef<NatsConnection | null>(null);
   const jsRef = useRef<JetStreamClient | null>(null);
 
+  // TEMPORARY: Fall back to existing WebSocket endpoints until NATS SSL is configured
   const config: NATSConfig = {
-    servers: [`ws://${window.location.hostname}:9222`], // Direct WebSocket connection
+    servers: [`wss://api.sentientiq.app/ws/interventions`], // Using existing SSL endpoint for now
     streamName: 'INTERVENTION_EVENTS',
     subject: 'interventions.events',
     consumerName: `dashboard-interventions-${Date.now()}` // Unique consumer per session
