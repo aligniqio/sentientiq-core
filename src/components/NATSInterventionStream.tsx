@@ -141,8 +141,9 @@ const NATSInterventionStream = () => {
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.3 }}
       className="glass-card p-6"
     >
       {/* Header */}
@@ -219,9 +220,14 @@ const NATSInterventionStream = () => {
             {Array.from(activeInterventions.values()).slice(0, 4).map(intervention => (
               <motion.div
                 key={intervention.id}
-                initial={{ opacity: 0, scale: 0.9 }}
+                initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.9 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                transition={{
+                  duration: 0.1,
+                  type: "tween",
+                  ease: "easeOut"
+                }}
                 className={`p-3 rounded-lg bg-gradient-to-r ${
                   INTERVENTION_COLORS[intervention.interventionType] || INTERVENTION_COLORS.default
                 }`}
@@ -265,10 +271,14 @@ const NATSInterventionStream = () => {
             interventions.map((intervention, index) => (
               <motion.div
                 key={`${intervention.sessionId}-${intervention.timestamp}-${index}`}
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: 20 }}
-                transition={{ duration: 0.2 }}
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                transition={{
+                  duration: 0.1,
+                  type: "tween",
+                  ease: "easeOut"
+                }}
                 className={`flex items-center gap-3 p-3 rounded-lg bg-gradient-to-r ${
                   INTERVENTION_COLORS[intervention.interventionType] || INTERVENTION_COLORS.default
                 }`}

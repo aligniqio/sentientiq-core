@@ -10,6 +10,7 @@ import Auth from '../pages/auth'
 import Settings from '../pages/settings'
 import Pricing from '../pages/pricing'
 import Billing from '../pages/billing'
+import PulseDashboard from '../pages/pulse' // Full Pulse dashboard page
 // import EmotionalLiveFeed from '../components/EmotionalLiveFeed' // Old API-based component
 // Using NATS components with SSL proxy
 import NATSEmotionalStream from '../components/NATSEmotionalStream'
@@ -147,10 +148,7 @@ function App() {
             <>
               <SignedIn>
                 <Layout>
-                  <div className="space-y-6">
-                    <NATSEmotionalStream />
-                    <NATSInterventionStream />
-                  </div>
+                  <PulseDashboard />
                 </Layout>
               </SignedIn>
               <SignedOut>

@@ -68,8 +68,9 @@ const NATSEmotionalStream = () => {
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.3 }}
       className="glass-card p-6"
     >
       {/* Header */}
@@ -150,10 +151,14 @@ const NATSEmotionalStream = () => {
             events.map((event, index) => (
               <motion.div
                 key={`${event.sessionId}-${event.timestamp}-${index}`}
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: 20 }}
-                transition={{ duration: 0.2 }}
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                transition={{
+                  duration: 0.1,
+                  type: "tween",
+                  ease: "easeOut"
+                }}
                 className="flex items-center gap-3 p-3 bg-white/5 rounded-lg hover:bg-white/10 transition-colors border border-white/10"
               >
                 {/* Emotion Badge */}
