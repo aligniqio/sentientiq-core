@@ -5,9 +5,10 @@
 
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import EmotionalStream from '@/components/EmotionalStream';
-import InterventionStream from '@/components/InterventionStream';
+import NATSEmotionalStream from '@/components/NATSEmotionalStream';
+import NATSInterventionStream from '@/components/NATSInterventionStream';
 import EVIDisplay from '@/components/EVIDisplay';
+import PipelineDiagnostic from '@/components/PipelineDiagnostic';
 import {
   Brain,
   BarChart3,
@@ -18,7 +19,7 @@ import {
 } from 'lucide-react';
 
 const PulseDashboard: React.FC = () => {
-  const [activeView, setActiveView] = useState<'streams' | 'analytics' | 'overview'>('streams');
+  const [activeView, setActiveView] = useState<'streams' | 'analytics' | 'overview' | 'diagnostic'>('streams');
 
   // Mock EVI value (will be calculated from emotional stream)
   const [eviValue] = useState(50);
@@ -54,7 +55,8 @@ const PulseDashboard: React.FC = () => {
                 {[
                   { id: 'streams', label: 'Live Streams', icon: Zap },
                   { id: 'analytics', label: 'Analytics', icon: TrendingUp },
-                  { id: 'overview', label: 'Overview', icon: BarChart3 }
+                  { id: 'overview', label: 'Overview', icon: BarChart3 },
+                  { id: 'diagnostic', label: 'Diagnostic', icon: Eye }
                 ].map(tab => (
                   <button
                     key={tab.id}
@@ -124,14 +126,14 @@ const PulseDashboard: React.FC = () => {
 
             {/* Broadcast Streams */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Broadcast Point #1: Emotional Stream */}
+              {/* Broadcast Point #1: NATS Emotional Stream */}
               <div className="h-full">
-                <EmotionalStream />
+                <NATSEmotionalStream />
               </div>
 
-              {/* Broadcast Point #2: Intervention Stream */}
+              {/* Broadcast Point #2: NATS Intervention Stream */}
               <div className="h-full">
-                <InterventionStream />
+                <NATSInterventionStream />
               </div>
             </div>
           </div>
@@ -170,6 +172,12 @@ const PulseDashboard: React.FC = () => {
                 />
               </div>
             </div>
+          </div>
+        )}
+
+        {activeView === 'diagnostic' && (
+          <div className="p-6">
+            <PipelineDiagnostic />
           </div>
         )}
 
