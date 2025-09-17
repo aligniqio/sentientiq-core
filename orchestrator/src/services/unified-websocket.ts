@@ -271,36 +271,45 @@ class UnifiedWebSocketServer extends EventEmitter {
 
   // Send intervention to specific session with rich context
   sendIntervention(sessionId: string, interventionType: string, context: any = {}): boolean {
+    // Generate correlation ID for tracking
+    const correlationId = `int-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
+
+    // Get intervention content
+    const interventionContent = this.getInterventionContent(interventionType, context);
+
+    const interventionData = {
+      type: 'intervention',
+      intervention_type: interventionType,
+      interventionType, // Both formats for compatibility
+      correlationId,
+      timestamp: new Date().toISOString(),
+      template: interventionContent.template,
+      timing: interventionContent.timing,
+      content: interventionContent.content,
+      discount: interventionContent.discount,
+      context: {
+        emotion: context.emotion,
+        confidence: context.confidence,
+        frustration: context.frustration,
+        urgency: context.urgency
+      }
+    };
+
+    // ALWAYS broadcast to dashboard clients for monitoring
+    this.broadcastInterventionToDashboard({
+      sessionId,
+      ...interventionData,
+      stage: 'engine',  // Mark this as coming from the intervention engine
+      component: 'intervention-engine',
+      clientConnected: false  // Initially mark as not connected
+    });
+
     // Check both channels - telemetry channel handles both telemetry and interventions
     const telemetryClient = this.channels.telemetry.get(sessionId);
     const interventionClient = this.channels.interventions.get(sessionId);
     const client = telemetryClient || interventionClient;
 
     if (client && client.ws.readyState === client.ws.OPEN) {
-      // Generate correlation ID for tracking
-      const correlationId = `int-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
-
-      // Get intervention content
-      const interventionContent = this.getInterventionContent(interventionType, context);
-
-      const interventionData = {
-        type: 'intervention',
-        intervention_type: interventionType,
-        interventionType, // Both formats for compatibility
-        correlationId,
-        timestamp: new Date().toISOString(),
-        template: interventionContent.template,
-        timing: interventionContent.timing,
-        content: interventionContent.content,
-        discount: interventionContent.discount,
-        context: {
-          emotion: context.emotion,
-          confidence: context.confidence,
-          frustration: context.frustration,
-          urgency: context.urgency
-        }
-      };
-
       // Send to the specific client (website)
       client.ws.send(JSON.stringify(interventionData));
 
@@ -314,12 +323,15 @@ class UnifiedWebSocketServer extends EventEmitter {
         delivered: true
       });
 
-      // ALSO broadcast to all dashboard clients on the interventions channel for monitoring
+      // Update dashboard that client received it
       this.broadcastInterventionToDashboard({
         sessionId,
-        ...interventionData,
-        stage: 'engine',  // Mark this as coming from the intervention engine
-        component: 'intervention-engine'
+        interventionType,
+        correlationId,
+        stage: 'delivered',
+        component: 'websocket',
+        clientConnected: true,
+        deliveredAt: new Date().toISOString()
       });
 
       // Emit for diagnostics
@@ -333,8 +345,8 @@ class UnifiedWebSocketServer extends EventEmitter {
       return true;
     }
 
-    console.log(`⚠️ Client ${sessionId} not connected for intervention`);
-    return false;
+    console.log(`⚠️ Client ${sessionId} not connected for intervention, but intervention ${interventionType} was broadcast to dashboard`);
+    return true;  // Return true because we still broadcast to dashboard
   }
 
   // Get connection stats

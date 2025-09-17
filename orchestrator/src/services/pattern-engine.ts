@@ -32,29 +32,116 @@ interface Pattern {
 
 // Start simple - these are our initial patterns
 const PATTERNS: Pattern[] = [
+  // Discount Modal - price sensitivity
   {
-    sequence: ['frustration', 'frustration', 'frustration'],
+    sequence: ['price_shock'],
     threshold: 70,
-    intervention: 'help_offer',
+    intervention: 'discount_modal',
+    cooldown: 600000 // 10 minutes
+  },
+  {
+    sequence: ['sticker_shock'],
+    threshold: 70,
+    intervention: 'discount_modal',
+    cooldown: 600000
+  },
+
+  // Trust Badges - skepticism
+  {
+    sequence: ['skeptical'],
+    threshold: 65,
+    intervention: 'trust_badges',
     cooldown: 300000 // 5 minutes
   },
   {
-    sequence: ['confusion', 'frustration'],
+    sequence: ['evaluation'],
+    threshold: 60,
+    intervention: 'trust_badges',
+    cooldown: 300000
+  },
+
+  // Urgency Banner - hesitation
+  {
+    sequence: ['hesitation'],
+    threshold: 70,
+    intervention: 'urgency_banner',
+    cooldown: 600000
+  },
+  {
+    sequence: ['cart_review'],
     threshold: 65,
-    intervention: 'guidance',
+    intervention: 'urgency_banner',
+    cooldown: 600000
+  },
+
+  // Social Toast - evaluation phase
+  {
+    sequence: ['evaluation'],
+    threshold: 60,
+    intervention: 'social_toast',
     cooldown: 300000
   },
   {
-    sequence: ['abandonment_risk'],
-    threshold: 85,
+    sequence: ['comparison_shopping'],
+    threshold: 70,
+    intervention: 'social_toast',
+    cooldown: 300000
+  },
+
+  // Help Chat - confusion/frustration
+  {
+    sequence: ['confusion'],
+    threshold: 65,
+    intervention: 'help_chat',
+    cooldown: 300000
+  },
+  {
+    sequence: ['frustration'],
+    threshold: 70,
+    intervention: 'help_chat',
+    cooldown: 300000
+  },
+  {
+    sequence: ['frustration', 'frustration', 'frustration'],
+    threshold: 70,
+    intervention: 'help_chat',
+    cooldown: 300000
+  },
+
+  // Value Highlight - cart hesitation
+  {
+    sequence: ['cart_hesitation'],
+    threshold: 65,
+    intervention: 'value_highlight',
+    cooldown: 600000
+  },
+
+  // Comparison Modal - shopping around
+  {
+    sequence: ['comparison_shopping'],
+    threshold: 70,
+    intervention: 'comparison_modal',
+    cooldown: 600000
+  },
+  {
+    sequence: ['anxiety'],
+    threshold: 65,
+    intervention: 'comparison_modal',
+    cooldown: 600000
+  },
+
+  // Exit Intent - abandonment risk
+  {
+    sequence: ['abandonment_intent'],
+    threshold: 80,
     intervention: 'exit_intent',
     cooldown: 86400000 // 24 hours
   },
   {
-    sequence: ['purchase_intent'],
-    threshold: 70,
-    intervention: 'price_assist',
-    cooldown: 600000 // 10 minutes
+    sequence: ['exit_risk'],
+    threshold: 85,
+    intervention: 'exit_intent',
+    cooldown: 86400000
   }
 ];
 

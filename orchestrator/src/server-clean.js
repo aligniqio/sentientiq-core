@@ -54,6 +54,15 @@ app.post('/api/telemetry/stream', async (req, res) => {
     // Process behaviors into emotions - DIRECT, no normalization
     const { emotions, patterns } = await behaviorProcessor.processBatch(session_id, events, url);
 
+    // Broadcast processor metric for dashboard
+    if (emotions.length > 0) {
+      unifiedWS.broadcastPipelineEvent('processor', {
+        sessionId: session_id,
+        emotionsProcessed: emotions.length,
+        timestamp: Date.now()
+      });
+    }
+
     // Don't broadcast individual emotion events to pipeline - EmotionalLiveFeed handles that
 
     // Store and broadcast each diagnosed emotion

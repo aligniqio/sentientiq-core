@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>WebSocket Test</title>
+</head>
+<body>
+    <h1>WebSocket Connection Test</h1>
+    <div id="status">Connecting...</div>
+    <div id="messages"></div>
+
+    <script>
+        const wsUrl = 'wss://api.sentientiq.app/ws?channel=interventions';
+        const status = document.getElementById('status');
+        const messages = document.getElementById('messages');
+
+        console.log('Attempting to connect to:', wsUrl);
+
+        const ws = new WebSocket(wsUrl);
+
+        ws.onopen = (event) => {
+            console.log('WebSocket connected!', event);
+            status.textContent = 'Connected!';
+            status.style.color = 'green';
+        };
+
+        ws.onmessage = (event) => {
+            console.log('Message received:', event.data);
+            const msg = document.createElement('div');
+            msg.textContent = 'Message: ' + event.data;
+            messages.appendChild(msg);
+        };
+
+        ws.onerror = (error) => {
+            console.error('WebSocket error:', error);
+            status.textContent = 'Error: ' + error.message;
+            status.style.color = 'red';
+        };
+
+        ws.onclose = (event) => {
+            console.log('WebSocket closed:', event.code, event.reason);
+            status.textContent = 'Closed: ' + event.code + ' ' + event.reason;
+            status.style.color = 'orange';
+        };
+    </script>
+</body>
+</html>
