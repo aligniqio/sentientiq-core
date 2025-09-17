@@ -11,8 +11,8 @@ import Settings from '../pages/settings'
 import Pricing from '../pages/pricing'
 import Billing from '../pages/billing'
 // import EmotionalLiveFeed from '../components/EmotionalLiveFeed' // Old API-based component
-import EmotionalStream from '../components/EmotionalStream'
-import InterventionStream from '../components/InterventionStream'
+import NATSEmotionalStream from '../components/NATSEmotionalStream'
+import NATSInterventionStream from '../components/NATSInterventionStream'
 
 // Admin pages
 import TenantsPage from './admin/TenantsPage'
@@ -48,8 +48,8 @@ function App() {
                 <OnboardingRouter>
                   <Layout>
                     <div className="space-y-6">
-                      <EmotionalStream />
-                      <InterventionStream />
+                      <NATSEmotionalStream />
+                      <NATSInterventionStream />
                     </div>
                   </Layout>
                 </OnboardingRouter>
@@ -72,8 +72,8 @@ function App() {
                 <SignedIn>
                   <Layout>
                     <div className="space-y-6">
-                      <EmotionalStream />
-                      <InterventionStream />
+                      <NATSEmotionalStream />
+                      <NATSInterventionStream />
                     </div>
                   </Layout>
                 </SignedIn>
@@ -147,8 +147,8 @@ function App() {
               <SignedIn>
                 <Layout>
                   <div className="space-y-6">
-                    <EmotionalStream />
-                    <InterventionStream />
+                    <NATSEmotionalStream />
+                    <NATSInterventionStream />
                   </div>
                 </Layout>
               </SignedIn>
