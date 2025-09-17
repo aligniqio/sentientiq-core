@@ -87,8 +87,9 @@ export const useNATSInterventions = (onEvent: (event: InterventionEvent) => void
         });
       }
 
-      // Subscribe to intervention events - using simple subscription
-      const sub = await js.subscribe(config.subject, {});
+      // Subscribe to intervention events
+      // @ts-ignore - NATS.ws API requires options but works with undefined
+      const sub = await js.subscribe(config.subject, undefined);
 
       setConnectionStatus('Subscribed to intervention events');
       console.log('📡 Subscribed to intervention events');
