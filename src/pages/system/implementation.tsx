@@ -1,27 +1,22 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { ChevronRight, Copy, Check, Code, Settings, Zap } from 'lucide-react';
+import { ChevronRight, Copy, Check, Code, Settings, Zap, MessageCircle, Send } from 'lucide-react';
 import PageHeader from '../../components/PageHeader';
-import { useUser } from '@clerk/clerk-react';
+import { useUser, useOrganization } from '@clerk/clerk-react';
+import { getSupabaseClient } from '@/lib/supabase';
 
 export default function SystemImplementation() {
   const { user } = useUser();
-  const [tenantId, setTenantId] = useState('');
+  const { organization } = useOrganization();
   const [debugMode, setDebugMode] = useState(true);
   const [copiedScript, setCopiedScript] = useState<string | null>(null);
+  const [showHelp, setShowHelp] = useState(false);
+  const [helpMessage, setHelpMessage] = useState('');
+  const [helpSent, setHelpSent] = useState(false);
+  const supabase = getSupabaseClient();
 
-  useEffect(() => {
-    // Try to get tenant ID from localStorage or URL params
-    const storedTenantId = localStorage.getItem('tenantId');
-    const params = new URLSearchParams(window.location.search);
-    const urlTenantId = params.get('tenant_id');
-
-    if (urlTenantId) {
-      setTenantId(urlTenantId);
-    } else if (storedTenantId) {
-      setTenantId(storedTenantId);
-    }
-  }, []);
+  // Use organization ID as tenant ID
+  const tenantId = organization?.id || '';
 
   const copyToClipboard = async (text: string, scriptName: string) => {
     try {
@@ -34,7 +29,7 @@ export default function SystemImplementation() {
   };
 
   const generateTelemetryScript = () => {
-    if (!tenantId) return '';
+    const id = tenantId || '{{TENANT_ID}}';
 
     return `<script>
   (function() {
@@ -42,14 +37,14 @@ export default function SystemImplementation() {
 
     // Set config for telemetry script
     window.SentientIQ = {
-      tenantId: '${tenantId}',
+      tenantId: '${id}',
       apiEndpoint: 'https://api.sentientiq.app'
     };
 
     // Load telemetry
     var script = document.createElement('script');
     script.src = 'https://sentientiq.ai/telemetry-v5.js';
-    script.setAttribute('data-tenant-id', '${tenantId}');
+    script.setAttribute('data-tenant-id', '${id}');
     script.setAttribute('data-debug', '${debugMode}');
     document.head.appendChild(script);
   })();
@@ -57,7 +52,7 @@ export default function SystemImplementation() {
   };
 
   const generateInterventionScript = () => {
-    if (!tenantId) return '';
+    const id = tenantId || '{{TENANT_ID}}';
 
     return `<script>
   (function() {
@@ -67,7 +62,7 @@ export default function SystemImplementation() {
 
     // Set config
     window.SentientIQ = window.SentientIQ || {
-      tenantId: '${tenantId}',
+      tenantId: '${id}',
       apiEndpoint: 'https://api.sentientiq.app'
     };
 
@@ -93,6 +88,49 @@ export default function SystemImplementation() {
   const telemetryScript = generateTelemetryScript();
   const interventionScript = generateInterventionScript();
 
+  const sendHelpRequest = async () => {
+    if (!supabase || !helpMessage.trim()) return;
+
+    try {
+      // Capture context for Sage
+      const context = {
+        page: 'implementation',
+        step: copiedScript || 'viewing_instructions',
+        tenant_id: tenantId,
+        user_email: user?.primaryEmailAddress?.emailAddress,
+        organization_name: organization?.name,
+        debug_mode: debugMode,
+        scripts_copied: {
+          telemetry: copiedScript === 'telemetry',
+          intervention: copiedScript === 'intervention'
+        },
+        timestamp: new Date().toISOString()
+      };
+
+      await supabase
+        .from('sage_support')
+        .insert({
+          user_id: user?.id,
+          organization_id: organization?.id,
+          message: helpMessage,
+          context: context,
+          source: 'gtm_implementation',
+          priority: helpMessage.toLowerCase().includes('urgent') || helpMessage.toLowerCase().includes('broken')
+            ? 'high'
+            : 'normal'
+        });
+
+      setHelpSent(true);
+      setTimeout(() => {
+        setShowHelp(false);
+        setHelpMessage('');
+        setHelpSent(false);
+      }, 3000);
+    } catch (error) {
+      console.error('Error sending help request:', error);
+    }
+  };
+
   return (
     <div className="min-h-screen">
       <PageHeader
@@ -117,16 +155,12 @@ export default function SystemImplementation() {
               <label className="block text-sm font-medium text-gray-300 mb-2">
                 Tenant ID
               </label>
-              <input
-                type="text"
-                value={tenantId}
-                onChange={(e) => setTenantId(e.target.value)}
-                placeholder="Enter your Tenant ID"
-                className="w-full px-4 py-3 bg-gray-900 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-              />
-              {!tenantId && (
-                <p className="text-sm text-yellow-400 mt-2">
-                  ⚠️ Please enter your Tenant ID to generate the scripts
+              <div className="px-4 py-3 bg-gray-900 border border-gray-600 rounded-lg">
+                <code className="text-green-400">{tenantId || 'Loading organization ID...'}</code>
+              </div>
+              {tenantId && (
+                <p className="text-sm text-green-400 mt-2">
+                  ✓ Using your organization ID as Tenant ID
                 </p>
               )}
             </div>
@@ -177,7 +211,7 @@ export default function SystemImplementation() {
               </ul>
             </div>
 
-            {tenantId && (
+            {
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <h3 className="font-medium">Script to Copy:</h3>
@@ -202,7 +236,7 @@ export default function SystemImplementation() {
                   <code>{telemetryScript}</code>
                 </pre>
               </div>
-            )}
+            }
           </div>
         </motion.div>
 
@@ -237,7 +271,7 @@ export default function SystemImplementation() {
               </ul>
             </div>
 
-            {tenantId && (
+            {
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <h3 className="font-medium">Script to Copy:</h3>
@@ -262,7 +296,7 @@ export default function SystemImplementation() {
                   <code>{interventionScript}</code>
                 </pre>
               </div>
-            )}
+            }
           </div>
         </motion.div>
 
@@ -298,23 +332,79 @@ export default function SystemImplementation() {
           </ol>
         </motion.div>
 
-        {/* Support Section */}
+        {/* Support Section with Sage Integration */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4 }}
-          className="mt-12 text-center"
+          className="mt-12"
         >
-          <p className="text-gray-400 mb-4">
-            Need help with implementation?
-          </p>
-          <a
-            href="mailto:support@sentientiq.app"
-            className="inline-flex items-center gap-2 text-blue-400 hover:text-blue-300 transition-colors"
-          >
-            Contact Support
-            <ChevronRight className="w-4 h-4" />
-          </a>
+          {!showHelp ? (
+            <div className="text-center">
+              <p className="text-gray-400 mb-4">
+                Stuck with GTM? Our AI assistant Sage knows exactly where you are.
+              </p>
+              <button
+                onClick={() => setShowHelp(true)}
+                className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 rounded-lg transition-all transform hover:scale-105"
+              >
+                <MessageCircle className="w-5 h-5" />
+                Get Help from Sage
+              </button>
+            </div>
+          ) : (
+            <div className="max-w-2xl mx-auto">
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="bg-gray-800/50 backdrop-blur-sm rounded-2xl p-6 border border-gray-700"
+              >
+                <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                  <MessageCircle className="w-5 h-5 text-purple-400" />
+                  Ask Sage for Help
+                </h3>
+                <p className="text-sm text-gray-400 mb-4">
+                  Sage knows you're on the GTM implementation page and what step you're on. Just describe what's happening.
+                </p>
+                <textarea
+                  value={helpMessage}
+                  onChange={(e) => setHelpMessage(e.target.value)}
+                  placeholder="e.g., 'I can't find where to create a Custom HTML tag' or 'The preview mode isn't showing anything'"
+                  className="w-full px-4 py-3 bg-gray-900 border border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all resize-none h-24"
+                  disabled={helpSent}
+                />
+                <div className="flex items-center justify-between mt-4">
+                  <button
+                    onClick={() => {
+                      setShowHelp(false);
+                      setHelpMessage('');
+                    }}
+                    className="px-4 py-2 text-gray-400 hover:text-white transition-colors"
+                    disabled={helpSent}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={sendHelpRequest}
+                    disabled={!helpMessage.trim() || helpSent}
+                    className="flex items-center gap-2 px-6 py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-700 disabled:cursor-not-allowed rounded-lg transition-colors"
+                  >
+                    {helpSent ? (
+                      <>
+                        <Check className="w-4 h-4" />
+                        Sent to Sage!
+                      </>
+                    ) : (
+                      <>
+                        <Send className="w-4 h-4" />
+                        Send to Sage
+                      </>
+                    )}
+                  </button>
+                </div>
+              </motion.div>
+            </div>
+          )}
         </motion.div>
       </div>
     </div>

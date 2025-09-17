@@ -128,19 +128,27 @@ export default function Thanks() {
           </div>
 
           <div className="space-y-4 mb-8">
-            <a 
-              href="https://docs.sentientiq.ai/quickstart" 
+            <a
+              href={`/auth?redirect=/onboarding-welcome${sessionId ? `?session_id=${sessionId}&from=stripe` : ''}`}
+              className="block card p-6 hover:border-green-500/40 transition-all bg-gradient-to-r from-green-900/20 to-emerald-900/20 border-2 border-green-500/50"
+            >
+              <span className="text-2xl font-bold text-green-400">🚀 Go to Your Dashboard</span>
+              <p className="text-white/60 mt-2">Sign in or create your account to start setup</p>
+            </a>
+
+            <a
+              href="https://docs.sentientiq.ai/quickstart"
               className="block card p-6 hover:border-purple-500/40 transition-all"
             >
               <span className="text-2xl font-bold text-purple-400">📚 Read the 5-Minute Setup Guide</span>
               <p className="text-white/60 mt-2">Everything you need to go live today</p>
             </a>
 
-            <a 
-              href="mailto:hello@sentientiq.ai?subject=Just%20Joined%20-%20Need%20Help%20With%20Setup" 
-              className="block card p-6 hover:border-green-500/40 transition-all"
+            <a
+              href="mailto:hello@sentientiq.ai?subject=Just%20Joined%20-%20Need%20Help%20With%20Setup"
+              className="block card p-6 hover:border-blue-500/40 transition-all"
             >
-              <span className="text-2xl font-bold text-green-400">💬 Get Direct Setup Help</span>
+              <span className="text-2xl font-bold text-blue-400">💬 Get Direct Setup Help</span>
               <p className="text-white/60 mt-2">We'll walk you through implementation live</p>
             </a>
           </div>

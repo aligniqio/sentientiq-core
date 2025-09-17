@@ -19,6 +19,8 @@ import SuperAdmin from '../pages/super-admin'
 import DebugSuperAdmin from '../pages/debug-super-admin'
 import SystemImplementation from '../pages/system/implementation'
 import { Configuration as SystemConfiguration } from '../pages/system/configuration'
+import OnboardingWelcome from '../pages/onboarding-welcome'
+import OnboardingRouter from '../components/OnboardingRouter'
 
 // Candy Kit UI enhancements
 import { SenseiCandyProvider } from '../components/ui/SenseiCandy'
@@ -40,9 +42,11 @@ function App() {
           <Route path="/" element={
             <>
               <SignedIn>
-                <Layout>
-                  <EmotionalLiveFeed /> {/* Main dashboard - real emotions from real users */}
-                </Layout>
+                <OnboardingRouter>
+                  <Layout>
+                    <EmotionalLiveFeed /> {/* Main dashboard - real emotions from real users */}
+                  </Layout>
+                </OnboardingRouter>
               </SignedIn>
               <SignedOut>
                 <Navigate to="/auth" replace />
@@ -109,6 +113,18 @@ function App() {
 
           {/* Auth page - explicit route */}
           <Route path="/auth" element={<Auth />} />
+
+          {/* Onboarding flow */}
+          <Route path="/onboarding-welcome" element={
+            <>
+              <SignedIn>
+                <OnboardingWelcome />
+              </SignedIn>
+              <SignedOut>
+                <Navigate to="/auth?redirect=/onboarding-welcome" replace />
+              </SignedOut>
+            </>
+          } />
 
           {/* Removed legacy routes - /start and /boardroom */}
 

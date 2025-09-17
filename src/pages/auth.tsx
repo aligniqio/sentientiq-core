@@ -6,6 +6,7 @@ import { motion } from 'framer-motion';
 const Auth: React.FC = () => {
   const [searchParams] = useSearchParams();
   const mode = searchParams.get('mode') || 'signin';
+  const redirect = searchParams.get('redirect') || '/';
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -115,7 +116,9 @@ const Auth: React.FC = () => {
         className="relative z-20 w-full max-w-md"
       >
         {mode === 'signup' ? (
-          <SignUp 
+          <SignUp
+            forceRedirectUrl={redirect}
+            signInForceRedirectUrl={redirect}
             appearance={{
               layout: {
                 socialButtonsPlacement: 'top',
@@ -164,7 +167,9 @@ const Auth: React.FC = () => {
             signInUrl="/"
           />
         ) : (
-          <SignIn 
+          <SignIn
+            forceRedirectUrl={redirect}
+            signUpForceRedirectUrl={redirect}
             appearance={{
               layout: {
                 socialButtonsPlacement: 'top',
