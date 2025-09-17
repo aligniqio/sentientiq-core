@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SentientIQ Unified Script Test</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      margin: 0;
+      padding: 20px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 12px;
+      padding: 40px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    }
+
+    h1 {
+      color: #1F2937;
+      margin-top: 0;
+    }
+
+    .test-section {
+      margin: 30px 0;
+      padding: 20px;
+      background: #F3F4F6;
+      border-radius: 8px;
+    }
+
+    .test-section h2 {
+      margin-top: 0;
+      color: #4F46E5;
+    }
+
+    .price-box {
+      display: inline-block;
+      padding: 20px;
+      background: white;
+      border: 2px solid #E5E7EB;
+      border-radius: 8px;
+      margin: 10px;
+      cursor: pointer;
+    }
+
+    .price-box:hover {
+      border-color: #4F46E5;
+      box-shadow: 0 4px 12px rgba(79, 70, 229, 0.2);
+    }
+
+    .price {
+      font-size: 32px;
+      font-weight: bold;
+      color: #4F46E5;
+    }
+
+    .button {
+      background: #4F46E5;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 6px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      margin: 10px;
+    }
+
+    .button:hover {
+      background: #4338CA;
+    }
+
+    .form-test {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      max-width: 400px;
+    }
+
+    .form-test input,
+    .form-test textarea {
+      padding: 10px;
+      border: 1px solid #E5E7EB;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 20px;
+      margin-top: 20px;
+    }
+
+    .metric-card {
+      background: white;
+      padding: 15px;
+      border-radius: 8px;
+      border: 1px solid #E5E7EB;
+    }
+
+    .metric-label {
+      font-size: 12px;
+      color: #6B7280;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .metric-value {
+      font-size: 24px;
+      font-weight: bold;
+      color: #1F2937;
+      margin-top: 5px;
+    }
+
+    .console {
+      background: #1F2937;
+      color: #10B981;
+      padding: 20px;
+      border-radius: 8px;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      max-height: 300px;
+      overflow-y: auto;
+      margin-top: 20px;
+    }
+
+    .console-line {
+      margin: 2px 0;
+    }
+
+    .status-indicator {
+      display: inline-block;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      margin-right: 8px;
+      animation: pulse 2s infinite;
+    }
+
+    .status-connected {
+      background: #10B981;
+    }
+
+    .status-disconnected {
+      background: #EF4444;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    .scroll-content {
+      height: 500px;
+      overflow-y: auto;
+      padding: 20px;
+      background: #F9FAFB;
+      border-radius: 8px;
+      margin: 20px 0;
+    }
+
+    .scroll-content p {
+      margin: 20px 0;
+      line-height: 1.6;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🧠 SentientIQ Unified Script Test Page</h1>
+
+    <div style="margin: 20px 0; padding: 15px; background: #F0FDF4; border: 1px solid #10B981; border-radius: 8px;">
+      <div style="display: flex; align-items: center;">
+        <span class="status-indicator status-connected" id="wsStatus"></span>
+        <strong>Connection Status:</strong> <span id="connectionStatus">Initializing...</span>
+      </div>
+      <div style="margin-top: 10px;">
+        <strong>Session ID:</strong> <span id="sessionId">Loading...</span>
+      </div>
+    </div>
+
+    <!-- Test Sections -->
+    <div class="test-section">
+      <h2>🎯 Mouse Physics Test</h2>
+      <p>Move your mouse around to test velocity, acceleration, and jerk tracking. Try:</p>
+      <ul>
+        <li>Slow, smooth movements</li>
+        <li>Quick, jerky movements</li>
+        <li>Circular motions (confusion gesture)</li>
+        <li>Zigzag patterns (frustration gesture)</li>
+        <li>Hovering in place (hesitation)</li>
+      </ul>
+
+      <div class="metrics">
+        <div class="metric-card">
+          <div class="metric-label">Mouse Velocity</div>
+          <div class="metric-value" id="mouseVelocity">0 px/s</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Jerk Level</div>
+          <div class="metric-value" id="jerkLevel">0</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Micro-gestures</div>
+          <div class="metric-value" id="microGestures">0</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="test-section">
+      <h2>💰 Price Selection Test</h2>
+      <p>Click on prices or select text containing prices to test sticker shock detection:</p>
+
+      <div style="margin: 20px 0;">
+        <div class="price-box">
+          <div class="price">$29.99</div>
+          <div>Basic Plan</div>
+        </div>
+        <div class="price-box">
+          <div class="price">$99.99</div>
+          <div>Pro Plan</div>
+        </div>
+        <div class="price-box">
+          <div class="price">$299.99</div>
+          <div>Enterprise</div>
+        </div>
+      </div>
+
+      <p>Try selecting this text: Our premium plan is only $199.99 per month with unlimited features!</p>
+    </div>
+
+    <div class="test-section">
+      <h2>😤 Rage Click Test</h2>
+      <p>Click rapidly on the buttons below to trigger rage click detection (3+ clicks in 500ms):</p>
+
+      <div>
+        <button class="button" onclick="console.log('Click!')">Click Me!</button>
+        <button class="button" onclick="console.log('Click!')">No, Click Me!</button>
+        <button class="button" onclick="console.log('Click!')">Actually Me!</button>
+      </div>
+
+      <div style="margin-top: 20px;">
+        <strong>Rage Clicks Detected:</strong> <span id="rageClicks">0</span>
+      </div>
+    </div>
+
+    <div class="test-section">
+      <h2>📜 Scroll Behavior Test</h2>
+      <p>Scroll through the content below to test scroll depth and velocity tracking:</p>
+
+      <div class="scroll-content" id="scrollContainer">
+        <h3>The Science of User Behavior</h3>
+        <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris.</p>
+
+        <p>Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.</p>
+
+        <p>Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium, totam rem aperiam, eaque ipsa quae ab illo inventore veritatis et quasi architecto beatae vitae dicta sunt explicabo.</p>
+
+        <p>Nemo enim ipsam voluptatem quia voluptas sit aspernatur aut odit aut fugit, sed quia consequuntur magni dolores eos qui ratione voluptatem sequi nesciunt.</p>
+
+        <p>Neque porro quisquam est, qui dolorem ipsum quia dolor sit amet, consectetur, adipisci velit, sed quia non numquam eius modi tempora incidunt ut labore et dolore magnam aliquam quaerat voluptatem.</p>
+
+        <p>At vero eos et accusamus et iusto odio dignissimos ducimus qui blanditiis praesentium voluptatum deleniti atque corrupti quos dolores et quas molestias excepturi sint occaecati cupiditate non provident.</p>
+
+        <p>Similique sunt in culpa qui officia deserunt mollitia animi, id est laborum et dolorum fuga. Et harum quidem rerum facilis est et expedita distinctio.</p>
+
+        <p>Nam libero tempore, cum soluta nobis est eligendi optio cumque nihil impedit quo minus id quod maxime placeat facere possimus, omnis voluptas assumenda est, omnis dolor repellendus.</p>
+      </div>
+
+      <div class="metrics">
+        <div class="metric-card">
+          <div class="metric-label">Scroll Depth</div>
+          <div class="metric-value" id="scrollDepth">0%</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Scroll Velocity</div>
+          <div class="metric-value" id="scrollVelocity">0 px/s</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="test-section">
+      <h2>📝 Form Abandonment Test</h2>
+      <p>Start filling out the form below and then abandon it to test tracking:</p>
+
+      <form class="form-test" onsubmit="event.preventDefault(); alert('Form submitted!');">
+        <input type="text" name="name" placeholder="Your Name" />
+        <input type="email" name="email" placeholder="Email Address" />
+        <textarea name="message" placeholder="Your Message" rows="4"></textarea>
+        <button type="submit" class="button">Submit</button>
+      </form>
+    </div>
+
+    <div class="test-section">
+      <h2>🔄 Tab Switching Test</h2>
+      <p>Switch to another tab and come back to test comparison shopping detection:</p>
+
+      <div class="metrics">
+        <div class="metric-card">
+          <div class="metric-label">Tab Switches</div>
+          <div class="metric-value" id="tabSwitches">0</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Away Duration</div>
+          <div class="metric-value" id="awayDuration">0s</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="test-section">
+      <h2>🚪 Exit Intent Test</h2>
+      <p>Move your mouse quickly towards the top of the browser window to trigger exit intent detection.</p>
+    </div>
+
+    <div class="test-section">
+      <h2>🎭 Intervention Triggers</h2>
+      <p>Test manual intervention triggers:</p>
+
+      <div>
+        <button class="button" onclick="triggerIntervention('exit_intent')">Exit Intent Modal</button>
+        <button class="button" onclick="triggerIntervention('help_offer')">Help Tooltip</button>
+        <button class="button" onclick="triggerIntervention('discount_offer')">Discount Banner</button>
+        <button class="button" onclick="triggerIntervention('price_assist')">Price Assistant</button>
+      </div>
+    </div>
+
+    <!-- Console Output -->
+    <div class="test-section">
+      <h2>📊 Live Telemetry Console</h2>
+      <div class="console" id="console">
+        <div class="console-line">Waiting for events...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Configuration -->
+  <script>
+    // Configure SentientIQ
+    window.SENTIENTIQ_TENANT_ID = 'test-tenant';
+    window.SENTIENTIQ_DEBUG = true;
+    window.SENTIENTIQ_ENABLE_INTERVENTIONS = true;
+  </script>
+
+  <!-- Load the unified script -->
+  <script src="sentientiq-unified.js"></script>
+
+  <!-- Test page functionality -->
+  <script>
+    // Update connection status
+    function updateConnectionStatus() {
+      const unified = window.SentientIQUnified;
+      if (unified) {
+        document.getElementById('sessionId').textContent = unified.sessionId || 'Not available';
+        document.getElementById('connectionStatus').textContent = unified.isConnected ? 'Connected' : 'Disconnected';
+
+        const indicator = document.getElementById('wsStatus');
+        if (unified.isConnected) {
+          indicator.className = 'status-indicator status-connected';
+        } else {
+          indicator.className = 'status-indicator status-disconnected';
+        }
+      }
+    }
+
+    // Update metrics display
+    function updateMetrics() {
+      const unified = window.SentientIQUnified;
+      if (!unified) return;
+
+      // Mouse velocity
+      const velocity = Math.sqrt(
+        unified.mouseState.vx ** 2 +
+        unified.mouseState.vy ** 2
+      );
+      document.getElementById('mouseVelocity').textContent =
+        Math.round(velocity) + ' px/s';
+
+      // Jerk level
+      const jerk = Math.sqrt(
+        unified.mouseState.jx ** 2 +
+        unified.mouseState.jy ** 2
+      );
+      document.getElementById('jerkLevel').textContent =
+        Math.min(Math.round(jerk), 9999);
+
+      // Micro-gestures
+      const gestures = unified.mouseState.microGestures;
+      document.getElementById('microGestures').textContent =
+        gestures.circles + gestures.zigzags;
+
+      // Rage clicks
+      document.getElementById('rageClicks').textContent =
+        unified.clickState.rageClicks || 0;
+
+      // Scroll metrics
+      document.getElementById('scrollDepth').textContent =
+        Math.round((unified.scrollState.depth || 0) * 100) + '%';
+
+      document.getElementById('scrollVelocity').textContent =
+        Math.round(Math.abs(unified.scrollState.velocity || 0)) + ' px/s';
+
+      // Tab switches
+      document.getElementById('tabSwitches').textContent =
+        unified.tabState.switchCount || 0;
+
+      document.getElementById('awayDuration').textContent =
+        Math.round((unified.tabState.awayDuration || 0) / 1000) + 's';
+    }
+
+    // Console logging
+    const consoleElement = document.getElementById('console');
+    let consoleLines = [];
+    const maxConsoleLines = 50;
+
+    function logToConsole(message) {
+      const timestamp = new Date().toLocaleTimeString();
+      consoleLines.push(`[${timestamp}] ${message}`);
+
+      if (consoleLines.length > maxConsoleLines) {
+        consoleLines.shift();
+      }
+
+      consoleElement.innerHTML = consoleLines
+        .map(line => `<div class="console-line">${line}</div>`)
+        .join('');
+
+      consoleElement.scrollTop = consoleElement.scrollHeight;
+    }
+
+    // Override track method to log events
+    if (window.SentientIQUnified) {
+      const originalTrack = window.SentientIQUnified.track;
+      window.SentientIQUnified.track = function(eventType, data) {
+        // Log interesting events
+        if (['click', 'rage_click', 'dwell', 'micro_gesture', 'tremor', 'exit_intent',
+             'price_selection', 'text_selection', 'tab_switch', 'comparison_shopping',
+             'intervention_result'].includes(eventType)) {
+          logToConsole(`${eventType}: ${JSON.stringify(data).substring(0, 100)}`);
+        }
+
+        // Call original method
+        return originalTrack.call(this, eventType, data);
+      };
+    }
+
+    // Manual intervention trigger
+    function triggerIntervention(type) {
+      if (window.SentientIQUnified) {
+        window.SentientIQUnified.handleIntervention({
+          type: 'intervention',
+          intervention_type: type
+        });
+        logToConsole(`Manually triggered: ${type}`);
+      }
+    }
+
+    // Update displays periodically
+    setInterval(updateConnectionStatus, 1000);
+    setInterval(updateMetrics, 100);
+
+    // Initial update
+    setTimeout(() => {
+      updateConnectionStatus();
+      logToConsole('SentientIQ Unified Script loaded and initialized');
+      logToConsole(`Session ID: ${window.SentientIQUnified?.sessionId}`);
+    }, 100);
+  </script>
+</body>
+</html>

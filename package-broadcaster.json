@@ -1,0 +1,17 @@
+{
+  "name": "sentientiq-broadcaster",
+  "version": "1.0.0",
+  "description": "SentientIQ Emotional States Broadcaster",
+  "main": "emotional-broadcaster.cjs",
+  "scripts": {
+    "start": "node emotional-broadcaster.cjs",
+    "test": "node test-dashboard-client.cjs",
+    "dev": "DEBUG=true node emotional-broadcaster.cjs"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "ioredis": "^5.3.2",
+    "ws": "^8.14.2"
+  }
+}

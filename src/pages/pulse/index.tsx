@@ -1,26 +1,27 @@
 /**
- * Pulse Dashboard
- * The crystal palace of marketing truth
- * Where emotional intelligence becomes visible
+ * Pulse Dashboard - Refactored
+ * Clean separation of concerns with independent broadcast points
  */
 
 import React, { useState } from 'react';
-import { InterventionDashboard } from '@/components/InterventionDashboard';
-import EmotionalLiveFeed from '@/components/EmotionalLiveFeed';
 import { motion } from 'framer-motion';
+import EmotionalStream from '@/components/EmotionalStream';
+import InterventionStream from '@/components/InterventionStream';
+import EVIDisplay from '@/components/EVIDisplay';
 import {
-  Activity,
   Brain,
+  BarChart3,
+  Zap,
   TrendingUp,
   Users,
-  Zap,
-  BarChart3,
-  Eye,
-  Target
+  Eye
 } from 'lucide-react';
 
 const PulseDashboard: React.FC = () => {
-  const [activeView, setActiveView] = useState<'overview' | 'interventions' | 'analytics'>('interventions');
+  const [activeView, setActiveView] = useState<'streams' | 'analytics' | 'overview'>('streams');
+
+  // Mock EVI value (will be calculated from emotional stream)
+  const [eviValue] = useState(50);
 
   // Mock metrics (would be fetched from API)
   const metrics = {
@@ -51,9 +52,9 @@ const PulseDashboard: React.FC = () => {
               {/* Navigation */}
               <nav className="flex gap-1">
                 {[
-                  { id: 'overview', label: 'Overview', icon: BarChart3 },
-                  { id: 'interventions', label: 'Interventions', icon: Zap },
-                  { id: 'analytics', label: 'Analytics', icon: TrendingUp }
+                  { id: 'streams', label: 'Live Streams', icon: Zap },
+                  { id: 'analytics', label: 'Analytics', icon: TrendingUp },
+                  { id: 'overview', label: 'Overview', icon: BarChart3 }
                 ].map(tab => (
                   <button
                     key={tab.id}
@@ -81,63 +82,140 @@ const PulseDashboard: React.FC = () => {
       </header>
 
       {/* Content */}
-      {activeView === 'interventions' && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 p-6 max-w-[1920px] mx-auto">
-          <div className="h-full">
-            <EmotionalLiveFeed />
-          </div>
-          <div className="h-full">
-            <InterventionDashboard />
-          </div>
-        </div>
-      )}
+      <div className="max-w-[1920px] mx-auto">
+        {activeView === 'streams' && (
+          <div className="p-6">
+            {/* Top Level Metrics */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+              {/* EVI Display */}
+              <div className="lg:col-span-2">
+                <EVIDisplay
+                  value={eviValue}
+                  trend={eviValue > 60 ? 'up' : eviValue < 40 ? 'down' : 'stable'}
+                  className="w-full h-full"
+                />
+              </div>
 
-      {activeView === 'overview' && (
-        <div className="p-6 max-w-7xl mx-auto">
-          {/* Key Metrics */}
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-8">
-            <MetricCard
-              icon={Users}
-              label="Active Users"
-              value={metrics.activeUsers.toLocaleString()}
-              change="+12%"
-              color="from-blue-500 to-blue-600"
-            />
-            <MetricCard
-              icon={Brain}
-              label="Emotions Detected"
-              value={metrics.emotionsDetected.toLocaleString()}
-              change="+28%"
-              color="from-purple-500 to-purple-600"
-            />
-            <MetricCard
-              icon={Zap}
-              label="Interventions"
-              value={metrics.interventionsTriggered.toLocaleString()}
-              change="+15%"
-              color="from-orange-500 to-orange-600"
-            />
-            <MetricCard
-              icon={Target}
-              label="Conversion Rate"
-              value={`${metrics.conversionRate}%`}
-              change="+5.2%"
-              color="from-green-500 to-green-600"
-            />
-            <MetricCard
-              icon={TrendingUp}
-              label="Revenue Impact"
-              value={metrics.revenueImpact}
-              change="+23%"
-              color="from-yellow-500 to-yellow-600"
-            />
-          </div>
+              {/* Active Users */}
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="glass-card p-6 flex flex-col items-center justify-center"
+              >
+                <Users className="w-8 h-8 text-purple-400 mb-3" />
+                <div className="text-4xl font-bold text-white">{metrics.activeUsers}</div>
+                <div className="text-sm text-white/60 mt-1">Active Users</div>
+                <div className="mt-3 grid grid-cols-2 gap-4 w-full">
+                  <div className="text-center">
+                    <div className="text-lg font-bold text-green-400">
+                      {metrics.conversionRate}%
+                    </div>
+                    <div className="text-xs text-white/40">Conversion</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-lg font-bold text-yellow-400">
+                      {metrics.revenueImpact}
+                    </div>
+                    <div className="text-xs text-white/40">Revenue</div>
+                  </div>
+                </div>
+              </motion.div>
+            </div>
 
-          {/* Real-time Activity Feed */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            <div className="space-y-4">
-              <h2 className="text-xl font-semibold text-white mb-4">Emotional Patterns</h2>
-              <div className="p-6 rounded-xl bg-gradient-to-br from-white/5 to-white/10 backdrop-blur-md border border-white/20">
+            {/* Broadcast Streams */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Broadcast Point #1: Emotional Stream */}
+              <div className="h-full">
+                <EmotionalStream />
+              </div>
+
+              {/* Broadcast Point #2: Intervention Stream */}
+              <div className="h-full">
+                <InterventionStream />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeView === 'analytics' && (
+          <div className="p-6">
+            <div className="text-center py-20">
+              <Eye className="w-16 h-16 text-gray-600 mx-auto mb-4" />
+              <h2 className="text-2xl font-bold text-white mb-2">Advanced Analytics</h2>
+              <p className="text-gray-400">Deep insights into emotional patterns and intervention effectiveness</p>
+              <div className="mt-8 grid grid-cols-1 md:grid-cols-4 gap-4 max-w-4xl mx-auto">
+                <MetricCard
+                  label="Emotions/Hour"
+                  value="2,847"
+                  change="+12%"
+                  color="from-purple-500 to-purple-600"
+                />
+                <MetricCard
+                  label="Intervention Rate"
+                  value="3.8%"
+                  change="+0.5%"
+                  color="from-green-500 to-green-600"
+                />
+                <MetricCard
+                  label="Avg Response Time"
+                  value="124ms"
+                  change="-15ms"
+                  color="from-blue-500 to-blue-600"
+                />
+                <MetricCard
+                  label="Pattern Accuracy"
+                  value="94.2%"
+                  change="+2.1%"
+                  color="from-yellow-500 to-yellow-600"
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeView === 'overview' && (
+          <div className="p-6">
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-8">
+              <MetricCard
+                label="Active Users"
+                value={metrics.activeUsers.toLocaleString()}
+                change="+12%"
+                color="from-blue-500 to-blue-600"
+              />
+              <MetricCard
+                label="Emotions Detected"
+                value={metrics.emotionsDetected.toLocaleString()}
+                change="+28%"
+                color="from-purple-500 to-purple-600"
+              />
+              <MetricCard
+                label="Interventions"
+                value={metrics.interventionsTriggered.toLocaleString()}
+                change="+15%"
+                color="from-orange-500 to-orange-600"
+              />
+              <MetricCard
+                label="Conversion Rate"
+                value={`${metrics.conversionRate}%`}
+                change="+5.2%"
+                color="from-green-500 to-green-600"
+              />
+              <MetricCard
+                label="Revenue Impact"
+                value={metrics.revenueImpact}
+                change="+23%"
+                color="from-yellow-500 to-yellow-600"
+              />
+            </div>
+
+            {/* Emotional Pattern Distribution */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="glass-card p-6"
+              >
+                <h2 className="text-xl font-semibold text-white mb-4">Emotional Patterns</h2>
                 <div className="space-y-3">
                   {[
                     { emotion: 'Frustration', percentage: 34, color: 'bg-red-500' },
@@ -161,12 +239,15 @@ const PulseDashboard: React.FC = () => {
                     </div>
                   ))}
                 </div>
-              </div>
-            </div>
+              </motion.div>
 
-            <div className="space-y-4">
-              <h2 className="text-xl font-semibold text-white mb-4">Top Interventions</h2>
-              <div className="p-6 rounded-xl bg-gradient-to-br from-white/5 to-white/10 backdrop-blur-md border border-white/20">
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1 }}
+                className="glass-card p-6"
+              >
+                <h2 className="text-xl font-semibold text-white mb-4">Top Interventions</h2>
                 <div className="space-y-3">
                   {[
                     { type: 'Discount Offer', conversions: 234, rate: '42%' },
@@ -183,44 +264,30 @@ const PulseDashboard: React.FC = () => {
                     </div>
                   ))}
                 </div>
-              </div>
+              </motion.div>
             </div>
           </div>
-        </div>
-      )}
-
-      {activeView === 'analytics' && (
-        <div className="p-6 max-w-7xl mx-auto">
-          <div className="text-center py-20">
-            <Eye className="w-16 h-16 text-gray-600 mx-auto mb-4" />
-            <h2 className="text-2xl font-bold text-white mb-2">Advanced Analytics</h2>
-            <p className="text-gray-400">Deep insights into emotional patterns and intervention effectiveness</p>
-            <p className="text-sm text-gray-500 mt-4">Coming soon...</p>
-          </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 };
 
 // Metric Card Component
 const MetricCard: React.FC<{
-  icon: any;
   label: string;
   value: string;
   change: string;
   color: string;
-}> = ({ icon: Icon, label, value, change, color }) => {
+}> = ({ label, value, change, color }) => {
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       className="p-6 rounded-xl bg-gradient-to-br from-white/5 to-white/10 backdrop-blur-md border border-white/20 hover:border-white/40 transition-all"
     >
-      <div className="flex items-center justify-between mb-4">
-        <div className={`p-2 rounded-lg bg-gradient-to-br ${color}`}>
-          <Icon className="w-5 h-5 text-white" />
-        </div>
+      <div className="flex items-center justify-between mb-2">
+        <div className={`w-2 h-8 rounded-full bg-gradient-to-b ${color}`} />
         <span className={`text-xs font-medium ${change.startsWith('+') ? 'text-green-400' : 'text-red-400'}`}>
           {change}
         </span>

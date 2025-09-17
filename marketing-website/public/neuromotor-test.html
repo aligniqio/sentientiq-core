@@ -1,0 +1,782 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SentientIQ Neuromotor Engine Test</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #fff;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.3);
+        }
+
+        .subtitle {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+
+        .dashboard {
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+
+        .metrics {
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 20px;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .metric {
+            margin-bottom: 20px;
+        }
+
+        .metric-label {
+            font-size: 0.9em;
+            opacity: 0.8;
+            margin-bottom: 5px;
+        }
+
+        .metric-value {
+            font-size: 1.5em;
+            font-weight: bold;
+        }
+
+        .metric-bar {
+            height: 6px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 3px;
+            margin-top: 8px;
+            overflow: hidden;
+        }
+
+        .metric-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #4ade80, #fbbf24, #ef4444);
+            border-radius: 3px;
+            transition: width 0.3s ease;
+        }
+
+        .visualization {
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 0;
+            border: 1px solid rgba(255,255,255,0.2);
+            position: relative;
+            height: 600px;
+            overflow: hidden;
+        }
+
+        #telemetryOutput {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            padding: 20px;
+            color: #0ff;
+            white-space: pre;
+            margin: 0;
+            font-family: 'Courier New', monospace;
+            font-size: 11px;
+            line-height: 1.3;
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+
+        #mouseTrail {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+
+        .trail-point {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.6);
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+        }
+
+        .content {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .card {
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 30px;
+            border: 1px solid rgba(255,255,255,0.2);
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        }
+
+        .price-card {
+            text-align: center;
+        }
+
+        .price-tier {
+            font-size: 1.3em;
+            margin-bottom: 10px;
+            opacity: 0.9;
+        }
+
+        .price-amount {
+            font-size: 3em;
+            font-weight: bold;
+            margin: 20px 0;
+        }
+
+        .price-features {
+            list-style: none;
+            margin: 20px 0;
+        }
+
+        .price-features li {
+            padding: 8px 0;
+            opacity: 0.8;
+        }
+
+        .cta-button {
+            background: linear-gradient(135deg, #4ade80 0%, #22c55e 100%);
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            border-radius: 25px;
+            font-size: 1.1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .cta-button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 10px 30px rgba(34, 197, 94, 0.4);
+        }
+
+        .event-log {
+            background: rgba(0,0,0,0.3);
+            border-radius: 10px;
+            padding: 15px;
+            margin-top: 20px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .event-log h3 {
+            margin-bottom: 10px;
+            opacity: 0.9;
+        }
+
+        .event-item {
+            font-size: 0.9em;
+            padding: 5px 0;
+            opacity: 0.7;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .event-item.critical {
+            color: #fbbf24;
+            opacity: 1;
+            font-weight: bold;
+        }
+
+        .tremor-indicator {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(255,255,255,0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+        }
+
+        .tremor-indicator.active {
+            animation: pulse 0.5s infinite;
+            border-color: #ef4444;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+
+        .prediction-banner {
+            position: fixed;
+            top: -100px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: linear-gradient(135deg, #fbbf24, #f59e0b);
+            color: #000;
+            padding: 15px 30px;
+            border-radius: 25px;
+            font-weight: bold;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            transition: top 0.3s ease;
+            z-index: 1000;
+        }
+
+        .prediction-banner.visible {
+            top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Navigation -->
+        <nav style="display: flex; justify-content: center; gap: 30px; padding: 20px 0; margin-bottom: 30px;">
+            <a href="#home" style="color: white; text-decoration: none; font-size: 1.1em; opacity: 0.9; transition: opacity 0.3s;">Home</a>
+            <a href="#features" style="color: white; text-decoration: none; font-size: 1.1em; opacity: 0.9; transition: opacity 0.3s;">Features</a>
+            <a href="#pricing" style="color: white; text-decoration: none; font-size: 1.1em; opacity: 0.9; transition: opacity 0.3s;">Pricing</a>
+            <a href="#docs" style="color: white; text-decoration: none; font-size: 1.1em; opacity: 0.9; transition: opacity 0.3s;">Documentation</a>
+            <a href="#contact" style="color: white; text-decoration: none; font-size: 1.1em; opacity: 0.9; transition: opacity 0.3s;">Contact</a>
+        </nav>
+
+        <header>
+            <h1>🧠 SentientIQ Neuromotor Engine</h1>
+            <p class="subtitle">Real-time biomechanical mouse telemetry analysis</p>
+        </header>
+
+        <div class="dashboard">
+            <div class="metrics">
+                <h2>Live Metrics</h2>
+
+                <div class="metric">
+                    <div class="metric-label">Stress Level</div>
+                    <div class="metric-value" id="stressLevel">0%</div>
+                    <div class="metric-bar">
+                        <div class="metric-fill" id="stressFill" style="width: 0%"></div>
+                    </div>
+                </div>
+
+                <div class="metric">
+                    <div class="metric-label">Cognitive Confidence</div>
+                    <div class="metric-value" id="confidence">50%</div>
+                    <div class="metric-bar">
+                        <div class="metric-fill" id="confidenceFill" style="width: 50%"></div>
+                    </div>
+                </div>
+
+                <div class="metric">
+                    <div class="metric-label">Hesitation</div>
+                    <div class="metric-value" id="hesitation">0%</div>
+                    <div class="metric-bar">
+                        <div class="metric-fill" id="hesitationFill" style="width: 0%"></div>
+                    </div>
+                </div>
+
+                <div class="metric">
+                    <div class="metric-label">Click Probability</div>
+                    <div class="metric-value" id="clickProb">0%</div>
+                    <div class="metric-bar">
+                        <div class="metric-fill" id="clickFill" style="width: 0%"></div>
+                    </div>
+                </div>
+
+                <div class="metric">
+                    <div class="metric-label">Abandonment Risk</div>
+                    <div class="metric-value" id="abandonRisk">0%</div>
+                    <div class="metric-bar">
+                        <div class="metric-fill" id="abandonFill" style="width: 0%"></div>
+                    </div>
+                </div>
+
+                <div class="event-log">
+                    <h3>Event Stream</h3>
+                    <div id="eventLog"></div>
+                </div>
+            </div>
+
+            <div class="visualization">
+                <div id="telemetryOutput"></div>
+            </div>
+        </div>
+
+        <!-- Text Content Area -->
+        <div style="background: rgba(255,255,255,0.1); backdrop-filter: blur(10px); border-radius: 15px; padding: 40px; margin: 40px 0; border: 1px solid rgba(255,255,255,0.2);">
+            <h2 style="margin-bottom: 20px; font-size: 1.8em;">Understanding User Intent Through Movement</h2>
+            <p style="line-height: 1.6; opacity: 0.9; margin-bottom: 20px;">
+                Every mouse movement tells a story. The way users navigate your site reveals their emotional state,
+                confidence level, and purchase intent. Our neuromotor engine captures micro-movements at 120Hz,
+                analyzing tremor patterns, acceleration curves, and trajectory predictions to understand user behavior
+                before they even realize their own intentions.
+            </p>
+            <p style="line-height: 1.6; opacity: 0.9; margin-bottom: 20px;">
+                This isn't just tracking - it's reading the biomechanical signatures of human decision-making.
+                When a user hesitates before clicking "Buy Now", we detect the deceleration pattern. When they're
+                stressed about pricing, we measure the tremor frequency. When they're about to abandon your site,
+                we see the exit vector forming before they reach the edge.
+            </p>
+            <p style="line-height: 1.6; opacity: 0.9;">
+                Move your mouse around this page to see the telemetry in action. Watch how the system tracks your
+                proximity to elements, detects your movement patterns, and predicts your next action. Every pixel
+                of movement is captured, analyzed, and interpreted in real-time.
+            </p>
+        </div>
+
+        <!-- Pricing Section -->
+        <div class="content" id="pricing">
+            <div class="card price-card" id="pricing-basic">
+                <div class="price-tier">Basic</div>
+                <div class="price-amount">$29</div>
+                <ul class="price-features">
+                    <li>✓ 1,000 sessions/month</li>
+                    <li>✓ Basic analytics</li>
+                    <li>✓ Email support</li>
+                </ul>
+                <button class="cta-button">Choose Basic</button>
+            </div>
+
+            <div class="card price-card" id="pricing-pro">
+                <div class="price-tier">Professional</div>
+                <div class="price-amount">$99</div>
+                <ul class="price-features">
+                    <li>✓ 10,000 sessions/month</li>
+                    <li>✓ Advanced analytics</li>
+                    <li>✓ Priority support</li>
+                    <li>✓ Custom interventions</li>
+                </ul>
+                <button class="cta-button">Choose Pro</button>
+            </div>
+
+            <div class="card price-card" id="pricing-enterprise">
+                <div class="price-tier">Enterprise</div>
+                <div class="price-amount">Custom</div>
+                <ul class="price-features">
+                    <li>✓ Unlimited sessions</li>
+                    <li>✓ Full platform access</li>
+                    <li>✓ Dedicated support</li>
+                    <li>✓ Custom integration</li>
+                </ul>
+                <button class="cta-button">Contact Sales</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="tremor-indicator" id="tremorIndicator">
+        <span id="tremorHz">0Hz</span>
+    </div>
+
+    <div class="prediction-banner" id="predictionBanner"></div>
+
+    <!-- Set tenant ID for testing -->
+    <script>
+        window.SENTIENTIQ_TENANT_ID = 'test-tenant';
+        window.SENTIENTIQ_DEBUG = true;
+        window.SENTIENTIQ_API = 'http://localhost:3001'; // Point to local server for testing
+    </script>
+
+    <!-- Load pure telemetry engine -->
+    <script src="sentientiq-telemetry-pure.js"></script>
+
+    <!-- Visualization and monitoring -->
+    <script>
+        // Display raw telemetry data
+        let lastTelemetryData = {};
+        const telemetryOutput = document.getElementById('telemetryOutput');
+
+        // Simple display function with better error handling
+        let frameCount = 0;
+        let lastBatchTime = 0;
+        let lastDisplayUpdate = 0;
+        const DISPLAY_UPDATE_RATE = 250; // Only update display every 250ms
+
+        function displayTelemetry() {
+            frameCount++;
+
+            const now = Date.now();
+
+            // Throttle display updates
+            if (now - lastDisplayUpdate < DISPLAY_UPDATE_RATE) {
+                requestAnimationFrame(displayTelemetry);
+                return;
+            }
+            lastDisplayUpdate = now;
+
+            try {
+                if (!window.lastTelemetryBatch || !window.lastTelemetryBatch.events) {
+                    const dots = '.'.repeat((frameCount / 10) % 4);
+                    telemetryOutput.innerHTML = '<pre>Waiting for telemetry data' + dots + '\nMove your mouse to generate events.\n\nFrame: ' + frameCount + '</pre>';
+                    requestAnimationFrame(displayTelemetry);
+                    return;
+                }
+
+                const batch = window.lastTelemetryBatch;
+                const events = batch.events;
+
+                // Check if batch is fresh
+                const batchTime = batch.timestamp || Date.now();
+                const isFresh = batchTime !== lastBatchTime;
+                lastBatchTime = batchTime;
+
+                // Find the most recent mouse_move event
+                const mouseEvents = events.filter(e => e.type === 'mouse_move');
+                if (mouseEvents.length > 0) {
+                    const data = mouseEvents[mouseEvents.length - 1].data;
+
+                let output = [];
+                output.push('═══════════════════════════════════════════════════════════════');
+                output.push('TELEMETRY STREAM - ' + new Date().toLocaleTimeString());
+                output.push('═══════════════════════════════════════════════════════════════');
+                output.push('Batch: ' + events.length + ' events | Session: ' + batch.session_id.slice(0, 8));
+                output.push('═══════════════════════════════════════════════════════════════');
+                output.push('');
+
+                // Position and Motion
+                output.push('POSITION & MOTION');
+                output.push('─────────────────');
+                output.push(`Position:      (${data.x?.toFixed(3)}, ${data.y?.toFixed(3)})`);
+                output.push(`Displacement:  ${data.displacement?.toFixed(3)} px`);
+                output.push(`Velocity:      ${data.velocity?.toFixed(1)} px/s`);
+                output.push(`Acceleration:  ${data.acceleration?.toFixed(1)} px/s²`);
+                output.push(`Jerk:          ${data.jerk?.toFixed(0)} px/s³`);
+                if (data.angle !== undefined) {
+                    output.push(`Angle:         ${(data.angle * 180 / Math.PI).toFixed(1)}°`);
+                }
+                output.push('');
+
+                // Viewport Context
+                if (data.viewport) {
+                    output.push('VIEWPORT CONTEXT');
+                    output.push('────────────────');
+                    output.push(`Zone (9-grid): ${data.viewport.zone9}`);
+                    output.push(`Zone (16-grid): ${data.viewport.zone}`);
+                    output.push(`Position %:    (${data.viewport.position_percent?.x?.toFixed(1)}%, ${data.viewport.position_percent?.y?.toFixed(1)}%)`);
+                    output.push(`Center dist:   ${data.viewport.center_distance?.toFixed(0)} px`);
+                    output.push('');
+
+                    output.push('EDGE PROXIMITY');
+                    output.push('──────────────');
+                    const e = data.viewport.edge_proximity;
+                    if (e) {
+                        output.push(`Top:    ${String(Math.round(e.top)).padStart(4)} px`);
+                        output.push(`Right:  ${String(Math.round(e.right)).padStart(4)} px`);
+                        output.push(`Bottom: ${String(Math.round(e.bottom)).padStart(4)} px`);
+                        output.push(`Left:   ${String(Math.round(e.left)).padStart(4)} px`);
+                        output.push(`Nearest: ${e.nearest?.toFixed(0)} px`);
+                    }
+
+                    if (data.viewport.exit_vector) {
+                        output.push('');
+                        output.push('⚠️  EXIT VECTOR DETECTED');
+                        output.push(`Side: ${data.viewport.exit_vector.side}`);
+                        output.push(`Velocity: ${data.viewport.exit_vector.velocity?.toFixed(0)} px/s`);
+                        output.push(`Time to exit: ${data.viewport.exit_vector.time_to_exit?.toFixed(2)}s`);
+                    }
+                    output.push('');
+                }
+
+                // Patterns
+                output.push('PATTERNS');
+                output.push('────────');
+                output.push(`Micro-pattern: ${data.micro_pattern || 'none'}`);
+                output.push(`Dwelling:      ${data.is_dwelling ? 'YES' : 'no'}`);
+                if (data.is_dwelling) {
+                    output.push(`Dwell time:    ${(data.dwell_time / 1000).toFixed(1)}s`);
+                }
+                output.push('');
+
+                // Nearby Elements
+                if (data.nearby_elements && data.nearby_elements.length > 0) {
+                    output.push('NEARBY ELEMENTS');
+                    output.push('───────────────');
+                    data.nearby_elements.forEach(el => {
+                        const arrow = el.is_approaching ? '→' : ' ';
+                        const velocity = el.is_approaching ? ` @ ${el.closing_velocity?.toFixed(0)} px/s` : '';
+                        output.push(`${arrow} ${el.id}: ${el.distance}px${velocity}`);
+                    });
+                } else {
+                    output.push('NEARBY ELEMENTS');
+                    output.push('───────────────');
+                    output.push('(no elements in range)');
+                }
+
+                if (data.hovering) {
+                    output.push('');
+                    output.push(`🎯 HOVERING: ${data.hovering}`);
+                } else {
+                    output.push('');
+                    output.push('🎯 HOVERING: none');
+                }
+
+                // Pad to consistent length to prevent layout shift
+                while (output.length < 45) {
+                    output.push('');
+                }
+
+                // Use innerHTML instead of textContent to prevent reflow
+                telemetryOutput.innerHTML = '<pre>' + output.join('\n') + '</pre>';
+            }
+
+            } catch (err) {
+                console.error('Display error:', err);
+                telemetryOutput.innerHTML = '<pre>Error displaying telemetry: ' + err.message + '</pre>';
+            }
+
+            requestAnimationFrame(displayTelemetry);
+        }
+
+        // Start display loop
+        displayTelemetry();
+
+        function displayTelemetryMetrics() {
+            if (!lastTelemetryData.mouse_move) {
+                requestAnimationFrame(displayTelemetryMetrics);
+                return;
+            }
+
+            const data = lastTelemetryData.mouse_move;
+
+            // Map raw telemetry to display metrics
+            // Velocity as stress indicator
+            const stressLevel = Math.min(100, (data.velocity || 0) / 10);
+            document.getElementById('stressLevel').textContent = Math.round(stressLevel) + '%';
+            document.getElementById('stressFill').style.width = stressLevel + '%';
+
+            // Jerk as confidence (lower jerk = higher confidence)
+            const confidence = Math.max(0, 100 - Math.min(100, (data.jerk || 0) / 100));
+            document.getElementById('confidence').textContent = Math.round(confidence) + '%';
+            document.getElementById('confidenceFill').style.width = confidence + '%';
+
+            // Dwelling as hesitation
+            const hesitation = data.is_dwelling ? Math.min(100, (data.dwell_time || 0) / 30) : 0;
+            document.getElementById('hesitation').textContent = Math.round(hesitation) + '%';
+            document.getElementById('hesitationFill').style.width = hesitation + '%';
+
+            // Click probability based on approach to elements
+            let clickProb = 0;
+            if (data.nearby_elements && data.nearby_elements.length > 0) {
+                const nearest = data.nearby_elements[0];
+                if (nearest.is_approaching && nearest.distance < 100) {
+                    clickProb = (100 - nearest.distance);
+                }
+            }
+            document.getElementById('clickProb').textContent = Math.round(clickProb) + '%';
+            document.getElementById('clickFill').style.width = clickProb + '%';
+
+            // Abandonment risk based on edge proximity
+            let abandonRisk = 0;
+            if (data.viewport && data.viewport.edge_proximity) {
+                const nearestEdge = data.viewport.edge_proximity.nearest;
+                if (nearestEdge < 100) {
+                    abandonRisk = (100 - nearestEdge);
+                    if (data.viewport.exit_vector) {
+                        abandonRisk = Math.min(100, abandonRisk * 1.5);
+                    }
+                }
+            }
+            document.getElementById('abandonRisk').textContent = Math.round(abandonRisk) + '%';
+            document.getElementById('abandonFill').style.width = abandonRisk + '%';
+
+            // Update indicator with viewport zone
+            if (data.viewport) {
+                document.getElementById('tremorHz').textContent = data.viewport.zone9 || 'tracking';
+                if (data.hovering) {
+                    document.getElementById('tremorIndicator').classList.add('active');
+                } else {
+                    document.getElementById('tremorIndicator').classList.remove('active');
+                }
+            }
+
+            requestAnimationFrame(displayTelemetryMetrics);
+        }
+
+        displayTelemetryMetrics();
+
+        // Event log
+        const eventLog = document.getElementById('eventLog');
+        const criticalEvents = ['pricing_hesitation', 'click_imminent', 'pricing_approach_slow', 'abandonment_risk_high', 'hover_start', 'hover_end'];
+
+        // Intercept telemetry events for display
+        let lastUpdateTime = 0;
+        const UPDATE_THROTTLE = 100; // Only update UI every 100ms
+
+        setTimeout(() => {
+            if (window.SentientIQ && window.SentientIQ.telemetry) {
+                const originalRecord = window.SentientIQ.telemetry.record;
+                window.SentientIQ.telemetry.record = function(eventType, data) {
+                // Store for metrics display
+                lastTelemetryData[eventType] = data;
+                // Call original
+                originalRecord.call(this, eventType, data);
+
+                // Display in log
+                const eventItem = document.createElement('div');
+                eventItem.className = criticalEvents.includes(eventType) ? 'event-item critical' : 'event-item';
+                eventItem.textContent = `${new Date().toLocaleTimeString()}: ${eventType}`;
+                eventLog.insertBefore(eventItem, eventLog.firstChild);
+
+                // Keep only last 20 events
+                while (eventLog.children.length > 20) {
+                    eventLog.removeChild(eventLog.lastChild);
+                }
+
+                // Update telemetry text output (throttled for readability)
+                const now = Date.now();
+                if (eventType === 'mouse_move' && data && (now - lastUpdateTime > UPDATE_THROTTLE)) {
+                    lastUpdateTime = now;
+                    let output = [];
+                    output.push('═══════════════════════════════════════════════════════════════════');
+                    output.push('TELEMETRY STREAM - ' + new Date().toLocaleTimeString());
+                    output.push('═══════════════════════════════════════════════════════════════════');
+                    output.push('');
+
+                    // Position and Motion
+                    output.push('POSITION & MOTION');
+                    output.push('─────────────────');
+                    output.push(`Position:      (${data.x?.toFixed(3)}, ${data.y?.toFixed(3)})`);
+                    output.push(`Displacement:  ${data.displacement?.toFixed(3)} px`);
+                    output.push(`Velocity:      ${data.velocity?.toFixed(1)} px/s`);
+                    output.push(`Acceleration:  ${data.acceleration?.toFixed(1)} px/s²`);
+                    output.push(`Jerk:          ${data.jerk?.toFixed(0)} px/s³`);
+                    if (data.angle !== undefined) {
+                        output.push(`Angle:         ${(data.angle * 180 / Math.PI).toFixed(1)}°`);
+                    }
+                    output.push('');
+
+                    // Viewport Context
+                    if (data.viewport) {
+                        output.push('VIEWPORT CONTEXT');
+                        output.push('────────────────');
+                        output.push(`Zone (9-grid): ${data.viewport.zone9}`);
+                        output.push(`Zone (16-grid): ${data.viewport.zone}`);
+                        output.push(`Position %:    (${data.viewport.position_percent?.x?.toFixed(1)}%, ${data.viewport.position_percent?.y?.toFixed(1)}%)`);
+                        output.push(`Center dist:   ${data.viewport.center_distance?.toFixed(0)} px`);
+                        output.push('');
+
+                        output.push('EDGE PROXIMITY');
+                        output.push('──────────────');
+                        const e = data.viewport.edge_proximity;
+                        if (e) {
+                            output.push(`Top:    ${String(Math.round(e.top)).padStart(4)} px`);
+                            output.push(`Right:  ${String(Math.round(e.right)).padStart(4)} px`);
+                            output.push(`Bottom: ${String(Math.round(e.bottom)).padStart(4)} px`);
+                            output.push(`Left:   ${String(Math.round(e.left)).padStart(4)} px`);
+                            output.push(`Nearest: ${e.nearest?.toFixed(0)} px`);
+                        }
+
+                        if (data.viewport.exit_vector) {
+                            output.push('');
+                            output.push('⚠️  EXIT VECTOR DETECTED');
+                            output.push(`Side: ${data.viewport.exit_vector.side}`);
+                            output.push(`Velocity: ${data.viewport.exit_vector.velocity?.toFixed(0)} px/s`);
+                            output.push(`Time to exit: ${data.viewport.exit_vector.time_to_exit?.toFixed(2)}s`);
+                        }
+                        output.push('');
+                    }
+
+                    // Patterns
+                    output.push('PATTERNS');
+                    output.push('────────');
+                    output.push(`Micro-pattern: ${data.micro_pattern || 'none'}`);
+                    output.push(`Dwelling:      ${data.is_dwelling ? 'YES' : 'no'}`);
+                    if (data.is_dwelling) {
+                        output.push(`Dwell time:    ${(data.dwell_time / 1000).toFixed(1)}s`);
+                    }
+                    output.push('');
+
+                    // Nearby Elements
+                    if (data.nearby_elements && data.nearby_elements.length > 0) {
+                        output.push('NEARBY ELEMENTS');
+                        output.push('───────────────');
+                        data.nearby_elements.forEach(el => {
+                            const arrow = el.is_approaching ? '→' : ' ';
+                            const velocity = el.is_approaching ? ` @ ${el.closing_velocity?.toFixed(0)} px/s` : '';
+                            output.push(`${arrow} ${el.id}: ${el.distance}px${velocity}`);
+                        });
+                    } else {
+                        output.push('No elements in range');
+                    }
+
+                    if (data.hovering) {
+                        output.push('');
+                        output.push(`🎯 HOVERING: ${data.hovering}`);
+                    }
+
+                    telemetryOutput.textContent = output.join('\n');
+                }
+
+                // Show prediction banner for certain events
+                if (eventType === 'click_imminent') {
+                    showPrediction(`🎯 Click predicted: ${data.element} (${Math.round(data.probability * 100)}%)`);
+                } else if (eventType === 'abandonment_risk_high') {
+                    showPrediction(`⚠️ High abandonment risk: ${Math.round(data.risk * 100)}%`);
+                } else if (eventType === 'pricing_hesitation') {
+                    showPrediction(`💭 Pricing hesitation detected: ${Math.round(data.duration/1000)}s`);
+                } else if (eventType === 'pricing_approach_slow') {
+                    showPrediction(`🐌 Slow pricing approach (anxiety: ${Math.round(data.anxiety)}%)`);
+                }
+            };
+            }
+        }, 1000);
+
+        // Prediction banner
+        function showPrediction(message) {
+            const banner = document.getElementById('predictionBanner');
+            banner.textContent = message;
+            banner.classList.add('visible');
+
+            setTimeout(() => {
+                banner.classList.remove('visible');
+            }, 3000);
+        }
+
+        // Test different scenarios
+        console.log('🎯 Test Scenarios:');
+        console.log('1. Move slowly toward pricing - observe hesitation detection');
+        console.log('2. Move quickly and stop suddenly - observe stress/surprise detection');
+        console.log('3. Make small circular movements - observe tremor analysis');
+        console.log('4. Approach CTA buttons smoothly - observe click prediction');
+        console.log('5. Move toward window edges - observe abandonment risk');
+    </script>
+</body>
+</html>

@@ -19,6 +19,7 @@
     "cors": "^2.8.5",
     "express": "^5.1.0",
     "framer-motion": "^11.3.0",
+    "ioredis": "^5.7.0",
     "lucide-react": "^0.400.0",
     "nats": "^2.29.3",
     "openai": "^5.19.1",
