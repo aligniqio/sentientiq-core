@@ -63,32 +63,11 @@ export const useNATSInterventions = (onEvent: (event: InterventionEvent) => void
       setIsConnected(true);
       setConnectionStatus('Connected to NATS');
 
-      // Get JetStream context
-      const js = nc.jetstream();
-      jsRef.current = js;
-      console.log('✅ JetStream initialized (Interventions)');
+      // Skip JetStream entirely - just use regular NATS pub/sub
+      // This avoids replaying old messages from the stream
+      console.log('Using direct NATS subscription (no replay)');
 
-      // Create ephemeral consumer for this dashboard session
-      const jsm = await nc.jetstreamManager();
-
-      // Check if stream exists, create if not
-      try {
-        await jsm.streams.info(config.streamName);
-      } catch (err) {
-        console.log('Creating INTERVENTION_EVENTS stream...');
-        await jsm.streams.add({
-          name: config.streamName,
-          subjects: [config.subject],
-          retention: RetentionPolicy.Limits,
-          max_msgs: 100000,
-          max_age: 24 * 60 * 60 * 1000000000, // 24 hours in nanoseconds
-          storage: StorageType.Memory,
-          discard: DiscardPolicy.Old
-        });
-      }
-
-      // Subscribe directly to the subject without JetStream consumer
-      // This creates a simple subscription
+      // Subscribe directly to the subject for NEW messages only
       const sub = nc.subscribe(config.subject);
 
       setConnectionStatus('Subscribed to intervention events');

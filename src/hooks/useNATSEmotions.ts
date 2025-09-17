@@ -67,18 +67,11 @@ export const useNATSEmotions = (onEvent: (event: EmotionalEvent) => void) => {
       setIsConnected(true);
       setConnectionStatus('Connected to NATS');
 
-      // Get JetStream context
-      const js = nc.jetstream();
-      jsRef.current = js;
-      console.log('✅ JetStream initialized');
+      // Skip JetStream entirely - just use regular NATS pub/sub
+      // This avoids replaying old messages from the stream
+      console.log('Using direct NATS subscription (no replay)');
 
-      // Create ephemeral consumer for this dashboard session
-      const jsm = await nc.jetstreamManager();
-      const stream = await jsm.streams.info(config.streamName);
-      console.log(`Stream ${config.streamName} has ${stream.state.messages} messages`);
-
-      // Subscribe directly to the subject without JetStream consumer
-      // This creates a simple subscription
+      // Subscribe directly to the subject for NEW messages only
       const sub = nc.subscribe(config.subject);
 
       setConnectionStatus('Subscribed to emotional events');
