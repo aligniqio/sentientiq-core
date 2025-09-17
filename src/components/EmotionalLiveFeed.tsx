@@ -409,46 +409,81 @@ const EmotionalLiveFeed = () => {
   useEffect(() => {
     if (!user) return;
 
+    let reconnectTimeoutId: NodeJS.Timeout;
+    let isCleaningUp = false;
+
     const connectInterventionWs = () => {
+      // Don't connect if we're cleaning up
+      if (isCleaningUp) return;
+
+      // Close existing connection if any
+      if (interventionWs.current && interventionWs.current.readyState !== WebSocket.CLOSED) {
+        interventionWs.current.close();
+        interventionWs.current = null;
+      }
+
       const tenantId = user.id || 'demo';
       const sessionId = `dashboard_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       const wsUrl = `wss://api.sentientiq.app/ws?channel=interventions&tenant_id=${tenantId}&session=${sessionId}`;
 
       console.log('Connecting to intervention WebSocket:', wsUrl);
-      const ws = new WebSocket(wsUrl);
 
-      ws.onopen = () => {
-        console.log('Intervention WebSocket connected successfully');
-      };
+      try {
+        const ws = new WebSocket(wsUrl);
 
-      ws.onmessage = (event) => {
-        try {
-          const data = JSON.parse(event.data);
-          console.log('Intervention WebSocket message received:', data.type);
-          handleIncomingInterventionEvent(data);
-        } catch (e) {
-          console.error('Failed to parse intervention message:', e);
+        ws.onopen = () => {
+          console.log('Intervention WebSocket connected successfully');
+        };
+
+        ws.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data);
+            console.log('Intervention WebSocket message received:', data.type);
+            handleIncomingInterventionEvent(data);
+          } catch (e) {
+            console.error('Failed to parse intervention message:', e);
+          }
+        };
+
+        ws.onerror = (error) => {
+          console.error('Intervention WebSocket error event:', error);
+          console.log('WebSocket readyState:', ws.readyState);
+        };
+
+        ws.onclose = (event) => {
+          console.log(`Intervention WebSocket closed. Code: ${event.code}, Reason: ${event.reason}`);
+
+          // Only reconnect if not cleaning up and not a normal closure
+          if (!isCleaningUp && event.code !== 1000) {
+            reconnectTimeoutId = setTimeout(connectInterventionWs, 3000);
+          }
+        };
+
+        interventionWs.current = ws;
+      } catch (error) {
+        console.error('Failed to create WebSocket:', error);
+        // Retry connection after 3 seconds
+        if (!isCleaningUp) {
+          reconnectTimeoutId = setTimeout(connectInterventionWs, 3000);
         }
-      };
-
-      ws.onerror = (error) => {
-        console.error('Intervention WebSocket error event:', error);
-        console.log('WebSocket readyState:', ws.readyState);
-        console.log('WebSocket URL:', wsUrl);
-      };
-
-      ws.onclose = (event) => {
-        console.log(`Intervention WebSocket closed. Code: ${event.code}, Reason: ${event.reason}`);
-        // Reconnect after 3 seconds
-        setTimeout(connectInterventionWs, 3000);
-      };
-
-      interventionWs.current = ws;
+      }
     };
 
     const handleIncomingInterventionEvent = (data: any) => {
+      // Skip connection status messages
+      if (data.type === 'connected' || data.type === 'connect') {
+        console.log('WebSocket connection confirmed:', data.message || 'Connected');
+        return;
+      }
+
       // Handle pipeline events
       if (data.type === 'pipeline_event') {
+        // Only process if we have valid data
+        if (!data.stage || !data.payload) {
+          console.log('Skipping incomplete pipeline event:', data);
+          return;
+        }
+
         const event: InterventionEvent = {
           id: `${data.sessionId || 'unknown'}_${Date.now()}`,
           timestamp: data.timestamp || Date.now(),
@@ -534,11 +569,22 @@ const EmotionalLiveFeed = () => {
       return 'telemetry';
     };
 
-    connectInterventionWs();
+    // Delay initial connection to avoid race conditions
+    const initTimeoutId = setTimeout(connectInterventionWs, 100);
 
     return () => {
+      isCleaningUp = true;
+
+      // Clear any pending timeouts
+      clearTimeout(initTimeoutId);
+      if (reconnectTimeoutId) {
+        clearTimeout(reconnectTimeoutId);
+      }
+
+      // Close WebSocket connection
       if (interventionWs.current) {
         interventionWs.current.close();
+        interventionWs.current = null;
       }
     };
   }, [user]);
