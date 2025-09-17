@@ -315,13 +315,7 @@ class UnifiedWebSocketServer extends EventEmitter {
 
       console.log(`🎯 Sent ${interventionType} intervention to ${sessionId} (${client.type} channel) - ${correlationId}`);
 
-      // Broadcast websocket delivery stage
-      this.broadcastPipelineEvent('websocket', {
-        sessionId,
-        interventionType,
-        correlationId,
-        delivered: true
-      });
+      // Don't broadcast websocket delivery events - dashboard only needs final interventions
 
       // Update dashboard that client received it
       this.broadcastInterventionToDashboard({

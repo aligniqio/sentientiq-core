@@ -54,14 +54,8 @@ app.post('/api/telemetry/stream', async (req, res) => {
     // Process behaviors into emotions - DIRECT, no normalization
     const { emotions, patterns } = await behaviorProcessor.processBatch(session_id, events, url);
 
-    // Broadcast processor metric for dashboard
-    if (emotions.length > 0) {
-      unifiedWS.broadcastPipelineEvent('processor', {
-        sessionId: session_id,
-        emotionsProcessed: emotions.length,
-        timestamp: Date.now()
-      });
-    }
+    // Don't broadcast processor events to dashboard - only final emotions/interventions
+    // The dashboard should only see the final products, not intermediate pipeline stages
 
     // Don't broadcast individual emotion events to pipeline - EmotionalLiveFeed handles that
 
@@ -103,14 +97,7 @@ app.post('/api/telemetry/stream', async (req, res) => {
           urgency: emotions[emotions.length - 1]?.context?.urgency || 0
         };
 
-        // Broadcast engine stage event
-        unifiedWS.broadcastPipelineEvent('engine', {
-          sessionId: session_id,
-          interventionType: pattern.intervention,
-          patternType: pattern.type,
-          emotion: emotionalContext.emotion,
-          confidence: emotionalContext.confidence
-        });
+        // Don't broadcast engine events - only final interventions should be visible
 
         const sent = unifiedWS.sendIntervention(session_id, pattern.intervention, emotionalContext);
 
@@ -129,12 +116,7 @@ app.post('/api/telemetry/stream', async (req, res) => {
         }
       } catch (error) {
         console.error(`❌ Intervention engine error for ${session_id}: ${error.message}`);
-        // Broadcast error state
-        unifiedWS.broadcastPipelineEvent('engine', {
-          sessionId: session_id,
-          error: 'intervention_failed',
-          message: error.message
-        });
+        // Don't broadcast error states to dashboard - keep it clean
       }
     }
 
