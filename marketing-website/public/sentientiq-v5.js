@@ -502,6 +502,22 @@
               <h4>💡 About our pricing</h4>
               <p>Average ROI within 2 weeks. See how we compare.</p>
             </div>
+          `,
+          price_reassurance: `
+            <div class="sq-modal-overlay" onclick="this.parentElement.remove()"></div>
+            <div class="sq-modal-content">
+              <button onclick="event.stopPropagation(); this.closest('.sq-intervention').remove()" style="position: absolute; top: 15px; right: 15px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); font-size: 20px; cursor: pointer; color: #fff; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; transition: all 0.3s; z-index: 1000000;">&times;</button>
+              <h2>💰 Let's talk about value</h2>
+              <p>Our pricing reflects the 10x ROI our customers typically see within 30 days.</p>
+              <button onclick="window.location.href='/roi-calculator'" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; padding: 15px 30px; border-radius: 10px; font-size: 16px; cursor: pointer; font-weight: 600; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);">Calculate Your ROI</button>
+            </div>
+          `,
+          competitive_advantage: `
+            <div class="sq-toast">
+              <h4>📊 Comparing us to others?</h4>
+              <p>We're the only solution with real-time behavioral intelligence. See why we're different.</p>
+              <button onclick="window.location.href='/comparison'" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; padding: 10px 20px; border-radius: 6px; font-size: 14px; cursor: pointer; font-weight: 600; margin-top: 10px;">See Comparison</button>
+            </div>
           `
         };
 

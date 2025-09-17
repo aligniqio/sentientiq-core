@@ -277,7 +277,53 @@ export class BehaviorProcessor {
 
       scroll_to_tabs: { emotion: 'comparison_shopping', confidence: 80 },
 
+      // TEXT SELECTION - The killer feature for demos
+      text_selection: (event) => {
+        const selectedText = event.selected_text || '';
+        const isPricing = event.ctx?.pricing ||
+                         selectedText.match(/\$|\d+|price|tier|plan|month|year/i);
+
+        if (isPricing) {
+          return {
+            emotion: 'price_comparison',
+            confidence: 95,
+            insight: 'Copying pricing info - comparison shopping!',
+            urgency: 'critical'
+          };
+        }
+
+        // Non-pricing text selection
+        return {
+          emotion: 'deep_research',
+          confidence: 85,
+          insight: 'Researching specific features'
+        };
+      },
+
       mouse_exit: (event) => {
+        // STICKER SHOCK - Check session history for recent pricing interactions
+        const session = this.sessions.get(event.session_id || 'unknown');
+        if (session) {
+          const recentHistory = session.history.slice(-5);
+          const hasRecentPricing = recentHistory.some(h =>
+            h.emotion === 'price_consideration' ||
+            h.emotion === 'price_interest' ||
+            h.emotion === 'purchase_intent' ||
+            h.emotion === 'pricing_exploration' ||
+            h.emotion === 'checkout_intent'
+          );
+
+          if (hasRecentPricing) {
+            // They were JUST looking at pricing and flew off the page
+            return {
+              emotion: 'sticker_shock',
+              confidence: 95,
+              insight: 'Rapid exit after viewing pricing - sticker shock!',
+              urgency: 'critical'
+            };
+          }
+        }
+
         // Exit direction tells us intent
         if (event.dir === 'top') {
           // Leaving via top after looking at pricing = checking competitors
@@ -1078,6 +1124,34 @@ export class BehaviorProcessor {
     // Debug log to see what emotions we're working with
     if (recent.length > 0) {
       console.log('📊 Recent emotions:', recent);
+    }
+
+    // STICKER SHOCK PATTERN - IMMEDIATE INTERVENTION
+    if (recent.includes('sticker_shock')) {
+      patterns.push({
+        type: 'sticker_shock_detected',
+        intervention: 'price_reassurance',
+        priority: 'CRITICAL'
+      });
+      // Update session to prevent spam
+      if (session) {
+        session.lastInterventionTime = now;
+      }
+      return patterns; // Return immediately with just this critical intervention
+    }
+
+    // PRICE COMPARISON (TEXT SELECTION) - IMMEDIATE INTERVENTION
+    if (recent.includes('price_comparison')) {
+      patterns.push({
+        type: 'comparison_shopping_detected',
+        intervention: 'competitive_advantage',
+        priority: 'CRITICAL'
+      });
+      // Update session to prevent spam
+      if (session) {
+        session.lastInterventionTime = now;
+      }
+      return patterns; // Return immediately with comparison intervention
     }
 
     // CART ABANDONMENT PATTERNS - THE MONEY MAKER
