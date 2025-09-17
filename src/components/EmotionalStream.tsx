@@ -102,8 +102,8 @@ const EmotionalStream = () => {
     const connectWebSocket = () => {
       if (isCleaningUp) return;
 
-      // Connect to emotional broadcaster on EC2
-      const wsUrl = `ws://98.87.12.130:3003/ws/emotions`;
+      // Connect to emotional broadcaster via secure proxy
+      const wsUrl = `wss://api.sentientiq.app/ws/emotions`;
 
       console.log('Connecting to Emotional Broadcaster:', wsUrl);
 

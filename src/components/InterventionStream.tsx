@@ -95,8 +95,8 @@ const InterventionStream = () => {
     const connectWebSocket = () => {
       if (isCleaningUp) return;
 
-      // Connect to intervention broadcaster on EC2
-      const wsUrl = `ws://98.87.12.130:3004/ws/interventions`;
+      // Connect to intervention broadcaster via secure proxy
+      const wsUrl = `wss://api.sentientiq.app/ws/interventions`;
 
       console.log('Connecting to Intervention Broadcaster:', wsUrl);
 

@@ -22,15 +22,15 @@
     debug: window.SENTIENTIQ_DEBUG || false,
 
     // Telemetry settings
-    telemetryEndpoint: 'ws://98.87.12.130:3002/ws',
-    httpFallback: 'http://98.87.12.130:3002/api/telemetry',
+    telemetryEndpoint: 'wss://api.sentientiq.app/ws/telemetry',
+    httpFallback: 'https://api.sentientiq.app/api/telemetry',
     samplingRate: 120, // Hz for biomechanical precision
     batchSize: 50,
     flushInterval: 2000,
 
     // Intervention settings
     enableInterventions: window.SENTIENTIQ_ENABLE_INTERVENTIONS !== false,
-    interventionEndpoint: 'ws://98.87.12.130:3004/ws/interventions',
+    interventionEndpoint: 'wss://api.sentientiq.app/ws/interventions',
 
     // FFT settings for tremor analysis
     fftBufferSize: 32,
