@@ -136,6 +136,7 @@
       this.lastActivity = Date.now();
       this.idleTimer = null;
       this.memoryPressure = false;
+      this.mouseInDocument = true;
 
       // Element mapping
       this.elementMap = new Map();
@@ -325,6 +326,9 @@
         // Check viewport proximity
         this.checkViewportProximity(e);
 
+        // Check element proximity
+        const nearElement = this.checkElementProximity(e.clientX, e.clientY);
+
         // Check for dwelling (hesitation)
         this.checkDwelling(vx, vy);
 
@@ -346,8 +350,14 @@
         }
       });
 
+      // Track mouse enter/leave for better idle detection
+      document.addEventListener('mouseenter', (e) => {
+        this.mouseInDocument = true;
+      });
+
       // Mouse leave tracking (potential exit intent)
       document.addEventListener('mouseleave', (e) => {
+        this.mouseInDocument = false;
         const exitVector = this.calculateExitVector(e);
         this.track('mouse_exit', exitVector);
       });
@@ -357,15 +367,21 @@
     detectMicroGestures(e) {
       if (this.mouseState.history.length < 10) return;
 
+      // Skip if mouse is idle or outside viewport
+      if (Date.now() - this.mouseState.lastTime > 500) return;
+      if (e.clientX < 0 || e.clientX > window.innerWidth ||
+          e.clientY < 0 || e.clientY > window.innerHeight) return;
+
       const recent = this.mouseState.history.slice(-10);
 
       // Detect circular motion (confusion indicator)
       const circularity = this.calculateCircularity(recent);
       if (circularity > config.circleThreshold) {
         this.mouseState.microGestures.circles++;
-        this.track('micro_gesture', {
-          type: 'circle',
-          circularity: circularity
+        this.track('circular_motion', {
+          circularity: circularity,
+          radius: this.calculateAverageRadius(recent),
+          duration: recent[recent.length-1].timestamp - recent[0].timestamp
         });
       }
 
@@ -373,11 +389,43 @@
       const directionChanges = this.countDirectionChanges(recent);
       if (directionChanges > 6) {
         this.mouseState.microGestures.zigzags++;
-        this.track('micro_gesture', {
-          type: 'zigzag',
-          changes: directionChanges
+        this.track('direction_changes', {
+          count: directionChanges,
+          duration: recent[recent.length-1].timestamp - recent[0].timestamp,
+          avgSpeed: this.calculateAverageSpeed(recent)
         });
       }
+    }
+
+    calculateAverageRadius(points) {
+      if (points.length < 2) return 0;
+      let cx = 0, cy = 0;
+      points.forEach(p => {
+        cx += p.x;
+        cy += p.y;
+      });
+      cx /= points.length;
+      cy /= points.length;
+
+      let avgRadius = 0;
+      points.forEach(p => {
+        avgRadius += Math.sqrt((p.x - cx) ** 2 + (p.y - cy) ** 2);
+      });
+      return avgRadius / points.length;
+    }
+
+    calculateAverageSpeed(points) {
+      if (points.length < 2) return 0;
+      let totalSpeed = 0;
+      for (let i = 1; i < points.length; i++) {
+        const dx = points[i].x - points[i-1].x;
+        const dy = points[i].y - points[i-1].y;
+        const dt = (points[i].timestamp - points[i-1].timestamp) / 1000;
+        if (dt > 0) {
+          totalSpeed += Math.sqrt(dx * dx + dy * dy) / dt;
+        }
+      }
+      return totalSpeed / (points.length - 1);
     }
 
     calculateCircularity(points) {
@@ -434,6 +482,13 @@
 
     // ============ DWELLING DETECTION ============
     checkDwelling(vx, vy) {
+      // Skip if mouse is outside viewport
+      if (this.mouseState.x < 0 || this.mouseState.x > window.innerWidth ||
+          this.mouseState.y < 0 || this.mouseState.y > window.innerHeight) {
+        this.mouseState.microGestures.lastDwellStart = null;
+        return;
+      }
+
       const speed = Math.sqrt(vx * vx + vy * vy);
 
       if (speed < config.microMovementThreshold) {
@@ -449,10 +504,14 @@
               x: this.mouseState.x,
               y: this.mouseState.y
             });
-            this.track('dwell', {
+            this.track('mouse_pause', {
               duration: dwellDuration,
               x: this.mouseState.x,
-              y: this.mouseState.y
+              y: this.mouseState.y,
+              viewport: {
+                relX: this.mouseState.x / window.innerWidth,
+                relY: this.mouseState.y / window.innerHeight
+              }
             });
             this.mouseState.microGestures.lastDwellStart = null;
           }
@@ -467,6 +526,14 @@
     analyzeTremor() {
       if (this.mouseState.history.length < config.fftBufferSize) return;
 
+      // Skip if mouse hasn't moved recently (idle)
+      const now = Date.now();
+      if (now - this.mouseState.lastTime > 1000) return; // No movement for 1 second = idle
+
+      // Skip if mouse is outside viewport
+      if (this.mouseState.x < 0 || this.mouseState.x > window.innerWidth ||
+          this.mouseState.y < 0 || this.mouseState.y > window.innerHeight) return;
+
       const samples = this.mouseState.history.slice(-config.fftBufferSize);
 
       // Check if there's any actual movement in the samples
@@ -474,10 +541,10 @@
         if (i === 0) return false;
         const dx = Math.abs(sample.x - samples[i-1].x);
         const dy = Math.abs(sample.y - samples[i-1].y);
-        return dx > 0.1 || dy > 0.1; // At least 0.1 pixel movement
+        return dx > 2; // Increased threshold from 0.1 to 2 pixels
       });
 
-      // Skip tremor analysis if no movement detected
+      // Skip tremor analysis if no significant movement detected
       if (!hasMovement) return;
 
       // Extract position data for FFT
@@ -570,9 +637,14 @@
 
         // Exit intent detection
         if (edge === 'top' && this.mouseState.vy < -config.exitVectorThreshold) {
-          this.track('exit_intent', {
+          this.track('viewport_approach', {
             edge: edge,
+            distance: distance,
             velocity: velocity,
+            vector: {
+              vx: this.mouseState.vx,
+              vy: this.mouseState.vy
+            },
             angle: Math.atan2(this.mouseState.vy, this.mouseState.vx) * 180 / Math.PI
           });
         }
@@ -775,8 +847,9 @@
 
           // Long absence might indicate comparison shopping
           if (awayDuration > 30000) {
-            this.track('comparison_shopping', {
-              duration: awayDuration
+            this.track('long_tab_return', {
+              awayDuration: awayDuration,
+              sessionTime: now - this.sessionStart
             });
           }
         }
@@ -795,13 +868,18 @@
             const pricePattern = /\\$\\d+(\\.\\d{2})?|\\d+\\.\\d{2}/;
             const hasPrice = pricePattern.test(text);
 
+            if (config.debug) {
+              console.log(`[SentientIQ] Text selected: "${text.substring(0, 50)}"${text.length > 50 ? '...' : ''}, hasPrice: ${hasPrice}`);
+            }
+
             if (hasPrice) {
               this.selectionState.priceSelections++;
               const priceMatch = text.match(pricePattern);
 
-              this.track('price_selection', {
+              this.track('text_selection_with_price', {
                 text: text.substring(0, 100),
-                price: priceMatch[0]
+                price: priceMatch[0],
+                length: text.length
               });
             }
 
@@ -889,6 +967,64 @@
           this.memoryPressure = false;
         }
       }, 10000);
+    }
+
+    // ============ ELEMENT PROXIMITY ============
+    checkElementProximity(x, y) {
+      let nearestElement = null;
+      let minDistance = Infinity;
+
+      // Check proximity to all mapped elements
+      for (const [el, data] of this.elementMap.entries()) {
+        const bounds = data.bounds;
+
+        // Calculate distance to element
+        const centerX = bounds.left + bounds.width / 2;
+        const centerY = bounds.top + bounds.height / 2;
+        const distance = Math.sqrt((x - centerX) ** 2 + (y - centerY) ** 2);
+
+        // Check if mouse is over element
+        const isOver = x >= bounds.left && x <= bounds.left + bounds.width &&
+                      y >= bounds.top && y <= bounds.top + bounds.height;
+
+        if (isOver || distance < 100) { // Within element or 100px proximity
+          if (distance < minDistance) {
+            minDistance = distance;
+            nearestElement = {
+              ...data,
+              distance: Math.round(distance),
+              isOver: isOver
+            };
+          }
+        }
+      }
+
+      // Track element proximity if found
+      if (nearestElement && nearestElement.isPrice) {
+        // Only track once per hover session
+        if (!this.hoveredElements.has('price')) {
+          this.track('price_proximity', {
+            element: nearestElement.text?.substring(0, 50),
+            distance: nearestElement.distance,
+            isOver: nearestElement.isOver
+          });
+          this.hoveredElements.add('price');
+        }
+      } else if (nearestElement && nearestElement.isCTA) {
+        if (!this.hoveredElements.has('cta')) {
+          this.track('cta_proximity', {
+            element: nearestElement.text?.substring(0, 50),
+            distance: nearestElement.distance,
+            isOver: nearestElement.isOver
+          });
+          this.hoveredElements.add('cta');
+        }
+      } else if (!nearestElement) {
+        // Clear hover state when leaving elements
+        this.hoveredElements.clear();
+      }
+
+      return nearestElement;
     }
 
     // ============ ELEMENT MAPPING ============
@@ -1407,7 +1543,7 @@
       }
 
       // Priority events trigger flush at lower threshold to ensure they're not lost
-      const isPriorityEvent = ['click', 'rage_click', 'form_submit', 'price_selection', 'exit_intent'].includes(eventType);
+      const isPriorityEvent = ['click', 'rage_click', 'form_submit', 'text_selection_with_price', 'text_selection', 'viewport_approach', 'mouse_pause', 'price_proximity', 'cta_proximity'].includes(eventType);
       const flushThreshold = isPriorityEvent ? Math.min(40, config.batchSize) : config.batchSize;
 
       // Flush if buffer is full
