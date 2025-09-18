@@ -4,7 +4,6 @@
  */
 
 import { useEffect, useState, useRef, useCallback } from 'react';
-import { connect, NatsConnection, StringCodec, JSONCodec, JetStreamClient, RetentionPolicy, StorageType, DiscardPolicy } from 'nats.ws';
 
 interface InterventionEvent {
   id: string;
@@ -18,19 +17,12 @@ interface InterventionEvent {
   timestamp: string;
 }
 
-interface NATSConfig {
-  servers: string[];
-  streamName: string;
-  subject: string;
-  consumerName: string;
-}
 
 export const useNATSInterventions = (onEvent: (event: InterventionEvent) => void) => {
   const [isConnected, setIsConnected] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState('Connecting...');
   const [error, setError] = useState<string | null>(null);
-  const ncRef = useRef<NatsConnection | null>(null);
-  const jsRef = useRef<JetStreamClient | null>(null);
+  const wsRef = useRef<WebSocket | null>(null);
 
   // Use SSL proxy for production, direct connection for local dev
   const isProduction = window.location.hostname === 'sentientiq.app';
@@ -38,82 +30,65 @@ export const useNATSInterventions = (onEvent: (event: InterventionEvent) => void
     ? 'wss://api.sentientiq.app/ws/nats'  // SSL proxy through nginx
     : 'ws://localhost:9222';               // Direct connection for local dev
 
-  const config: NATSConfig = {
-    servers: [wsUrl],
-    streamName: 'INTERVENTION_EVENTS',
-    subject: 'interventions.events',
-    consumerName: `dashboard-interventions-${Date.now()}` // Unique consumer per session
-  };
-
-  const connectToNATS = useCallback(async () => {
+  const connectToNATS = useCallback(() => {
     try {
       setConnectionStatus('Connecting...');
+      setError(null);
 
-      // Connect to NATS
-      const nc = await connect({
-        servers: config.servers,
-        reconnect: true,
-        maxReconnectAttempts: -1,
-        reconnectTimeWait: 1000,
-        timeout: 5000
-      });
+      // Create WebSocket connection
+      const ws = new WebSocket(wsUrl);
+      wsRef.current = ws;
 
-      ncRef.current = nc;
-      console.log('✅ Connected to NATS (Interventions)');
-      setIsConnected(true);
-      setConnectionStatus('Connected');
+      ws.onopen = () => {
+        console.log('✅ Connected to WebSocket bridge (Interventions)');
+        setIsConnected(true);
+        setConnectionStatus('Connected');
 
-      // Skip JetStream entirely - just use regular NATS pub/sub
-      // This avoids replaying old messages from the stream
-      console.log('Using direct NATS subscription (no replay)');
+        // Subscribe to intervention events
+        ws.send(JSON.stringify({
+          type: 'subscribe',
+          subject: 'interventions.events'
+        }));
 
-      // Subscribe directly to the subject for NEW messages only
-      const sub = nc.subscribe(config.subject);
+        console.log('📡 Subscribed to intervention events');
+        setConnectionStatus('Subscribed to intervention events');
+      };
 
-      setConnectionStatus('Subscribed to intervention events');
-      console.log('📡 Subscribed to intervention events');
+      ws.onmessage = (event) => {
+        try {
+          const message = JSON.parse(event.data);
 
-      // Process messages
-      (async () => {
-        for await (const msg of sub) {
-          try {
-            const jc = JSONCodec();
-            const event = jc.decode(msg.data) as InterventionEvent;
-            console.log('🎯 Intervention event:', event);
+          if (message.type === 'message' && message.data) {
+            console.log('🎯 Intervention event:', message.data);
 
             // Pass to handler
-            onEvent(event);
-
-          } catch (err) {
-            console.error('Error processing intervention message:', err);
+            onEvent(message.data as InterventionEvent);
+          } else if (message.type === 'subscribed') {
+            console.log('✅ Subscription confirmed:', message.subject);
           }
+        } catch (err) {
+          console.error('Error processing intervention message:', err);
         }
-      })();
+      };
 
-      // Monitor connection status
-      (async () => {
-        for await (const status of nc.status()) {
-          console.log(`NATS connection status (Interventions): ${status.type}`);
-          // Only show user-friendly status
-          if (status.type === 'pingTimer') {
-            // Skip internal ping timer status
-            continue;
-          }
-          const friendlyStatus = status.type === 'disconnect' ? 'Reconnecting...' : 'Connected';
-          setConnectionStatus(friendlyStatus);
+      ws.onerror = (error) => {
+        console.error('WebSocket error (Interventions):', error);
+        setError('Connection error');
+        setIsConnected(false);
+      };
 
-          if (status.type === 'disconnect' || status.type === 'error') {
-            setIsConnected(false);
-            setError(status.data?.toString() || 'Connection lost');
-          } else if (status.type === 'reconnect') {
-            setIsConnected(true);
-            setError(null);
-          }
-        }
-      })();
+      ws.onclose = () => {
+        console.log('WebSocket closed (Interventions)');
+        setIsConnected(false);
+        setConnectionStatus('Disconnected');
+        setError('Connection closed');
+
+        // Retry connection after 5 seconds
+        setTimeout(connectToNATS, 5000);
+      };
 
     } catch (err) {
-      console.error('Failed to connect to NATS (Interventions):', err);
+      console.error('Failed to connect to WebSocket (Interventions):', err);
       setError(err instanceof Error ? err.message : 'Connection failed');
       setIsConnected(false);
       setConnectionStatus('Failed to connect');
@@ -121,16 +96,15 @@ export const useNATSInterventions = (onEvent: (event: InterventionEvent) => void
       // Retry connection after 5 seconds
       setTimeout(connectToNATS, 5000);
     }
-  }, [onEvent]);
+  }, [wsUrl, onEvent]);
 
   useEffect(() => {
     connectToNATS();
 
     return () => {
-      if (ncRef.current) {
-        ncRef.current.close();
-        ncRef.current = null;
-        jsRef.current = null;
+      if (wsRef.current) {
+        wsRef.current.close();
+        wsRef.current = null;
       }
     };
   }, [connectToNATS]);
