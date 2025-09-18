@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Telemetry Script Debug Test</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            padding: 40px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .test-area {
+            border: 2px dashed #ccc;
+            padding: 40px;
+            margin: 20px 0;
+            min-height: 200px;
+            background: #f9f9f9;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            cursor: pointer;
+            background: #4F46E5;
+            color: white;
+            border: none;
+            border-radius: 5px;
+        }
+        button:hover {
+            background: #4338CA;
+        }
+        .console-output {
+            background: #1a1a1a;
+            color: #0f0;
+            font-family: 'Courier New', monospace;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 5px;
+            max-height: 400px;
+            overflow-y: auto;
+            font-size: 12px;
+        }
+        .price {
+            font-size: 24px;
+            font-weight: bold;
+            color: #4F46E5;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>Telemetry Script Debug Test</h1>
+
+    <div class="test-area">
+        <h2>Test Interactions</h2>
+        <p>Move your mouse around, click buttons, and perform various actions to generate events.</p>
+
+        <button onclick="simulateRageClicks()">Simulate Rage Clicks</button>
+        <button onclick="clearConsole()">Clear Console</button>
+        <button onclick="location.reload()">Reload Page</button>
+
+        <div class="price">$99.99/month</div>
+
+        <form id="test-form">
+            <input type="text" placeholder="Test input field" style="padding: 10px; margin: 10px 0;">
+            <select style="padding: 10px; margin: 10px 0;">
+                <option>Option 1</option>
+                <option>Option 2</option>
+            </select>
+        </form>
+
+        <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Select this text to test selection tracking.</p>
+    </div>
+
+    <div class="console-output" id="console-output">
+        <div>Console output will appear here...</div>
+    </div>
+
+    <div style="height: 2000px; background: linear-gradient(to bottom, #f0f0f0, #e0e0e0);">
+        <h3>Scroll Area</h3>
+        <p>Scroll down to test scroll tracking</p>
+    </div>
+
+    <script>
+        // Enable debug mode
+        window.SENTIENTIQ_DEBUG = true;
+        window.SENTIENTIQ_TENANT_ID = 'debug-test';
+
+        // Capture console logs
+        const consoleOutput = document.getElementById('console-output');
+        const originalLog = console.log;
+        const originalError = console.error;
+
+        console.log = function(...args) {
+            originalLog.apply(console, args);
+            const message = args.map(arg =>
+                typeof arg === 'object' ? JSON.stringify(arg, null, 2) : arg
+            ).join(' ');
+
+            if (message.includes('[SentientIQ]')) {
+                const div = document.createElement('div');
+                div.textContent = new Date().toLocaleTimeString() + ' - ' + message;
+                consoleOutput.appendChild(div);
+                consoleOutput.scrollTop = consoleOutput.scrollHeight;
+            }
+        };
+
+        console.error = function(...args) {
+            originalError.apply(console, args);
+            const message = args.map(arg =>
+                typeof arg === 'object' ? JSON.stringify(arg, null, 2) : arg
+            ).join(' ');
+
+            if (message.includes('[SentientIQ]')) {
+                const div = document.createElement('div');
+                div.style.color = '#ff6b6b';
+                div.textContent = new Date().toLocaleTimeString() + ' ERROR - ' + message;
+                consoleOutput.appendChild(div);
+                consoleOutput.scrollTop = consoleOutput.scrollHeight;
+            }
+        };
+
+        function simulateRageClicks() {
+            const button = event.target;
+            for (let i = 0; i < 5; i++) {
+                setTimeout(() => {
+                    button.click();
+                    console.log(`[Test] Simulated click ${i + 1}`);
+                }, i * 100);
+            }
+        }
+
+        function clearConsole() {
+            consoleOutput.innerHTML = '<div>Console cleared</div>';
+        }
+    </script>
+
+    <!-- Load the telemetry script -->
+    <script src="marketing-website/public/sentientiq-unified.js"></script>
+
+    <script>
+        // Log when script is loaded
+        setTimeout(() => {
+            if (window.SentientIQUnified) {
+                console.log('[Test] SentientIQ script loaded successfully');
+                console.log('[Test] Session ID:', window.SentientIQUnified.sessionId);
+            } else {
+                console.error('[Test] SentientIQ script failed to load');
+            }
+        }, 1000);
+    </script>
+</body>
+</html>

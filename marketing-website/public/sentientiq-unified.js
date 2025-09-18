@@ -26,7 +26,7 @@
     httpFallback: 'https://api.sentientiq.app/api/telemetry',
     samplingRate: 120, // Hz for biomechanical precision
     batchSize: 50,
-    flushInterval: 2000,
+    flushInterval: 1000, // Reduced from 2000ms for faster delivery
 
     // Intervention settings
     enableInterventions: window.SENTIENTIQ_ENABLE_INTERVENTIONS !== false,
@@ -181,7 +181,12 @@
       }
 
       // Batch flush interval
-      this.flushTimer = setInterval(() => this.flush(), config.flushInterval);
+      this.flushTimer = setInterval(() => {
+        if (config.debug && this.buffer.length > 0) {
+          console.log(`[SentientIQ] Flush timer: ${this.buffer.length} events in buffer`);
+        }
+        this.flush();
+      }, config.flushInterval);
 
       // FFT analysis interval for tremor detection
       this.fftTimer = setInterval(() => this.analyzeTremor(), 250);
@@ -1393,16 +1398,34 @@
       // Add to buffer
       this.buffer.push(event);
 
+      if (config.debug && eventType !== 'mouse') {
+        console.log(`[SentientIQ] Tracked event: ${eventType}, buffer size: ${this.buffer.length}`);
+      }
+
       // Flush if buffer is full
       if (this.buffer.length >= config.batchSize) {
+        if (config.debug) {
+          console.log(`[SentientIQ] Buffer full (${this.buffer.length}), triggering flush`);
+        }
         this.flush();
       }
     }
 
     flush() {
-      if (this.buffer.length === 0) return;
+      if (this.buffer.length === 0) {
+        if (config.debug) console.log('[SentientIQ] Flush called but buffer empty');
+        return;
+      }
 
       const batch = this.buffer.splice(0, config.batchSize);
+
+      if (config.debug) {
+        const eventTypes = {};
+        batch.forEach(e => {
+          eventTypes[e.type] = (eventTypes[e.type] || 0) + 1;
+        });
+        console.log(`[SentientIQ] Flushing ${batch.length} events:`, eventTypes);
+      }
 
       if (this.ws && this.ws.readyState === WebSocket.OPEN) {
         // Send via WebSocket
@@ -1414,7 +1437,7 @@
         }));
 
         if (config.debug) {
-          console.log(`[SentientIQ] Sent ${batch.length} events via WebSocket`);
+          console.log(`[SentientIQ] Successfully sent via WebSocket (connected: ${this.isConnected})`);
         }
       } else if (this.useHttpFallback) {
         // Fallback to HTTP
@@ -1433,6 +1456,9 @@
         });
       } else {
         // Return to buffer if no connection
+        if (config.debug) {
+          console.log(`[SentientIQ] No WebSocket connection, returning ${batch.length} events to buffer (WS: ${this.ws}, HTTP fallback: ${this.useHttpFallback})`);
+        }
         this.buffer.unshift(...batch);
       }
     }
