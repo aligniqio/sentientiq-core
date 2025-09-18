@@ -27,8 +27,8 @@ export const useNATSInterventions = (onEvent: (event: InterventionEvent) => void
   // Use SSL proxy for production, direct connection for local dev
   const isProduction = window.location.hostname === 'sentientiq.app';
   const wsUrl = isProduction
-    ? 'wss://api.sentientiq.app/ws/nats'  // SSL proxy through nginx
-    : 'ws://localhost:9222';               // Direct connection for local dev
+    ? 'wss://api.sentientiq.app/ws/interventions'  // Dedicated interventions endpoint
+    : 'ws://localhost:3004';                        // Direct connection to intervention service
 
   const connectToNATS = useCallback(() => {
     try {
