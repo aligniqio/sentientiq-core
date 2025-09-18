@@ -1001,6 +1001,10 @@
       }
 
       // Track element proximity if found
+      if (config.debug && nearestElement) {
+        console.log(`[SentientIQ] Near element: ${nearestElement.text?.substring(0, 30)}, isPrice: ${nearestElement.isPrice}, isCTA: ${nearestElement.isCTA}`);
+      }
+
       if (nearestElement && nearestElement.isPrice) {
         // Only track once per hover session
         if (!this.hoveredElements.has('price')) {
@@ -1071,6 +1075,10 @@
           });
         }
       });
+
+      if (config.debug) {
+        console.log(`[SentientIQ] Mapped ${this.elementMap.size} elements`);
+      }
     }
 
     // ============ INTERVENTION CONNECTION ============
