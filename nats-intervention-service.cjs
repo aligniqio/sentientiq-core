@@ -267,8 +267,24 @@ async function startMonitoring() {
 
           session.ws.send(JSON.stringify(message));
 
+          // Also publish to NATS for dashboard monitoring
+          const interventionEvent = {
+            id: `int_${Date.now()}_${Math.random().toString(36).substring(7)}`,
+            sessionId,
+            interventionType: intervention.type,
+            emotion: intervention.reason,
+            confidence: intervention.confidence,
+            priority: 'high',
+            timing: 'immediate',
+            reason: intervention.reason,
+            timestamp: new Date().toISOString()
+          };
+
+          await nc.publish('interventions.events', jc.encode(interventionEvent));
+
           if (config.debug) {
             console.log(`🎯 Sent ${intervention.type} to ${sessionId}: ${intervention.message}`);
+            console.log(`📡 Published to NATS: interventions.events`);
           }
         }
       }
