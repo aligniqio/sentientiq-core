@@ -460,6 +460,17 @@
 
       const samples = this.mouseState.history.slice(-config.fftBufferSize);
 
+      // Check if there's any actual movement in the samples
+      const hasMovement = samples.some((sample, i) => {
+        if (i === 0) return false;
+        const dx = Math.abs(sample.x - samples[i-1].x);
+        const dy = Math.abs(sample.y - samples[i-1].y);
+        return dx > 0.1 || dy > 0.1; // At least 0.1 pixel movement
+      });
+
+      // Skip tremor analysis if no movement detected
+      if (!hasMovement) return;
+
       // Extract position data for FFT
       const xData = samples.map(s => s.x);
       const yData = samples.map(s => s.y);
@@ -471,7 +482,8 @@
       // Check for tremor in target frequency range (8-12 Hz)
       const tremorPower = this.getTremorPower(xFreq, yFreq);
 
-      if (tremorPower > 0.3) { // Threshold for significant tremor
+      // Only report significant tremor with actual movement
+      if (tremorPower > 0.3 && hasMovement) { // Threshold for significant tremor
         this.track('tremor', {
           power: tremorPower,
           frequency: this.dominantFrequency(xFreq, yFreq)
