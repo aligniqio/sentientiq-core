@@ -1,10 +1,9 @@
 /**
- * NATS JetStream Hook for Emotional Events
- * Reliable, persistent event streaming that actually works
+ * NATS WebSocket Bridge Hook for Emotional Events
+ * Connects to NATS via WebSocket bridge for browser compatibility
  */
 
 import { useEffect, useState, useRef, useCallback } from 'react';
-import { connect, NatsConnection, StringCodec, JSONCodec, JetStreamClient } from 'nats.ws';
 
 interface EmotionalEvent {
   sessionId: string;
@@ -22,19 +21,11 @@ interface EmotionalEvent {
   timestamp: string;
 }
 
-interface NATSConfig {
-  servers: string[];
-  streamName: string;
-  subject: string;
-  consumerName: string;
-}
-
 export const useNATSEmotions = (onEvent: (event: EmotionalEvent) => void) => {
   const [isConnected, setIsConnected] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState('Connecting...');
   const [error, setError] = useState<string | null>(null);
-  const ncRef = useRef<NatsConnection | null>(null);
-  const jsRef = useRef<JetStreamClient | null>(null);
+  const wsRef = useRef<WebSocket | null>(null);
 
   // Use SSL proxy for production, direct connection for local dev
   const isProduction = window.location.hostname === 'sentientiq.app';
@@ -42,99 +33,114 @@ export const useNATSEmotions = (onEvent: (event: EmotionalEvent) => void) => {
     ? 'wss://api.sentientiq.app/ws/nats'  // SSL proxy through nginx
     : 'ws://localhost:9222';               // Direct connection for local dev
 
-  const config: NATSConfig = {
-    servers: [wsUrl],
-    streamName: 'EMOTIONAL_EVENTS',
-    subject: 'emotions.events',
-    consumerName: `dashboard-${Date.now()}` // Unique consumer per session
-  };
+  const connectToNATS = useCallback(() => {
+    // Prevent multiple simultaneous connections
+    if (wsRef.current && wsRef.current.readyState === WebSocket.CONNECTING) {
+      console.log('⏳ Connection already in progress...');
+      return;
+    }
 
-  const connectToNATS = useCallback(async () => {
     try {
       setConnectionStatus('Connecting...');
+      setError(null);
 
-      // Connect to NATS
-      const nc = await connect({
-        servers: config.servers,
-        reconnect: true,
-        maxReconnectAttempts: -1,
-        reconnectTimeWait: 1000,
-        timeout: 5000
-      });
+      // Close existing connection if any
+      if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+        wsRef.current.close(1000, 'Reconnecting');
+        wsRef.current = null;
+      }
 
-      ncRef.current = nc;
-      console.log('✅ Connected to NATS');
-      setIsConnected(true);
-      setConnectionStatus('Connected');
+      // Create WebSocket connection to bridge
+      const ws = new WebSocket(wsUrl);
+      wsRef.current = ws;
 
-      // Skip JetStream entirely - just use regular NATS pub/sub
-      // This avoids replaying old messages from the stream
-      console.log('Using direct NATS subscription (no replay)');
+      ws.onopen = () => {
+        console.log('✅ Connected to NATS bridge');
+        setIsConnected(true);
+        setConnectionStatus('Connected');
 
-      // Subscribe directly to the subject for NEW messages only
-      const sub = nc.subscribe(config.subject);
+        // Subscribe to emotion events
+        ws.send(JSON.stringify({
+          type: 'subscribe',
+          subject: 'EMOTIONS.state'
+        }));
+      };
 
-      setConnectionStatus('Live');
-      console.log('📡 Subscribed to emotional events');
+      ws.onmessage = (event) => {
+        try {
+          const message = JSON.parse(event.data);
 
-      // Process messages
-      (async () => {
-        for await (const msg of sub) {
-          try {
-            const jc = JSONCodec();
-            const event = jc.decode(msg.data) as EmotionalEvent;
-            console.log('🎯 Emotional event:', event);
+          if (message.type === 'connected') {
+            console.log('🔌 Bridge connection confirmed');
+          }
+
+          if (message.type === 'subscribed') {
+            setConnectionStatus('Live');
+            console.log('📡 Subscribed to:', message.subject);
+          }
+
+          if (message.type === 'message' && message.data) {
+            const emotionEvent = message.data as EmotionalEvent;
+            console.log('🎭 Emotion received:', emotionEvent.emotion, `${emotionEvent.confidence}%`);
+
+            // Add timestamp if missing
+            if (!emotionEvent.timestamp) {
+              emotionEvent.timestamp = new Date().toISOString();
+            }
 
             // Pass to handler
-            onEvent(event);
-
-          } catch (err) {
-            console.error('Error processing message:', err);
+            onEvent(emotionEvent);
           }
+
+          if (message.type === 'error') {
+            console.error('❌ Bridge error:', message.error);
+            setError(message.error);
+          }
+
+        } catch (err) {
+          console.error('Error processing message:', err);
         }
-      })();
+      };
 
-      // Monitor connection status
-      (async () => {
-        for await (const status of nc.status()) {
-          console.log(`NATS connection status: ${status.type}`);
-          // Only show user-friendly status
-          if (status.type === 'pingTimer') {
-            // Skip internal ping timer status
-            continue;
-          }
-          const friendlyStatus = status.type === 'disconnect' ? 'Reconnecting...' : 'Connected';
-          setConnectionStatus(friendlyStatus);
+      ws.onerror = (error) => {
+        console.error('❌ WebSocket error:', error);
+        setError('Connection error');
+        setIsConnected(false);
+      };
 
-          if (status.type === 'disconnect' || status.type === 'error') {
-            setIsConnected(false);
-            setError(status.data?.toString() || 'Connection lost');
-          } else if (status.type === 'reconnect') {
-            setIsConnected(true);
-            setError(null);
-          }
+      ws.onclose = (event) => {
+        console.log('🔌 WebSocket closed', event.code, event.reason);
+        setIsConnected(false);
+        setConnectionStatus('Disconnected');
+        wsRef.current = null;
+
+        // Only reconnect if not a normal closure
+        if (event.code !== 1000 && event.code !== 1001) {
+          setTimeout(() => {
+            console.log('🔄 Attempting reconnection...');
+            connectToNATS();
+          }, 3000);
         }
-      })();
+      };
 
     } catch (err) {
-      console.error('Failed to connect to NATS:', err);
+      console.error('Failed to connect:', err);
       setError(err instanceof Error ? err.message : 'Connection failed');
       setIsConnected(false);
-      setConnectionStatus('Failed to connect');
+      setConnectionStatus('Failed');
 
-      // Retry connection after 5 seconds
-      setTimeout(connectToNATS, 5000);
+      // Retry after delay
+      setTimeout(() => connectToNATS(), 5000);
     }
-  }, [onEvent]);
+  }, [wsUrl, onEvent]);
 
   useEffect(() => {
     connectToNATS();
 
     return () => {
-      if (ncRef.current) {
-        ncRef.current.close();
-        ncRef.current = null;
-        jsRef.current = null;
+      if (wsRef.current) {
+        wsRef.current.close();
+        wsRef.current = null;
       }
     };
   }, [connectToNATS]);

@@ -12,9 +12,6 @@ import Pricing from '../pages/pricing'
 import Billing from '../pages/billing'
 import PulseDashboard from '../pages/pulse' // Full Pulse dashboard page
 // import EmotionalLiveFeed from '../components/EmotionalLiveFeed' // Old API-based component
-// Using NATS components with SSL proxy
-import NATSEmotionalStream from '../components/NATSEmotionalStream'
-import NATSInterventionStream from '../components/NATSInterventionStream'
 
 // Admin pages
 import TenantsPage from './admin/TenantsPage'
@@ -24,7 +21,6 @@ import DebugSuperAdmin from '../pages/debug-super-admin'
 import SystemImplementation from '../pages/system/implementation'
 import { Configuration as SystemConfiguration } from '../pages/system/configuration'
 import OnboardingWelcome from '../pages/onboarding-welcome'
-import OnboardingRouter from '../components/OnboardingRouter'
 import PaymentRequired from '../pages/payment-required'
 
 // Candy Kit UI enhancements
@@ -47,14 +43,9 @@ function App() {
           <Route path="/" element={
             <>
               <SignedIn>
-                <OnboardingRouter>
-                  <Layout>
-                    <div className="space-y-6">
-                      <NATSEmotionalStream />
-                      <NATSInterventionStream />
-                    </div>
-                  </Layout>
-                </OnboardingRouter>
+                <Layout>
+                  <PulseDashboard />
+                </Layout>
               </SignedIn>
               <SignedOut>
                 <Navigate to="/auth" replace />
@@ -66,25 +57,6 @@ function App() {
 
           {/* Sage lives in the corner crystal ball - no dedicated route needed */}
 
-          {/* PhD Collective */}
-          <Route
-            path="/collective"
-            element={
-              <>
-                <SignedIn>
-                  <Layout>
-                    <div className="space-y-6">
-                      <NATSEmotionalStream />
-                      <NATSInterventionStream />
-                    </div>
-                  </Layout>
-                </SignedIn>
-                <SignedOut>
-                  <Navigate to="/auth" replace />
-                </SignedOut>
-              </>
-            }
-          />
           
           {/* Settings page */}
           <Route

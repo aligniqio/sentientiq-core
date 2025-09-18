@@ -13,7 +13,15 @@ let supabaseClient: any = null;
 
 export function getSupabaseClient() {
   if (!supabaseClient && supabaseUrl && supabaseKey) {
-    supabaseClient = createClient(supabaseUrl, supabaseKey);
+    supabaseClient = createClient(supabaseUrl, supabaseKey, {
+      global: {
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+          'Prefer': 'return=minimal'
+        }
+      }
+    });
   }
   return supabaseClient;
 }

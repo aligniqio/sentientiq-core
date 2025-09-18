@@ -43,6 +43,18 @@
   animation-delay: 4s; /* Half the duration for offset */
 }
 
+/* Terminal-style fade in animation */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 /* Subtle pulse animation - barely noticeable unless you stare */
 @keyframes subtle-pulse {
   0%, 100% {
