@@ -43,7 +43,7 @@
     jerkThreshold: 1000, // px/s^3 - frustration indicator
 
     // Gesture detection
-    circleThreshold: 0.7, // circularity score
+    circleThreshold: 0.85, // circularity score - increased for less false positives
     dwellThreshold: 500, // ms - hesitation indicator
     rageClickThreshold: 3, // clicks in 500ms
     rageClickWindow: 500, // ms
@@ -376,11 +376,12 @@
 
       // Detect circular motion (confusion indicator)
       const circularity = this.calculateCircularity(recent);
-      if (circularity > config.circleThreshold) {
+      const radius = this.calculateAverageRadius(recent);
+      if (circularity > config.circleThreshold && radius > 20) { // Minimum 20px radius
         this.mouseState.microGestures.circles++;
         this.track('circular_motion', {
           circularity: circularity,
-          radius: this.calculateAverageRadius(recent),
+          radius: radius,
           duration: recent[recent.length-1].timestamp - recent[0].timestamp
         });
       }
