@@ -149,8 +149,8 @@ const NATSInterventionStream = () => {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h2 className="text-xl font-bold text-white">NATS Intervention Stream</h2>
-          <p className="text-sm text-white/60 mt-1">Persistent intervention events</p>
+          <h2 className="text-xl font-bold text-white">Intervention Stream</h2>
+          <p className="text-sm text-white/60 mt-1">Real-time intervention triggers</p>
         </div>
         <div className="flex items-center gap-4">
           {interventions.length > 10 && (
@@ -196,7 +196,7 @@ const NATSInterventionStream = () => {
             {isConnected ? (
               <>
                 <CheckCircle className="w-4 h-4 text-green-400" />
-                <span className="text-green-400 font-bold">NATS</span>
+                <span className="text-green-400 font-bold">Live</span>
               </>
             ) : (
               <>
@@ -205,7 +205,7 @@ const NATSInterventionStream = () => {
               </>
             )}
           </div>
-          <div className="text-xs text-white/60">JetStream</div>
+          <div className="text-xs text-white/60">Connected</div>
         </div>
       </div>
 
@@ -263,7 +263,7 @@ const NATSInterventionStream = () => {
             >
               <Target className="w-12 h-12 mx-auto mb-4 text-white/20" />
               <p className="text-lg mb-2">
-                {isConnected ? 'Waiting for interventions...' : 'Connecting to NATS...'}
+                {isConnected ? 'Waiting for interventions...' : 'Connecting...'}
               </p>
               <p className="text-sm">Persistent intervention stream ready</p>
             </motion.div>
@@ -336,7 +336,7 @@ const NATSInterventionStream = () => {
 
       <div className="mt-4 pt-4 border-t border-white/10 text-center">
         <p className="text-xs text-white/40">
-          NATS JetStream • Persistent Events • {totalEvents} total received
+          {totalEvents} interventions triggered
         </p>
       </div>
     </motion.div>

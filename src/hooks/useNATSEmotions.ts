@@ -31,7 +31,7 @@ interface NATSConfig {
 
 export const useNATSEmotions = (onEvent: (event: EmotionalEvent) => void) => {
   const [isConnected, setIsConnected] = useState(false);
-  const [connectionStatus, setConnectionStatus] = useState('Initializing...');
+  const [connectionStatus, setConnectionStatus] = useState('Connecting...');
   const [error, setError] = useState<string | null>(null);
   const ncRef = useRef<NatsConnection | null>(null);
   const jsRef = useRef<JetStreamClient | null>(null);
@@ -51,7 +51,7 @@ export const useNATSEmotions = (onEvent: (event: EmotionalEvent) => void) => {
 
   const connectToNATS = useCallback(async () => {
     try {
-      setConnectionStatus('Connecting to NATS...');
+      setConnectionStatus('Connecting...');
 
       // Connect to NATS
       const nc = await connect({
@@ -65,7 +65,7 @@ export const useNATSEmotions = (onEvent: (event: EmotionalEvent) => void) => {
       ncRef.current = nc;
       console.log('✅ Connected to NATS');
       setIsConnected(true);
-      setConnectionStatus('Connected to NATS');
+      setConnectionStatus('Connected');
 
       // Skip JetStream entirely - just use regular NATS pub/sub
       // This avoids replaying old messages from the stream
@@ -74,7 +74,7 @@ export const useNATSEmotions = (onEvent: (event: EmotionalEvent) => void) => {
       // Subscribe directly to the subject for NEW messages only
       const sub = nc.subscribe(config.subject);
 
-      setConnectionStatus('Subscribed to emotional events');
+      setConnectionStatus('Live');
       console.log('📡 Subscribed to emotional events');
 
       // Process messages
@@ -98,7 +98,13 @@ export const useNATSEmotions = (onEvent: (event: EmotionalEvent) => void) => {
       (async () => {
         for await (const status of nc.status()) {
           console.log(`NATS connection status: ${status.type}`);
-          setConnectionStatus(`NATS: ${status.type}`);
+          // Only show user-friendly status
+          if (status.type === 'pingTimer') {
+            // Skip internal ping timer status
+            continue;
+          }
+          const friendlyStatus = status.type === 'disconnect' ? 'Reconnecting...' : 'Connected';
+          setConnectionStatus(friendlyStatus);
 
           if (status.type === 'disconnect' || status.type === 'error') {
             setIsConnected(false);

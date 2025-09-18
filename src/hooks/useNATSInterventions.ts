@@ -27,7 +27,7 @@ interface NATSConfig {
 
 export const useNATSInterventions = (onEvent: (event: InterventionEvent) => void) => {
   const [isConnected, setIsConnected] = useState(false);
-  const [connectionStatus, setConnectionStatus] = useState('Initializing...');
+  const [connectionStatus, setConnectionStatus] = useState('Connecting...');
   const [error, setError] = useState<string | null>(null);
   const ncRef = useRef<NatsConnection | null>(null);
   const jsRef = useRef<JetStreamClient | null>(null);
@@ -47,7 +47,7 @@ export const useNATSInterventions = (onEvent: (event: InterventionEvent) => void
 
   const connectToNATS = useCallback(async () => {
     try {
-      setConnectionStatus('Connecting to NATS...');
+      setConnectionStatus('Connecting...');
 
       // Connect to NATS
       const nc = await connect({
@@ -61,7 +61,7 @@ export const useNATSInterventions = (onEvent: (event: InterventionEvent) => void
       ncRef.current = nc;
       console.log('✅ Connected to NATS (Interventions)');
       setIsConnected(true);
-      setConnectionStatus('Connected to NATS');
+      setConnectionStatus('Connected');
 
       // Skip JetStream entirely - just use regular NATS pub/sub
       // This avoids replaying old messages from the stream
@@ -94,7 +94,13 @@ export const useNATSInterventions = (onEvent: (event: InterventionEvent) => void
       (async () => {
         for await (const status of nc.status()) {
           console.log(`NATS connection status (Interventions): ${status.type}`);
-          setConnectionStatus(`NATS: ${status.type}`);
+          // Only show user-friendly status
+          if (status.type === 'pingTimer') {
+            // Skip internal ping timer status
+            continue;
+          }
+          const friendlyStatus = status.type === 'disconnect' ? 'Reconnecting...' : 'Connected';
+          setConnectionStatus(friendlyStatus);
 
           if (status.type === 'disconnect' || status.type === 'error') {
             setIsConnected(false);
