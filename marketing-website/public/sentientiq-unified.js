@@ -24,7 +24,7 @@
     // Telemetry settings
     telemetryEndpoint: 'wss://api.sentientiq.app/ws/telemetry',
     httpFallback: 'https://api.sentientiq.app/api/telemetry',
-    samplingRate: 120, // Hz for biomechanical precision
+    samplingRate: 20, // Hz - reduced from 120 to prevent buffer overflow
     batchSize: 50,
     flushInterval: 1000, // Reduced from 2000ms for faster delivery
 
@@ -1406,10 +1406,14 @@
         console.log(`[SentientIQ] Tracked event: ${eventType}, buffer size: ${this.buffer.length}`);
       }
 
+      // Priority events trigger flush at lower threshold to ensure they're not lost
+      const isPriorityEvent = ['click', 'rage_click', 'form_submit', 'price_selection', 'exit_intent'].includes(eventType);
+      const flushThreshold = isPriorityEvent ? Math.min(40, config.batchSize) : config.batchSize;
+
       // Flush if buffer is full
-      if (this.buffer.length >= config.batchSize) {
+      if (this.buffer.length >= flushThreshold) {
         if (config.debug) {
-          console.log(`[SentientIQ] Buffer full (${this.buffer.length}), triggering flush`);
+          console.log(`[SentientIQ] Buffer at ${this.buffer.length}/${flushThreshold}, triggering flush${isPriorityEvent ? ' (priority event)' : ''}`);
         }
         this.flush();
       }
