@@ -183,7 +183,11 @@
       // Batch flush interval
       this.flushTimer = setInterval(() => {
         if (config.debug && this.buffer.length > 0) {
-          console.log(`[SentientIQ] Flush timer: ${this.buffer.length} events in buffer`);
+          // Only log if buffer contains non-tremor events
+          const nonTremorEvents = this.buffer.filter(e => e.type !== 'tremor').length;
+          if (nonTremorEvents > 0) {
+            console.log(`[SentientIQ] Flush timer: ${this.buffer.length} events in buffer (${nonTremorEvents} non-tremor)`);
+          }
         }
         this.flush();
       }, config.flushInterval);
@@ -1398,7 +1402,7 @@
       // Add to buffer
       this.buffer.push(event);
 
-      if (config.debug && eventType !== 'mouse') {
+      if (config.debug && eventType !== 'mouse' && eventType !== 'tremor') {
         console.log(`[SentientIQ] Tracked event: ${eventType}, buffer size: ${this.buffer.length}`);
       }
 
@@ -1424,7 +1428,12 @@
         batch.forEach(e => {
           eventTypes[e.type] = (eventTypes[e.type] || 0) + 1;
         });
-        console.log(`[SentientIQ] Flushing ${batch.length} events:`, eventTypes);
+        // Only log flush if it contains non-tremor events or if tremor count is unusual
+        const hasOtherEvents = Object.keys(eventTypes).some(type => type !== 'tremor');
+        const tremorCount = eventTypes.tremor || 0;
+        if (hasOtherEvents || tremorCount > 10) {
+          console.log(`[SentientIQ] Flushing ${batch.length} events:`, eventTypes);
+        }
       }
 
       if (this.ws && this.ws.readyState === WebSocket.OPEN) {
