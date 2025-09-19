@@ -118,12 +118,26 @@ const NATSEmotionalStream = () => {
             </div>
           ) : (
             events.map((event, index) => {
-              const emotionColor = event.emotion === 'frustration' ? 'text-red-400' :
-                                 event.emotion === 'confusion' ? 'text-yellow-400' :
-                                 event.emotion === 'intention' ? 'text-green-400' :
-                                 event.emotion === 'interest' ? 'text-blue-400' :
-                                 event.emotion === 'excitement' ? 'text-purple-400' :
-                                 'text-white/60';
+              // Color mapping based on emotion psychology
+              const emotionColor =
+                // CRITICAL - Dark Red (immediate intervention needed)
+                ['abandonment_intent', 'exit_risk', 'cart_abandonment'].includes(event.emotion) ? 'text-red-600' :
+                // HIGH RISK - Red
+                ['frustration', 'rage', 'anger', 'cart_shock'].includes(event.emotion) ? 'text-red-500' :
+                // PRICE SENSITIVITY - Orange-Red
+                ['price_shock', 'sticker_shock', 'price_hesitation'].includes(event.emotion) ? 'text-orange-500' :
+                // CAUTION - Yellow
+                ['confusion', 'hesitation', 'skeptical', 'trust_hesitation', 'cart_hesitation'].includes(event.emotion) ? 'text-yellow-400' :
+                // NEUTRAL/EXPLORING - Blue
+                ['evaluation', 'comparison_shopping', 'searching', 'exploration', 'lost'].includes(event.emotion) ? 'text-blue-400' :
+                // POSITIVE ENGAGEMENT - Light Green
+                ['interest', 'curiosity', 'scanning', 'reading'].includes(event.emotion) ? 'text-green-300' :
+                // PURCHASE SIGNALS - Dark Green
+                ['confidence', 'purchase_intent', 'excitement', 'delight', 'trust_building'].includes(event.emotion) ? 'text-green-500' :
+                // ANXIETY - Purple
+                ['anxiety', 'cart_review'].includes(event.emotion) ? 'text-purple-400' :
+                // DEFAULT
+                'text-white/60';
 
               return (
                 <div
