@@ -28,15 +28,17 @@ export const useNATSInterventions = (onEvent: (event: InterventionEvent) => void
   const isProduction = window.location.hostname === 'sentientiq.app';
   const wsUrl = isProduction
     ? 'wss://api.sentientiq.app/ws/interventions'  // Dedicated interventions endpoint
-    : 'ws://localhost:3004';                        // Direct connection to intervention service
+    : 'ws://localhost:3004/ws/interventions';       // Direct connection to intervention service
 
   const connectToNATS = useCallback(() => {
     try {
       setConnectionStatus('Connecting...');
       setError(null);
 
-      // Create WebSocket connection
-      const ws = new WebSocket(wsUrl);
+      // Dashboard connects as a monitor, not a specific session
+      const sessionId = 'dashboard-monitor';
+      const urlWithParams = `${wsUrl}?session=${sessionId}&monitor=true`;
+      const ws = new WebSocket(urlWithParams);
       wsRef.current = ws;
 
       ws.onopen = () => {
