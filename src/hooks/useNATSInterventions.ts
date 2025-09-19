@@ -45,8 +45,8 @@ export const useNATSInterventions = (onEvent: (event: InterventionEvent) => void
       reconnectTimeoutRef.current = null;
     }
 
-    // Close existing connection if any
-    if (wsRef.current && (wsRef.current.readyState === WebSocket.OPEN || wsRef.current.readyState === WebSocket.CONNECTING)) {
+    // Only close if already OPEN (not CONNECTING)
+    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
       wsRef.current.close(1000, 'Reconnecting');
       wsRef.current = null;
     }
