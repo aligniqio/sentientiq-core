@@ -90,6 +90,39 @@ const INTERVENTION_RULES = {
       position: 'center',
       style: 'blocking'
     }
+  },
+  social_proof: {
+    triggers: ['evaluation', 'comparison_shopping', 'interest'],
+    threshold: 50,
+    cooldown: 45000,
+    intervention: {
+      type: 'social_proof',
+      message: '12 people are viewing this right now',
+      position: 'bottom-left',
+      style: 'notification'
+    }
+  },
+  value_proposition: {
+    triggers: ['cart_hesitation', 'price_hesitation', 'evaluation'],
+    threshold: 55,
+    cooldown: 60000,
+    intervention: {
+      type: 'value_proposition',
+      message: 'Free shipping • 30-day returns • 24/7 support',
+      position: 'top-center',
+      style: 'banner'
+    }
+  },
+  comparison_table: {
+    triggers: ['comparison_shopping', 'anxiety', 'evaluation'],
+    threshold: 65,
+    cooldown: 90000,
+    intervention: {
+      type: 'comparison_table',
+      message: 'See how we compare',
+      position: 'center',
+      style: 'modal'
+    }
   }
 };
 
@@ -112,10 +145,14 @@ const EMOTION_TO_TRIGGER = {
   searching: ['guide'],
 
   // Purchase journey
-  comparison_shopping: ['urgency', 'discount'],
-  evaluation: ['urgency', 'trust'],
-  cart_hesitation: ['urgency', 'discount'],
+  comparison_shopping: ['comparison_table', 'social_proof', 'urgency'],
+  evaluation: ['social_proof', 'value_proposition', 'trust'],
+  cart_hesitation: ['value_proposition', 'urgency', 'discount'],
   cart_abandonment: ['abandonment', 'discount'],
+
+  // Additional states for new interventions
+  interest: ['social_proof'],
+  anxiety: ['comparison_table', 'trust'],
 
   // Exit risks
   abandonment_intent: ['abandonment', 'chat'],

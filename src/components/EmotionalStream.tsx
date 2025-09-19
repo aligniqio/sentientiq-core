@@ -33,55 +33,106 @@ interface EmotionalStats {
 }
 
 const EMOTION_COLORS: Record<string, string> = {
-  // Critical (RED)
-  rage: 'from-red-600 to-red-700',
+  // Critical - EXIT/ABANDON (DARK RED)
   abandonment_intent: 'from-red-600 to-red-700',
-  exit_risk: 'from-red-500 to-red-600',
-  frustration: 'from-red-400 to-red-500',
+  exit_risk: 'from-red-600 to-red-700',
+  cart_abandonment: 'from-red-600 to-red-700',
+  rage: 'from-red-600 to-red-700',
+
+  // High Risk (RED)
+  frustration: 'from-red-500 to-red-600',
   cart_shock: 'from-red-500 to-red-600',
+  anger: 'from-red-500 to-red-600',
 
-  // Caution (YELLOW)
-  hesitation: 'from-yellow-500 to-amber-500',
-  confusion: 'from-yellow-400 to-yellow-500',
-  skepticism: 'from-yellow-500 to-amber-600',
-  sticker_shock: 'from-amber-500 to-orange-600',
-  price_shock: 'from-yellow-500 to-amber-600',
-  cart_hesitation: 'from-yellow-400 to-amber-500',
-  cart_review: 'from-amber-400 to-yellow-500',
+  // Price Sensitivity (ORANGE-RED)
+  price_shock: 'from-orange-500 to-red-500',
+  sticker_shock: 'from-orange-500 to-red-500',
+  price_hesitation: 'from-orange-400 to-orange-500',
 
-  // Positive (GREEN)
-  confidence: 'from-green-500 to-emerald-600',
-  delight: 'from-green-400 to-emerald-500',
-  purchase_intent: 'from-green-600 to-green-700',
+  // Caution/Uncertainty (YELLOW)
+  confusion: 'from-yellow-500 to-amber-500',
+  hesitation: 'from-yellow-400 to-yellow-500',
+  skeptical: 'from-yellow-500 to-amber-600',
+  trust_hesitation: 'from-yellow-500 to-amber-500',
+  cart_hesitation: 'from-amber-400 to-yellow-500',
 
-  // Information (BLUE)
+  // Neutral/Exploring (BLUE)
   evaluation: 'from-blue-400 to-blue-500',
   comparison_shopping: 'from-blue-500 to-indigo-600',
+  searching: 'from-blue-400 to-indigo-500',
+  exploration: 'from-blue-300 to-blue-400',
+  lost: 'from-indigo-400 to-indigo-500',
+
+  // Positive Engagement (LIGHT GREEN)
+  interest: 'from-green-300 to-green-400',
+  curiosity: 'from-green-300 to-green-400',
+  scanning: 'from-green-200 to-green-300',
+  reading: 'from-green-200 to-green-300',
+
+  // Purchase Signals (DARK GREEN)
+  confidence: 'from-green-500 to-emerald-600',
+  purchase_intent: 'from-green-600 to-green-700',
+  excitement: 'from-green-500 to-emerald-600',
+  delight: 'from-green-400 to-emerald-500',
+  trust_building: 'from-green-400 to-green-500',
+
+  // Anxiety States (PURPLE)
+  anxiety: 'from-purple-400 to-purple-500',
+  cart_review: 'from-purple-300 to-purple-400',
 
   // Default
   default: 'from-gray-400 to-gray-500'
 };
 
 const EMOTION_LABELS: Record<string, string> = {
-  rage: 'Rage',
-  abandonment_intent: 'Exit Intent',
-  exit_risk: 'Exit Risk',
-  frustration: 'Frustrated',
-  cart_shock: 'Cart Shock',
-  cart_hesitation: 'Cart Hesitation',
-  cart_review: 'Cart Review',
-  hesitation: 'Hesitating',
-  confusion: 'Confused',
-  skepticism: 'Skeptical',
-  sticker_shock: 'Price Shock',
-  price_shock: 'Price Shock',
-  confidence: 'Confident',
-  delight: 'Delighted',
-  purchase_intent: 'Purchase Intent',
-  evaluation: 'Evaluating',
-  comparison_shopping: 'Comparing',
-  decision_paralysis: 'Paralyzed',
-  default: 'Unknown'
+  // Critical
+  abandonment_intent: 'ABANDONMENT INTENT',
+  exit_risk: 'EXIT RISK',
+  cart_abandonment: 'CART ABANDONMENT',
+  rage: 'RAGE',
+
+  // High Risk
+  frustration: 'FRUSTRATION',
+  cart_shock: 'CART SHOCK',
+  anger: 'ANGER',
+
+  // Price Sensitivity
+  price_shock: 'PRICE SHOCK',
+  sticker_shock: 'STICKER SHOCK',
+  price_hesitation: 'PRICE HESITATION',
+
+  // Caution
+  confusion: 'CONFUSION',
+  hesitation: 'HESITATION',
+  skeptical: 'SKEPTICAL',
+  trust_hesitation: 'TRUST HESITATION',
+  cart_hesitation: 'CART HESITATION',
+
+  // Exploring
+  evaluation: 'EVALUATION',
+  comparison_shopping: 'COMPARISON SHOPPING',
+  searching: 'SEARCHING',
+  exploration: 'EXPLORATION',
+  lost: 'LOST',
+
+  // Positive Engagement
+  interest: 'INTEREST',
+  curiosity: 'CURIOSITY',
+  scanning: 'SCANNING',
+  reading: 'READING',
+
+  // Purchase Signals
+  confidence: 'CONFIDENCE',
+  purchase_intent: 'PURCHASE INTENT',
+  excitement: 'EXCITEMENT',
+  delight: 'DELIGHT',
+  trust_building: 'TRUST BUILDING',
+
+  // Anxiety
+  anxiety: 'ANXIETY',
+  cart_review: 'CART REVIEW',
+
+  default: 'UNKNOWN'
 };
 
 const EmotionalStream = () => {
