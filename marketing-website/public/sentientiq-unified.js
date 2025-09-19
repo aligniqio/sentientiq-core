@@ -1070,7 +1070,8 @@
               width: rect.width,
               height: rect.height
             },
-            isPrice: /price|cost|\\$\\d+/.test(el.textContent || ''),
+            isPrice: /\\$\\d+(\\.\\d{2})?|\\d{1,3}(,\\d{3})*(\\.\\d{2})?\\s*(USD|EUR|GBP)?/.test(el.textContent || '') &&
+                     !/pricing|price list|price page|view prices/i.test(el.textContent || ''),
             isCTA: el.matches('button, [role="button"], .btn, .button')
           });
         }
