@@ -131,9 +131,15 @@ export const useNATSInterventions = (onEvent: (event: InterventionEvent) => void
   }, [wsUrl, onEvent]);
 
   useEffect(() => {
-    connectToNATS();
+    // Small delay to avoid React StrictMode double-mount race
+    const mountTimeout = setTimeout(() => {
+      connectToNATS();
+    }, 10);
 
     return () => {
+      // Clear mount timeout
+      clearTimeout(mountTimeout);
+
       // Clear any pending reconnect
       if (reconnectTimeoutRef.current) {
         clearTimeout(reconnectTimeoutRef.current);
