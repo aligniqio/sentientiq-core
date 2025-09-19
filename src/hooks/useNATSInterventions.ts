@@ -23,6 +23,8 @@ export const useNATSInterventions = (onEvent: (event: InterventionEvent) => void
   const [connectionStatus, setConnectionStatus] = useState('Connecting...');
   const [error, setError] = useState<string | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
+  const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const isConnectingRef = useRef(false);
 
   // Use SSL proxy for production, direct connection for local dev
   const isProduction = window.location.hostname === 'sentientiq.app';
@@ -31,7 +33,26 @@ export const useNATSInterventions = (onEvent: (event: InterventionEvent) => void
     : 'ws://localhost:3004/ws/interventions';       // Direct connection to intervention service
 
   const connectToNATS = useCallback(() => {
+    // Prevent concurrent connection attempts
+    if (isConnectingRef.current || (wsRef.current && wsRef.current.readyState === WebSocket.CONNECTING)) {
+      console.log('⏳ Connection already in progress...');
+      return;
+    }
+
+    // Clear any pending reconnect
+    if (reconnectTimeoutRef.current) {
+      clearTimeout(reconnectTimeoutRef.current);
+      reconnectTimeoutRef.current = null;
+    }
+
+    // Close existing connection if any
+    if (wsRef.current && (wsRef.current.readyState === WebSocket.OPEN || wsRef.current.readyState === WebSocket.CONNECTING)) {
+      wsRef.current.close(1000, 'Reconnecting');
+      wsRef.current = null;
+    }
+
     try {
+      isConnectingRef.current = true;
       setConnectionStatus('Connecting...');
       setError(null);
 
@@ -43,6 +64,7 @@ export const useNATSInterventions = (onEvent: (event: InterventionEvent) => void
 
       ws.onopen = () => {
         console.log('✅ Connected to WebSocket bridge (Interventions)');
+        isConnectingRef.current = false;
         setIsConnected(true);
         setConnectionStatus('Connected');
 
@@ -79,24 +101,32 @@ export const useNATSInterventions = (onEvent: (event: InterventionEvent) => void
         setIsConnected(false);
       };
 
-      ws.onclose = () => {
-        console.log('WebSocket closed (Interventions)');
+      ws.onclose = (event) => {
+        console.log('WebSocket closed (Interventions)', event.code, event.reason);
+        isConnectingRef.current = false;
         setIsConnected(false);
         setConnectionStatus('Disconnected');
-        setError('Connection closed');
+        wsRef.current = null;
 
-        // Retry connection after 5 seconds
-        setTimeout(connectToNATS, 5000);
+        // Only reconnect if not a normal closure
+        if (event.code !== 1000 && event.code !== 1001) {
+          setError('Connection closed');
+          reconnectTimeoutRef.current = setTimeout(() => {
+            console.log('🔄 Attempting reconnection...');
+            connectToNATS();
+          }, 5000);
+        }
       };
 
     } catch (err) {
       console.error('Failed to connect to WebSocket (Interventions):', err);
+      isConnectingRef.current = false;
       setError(err instanceof Error ? err.message : 'Connection failed');
       setIsConnected(false);
       setConnectionStatus('Failed to connect');
 
       // Retry connection after 5 seconds
-      setTimeout(connectToNATS, 5000);
+      reconnectTimeoutRef.current = setTimeout(connectToNATS, 5000);
     }
   }, [wsUrl, onEvent]);
 
@@ -104,10 +134,19 @@ export const useNATSInterventions = (onEvent: (event: InterventionEvent) => void
     connectToNATS();
 
     return () => {
+      // Clear any pending reconnect
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current);
+        reconnectTimeoutRef.current = null;
+      }
+
+      // Close WebSocket
       if (wsRef.current) {
-        wsRef.current.close();
+        wsRef.current.close(1000, 'Component unmounting');
         wsRef.current = null;
       }
+
+      isConnectingRef.current = false;
     };
   }, [connectToNATS]);
 
