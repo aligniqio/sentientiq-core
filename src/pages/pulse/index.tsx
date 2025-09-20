@@ -7,6 +7,7 @@ import { motion } from 'framer-motion';
 // Using NATS components with SSL proxy
 import NATSEmotionalStream from '@/components/NATSEmotionalStream';
 import NATSInterventionStream from '@/components/NATSInterventionStream';
+import BehavioralNarrator from '@/components/BehavioralNarrator';
 import EVIDisplay from '@/components/EVIDisplay';
 import PageHeader from '@/components/PageHeader';
 import { Users } from 'lucide-react';
@@ -65,6 +66,11 @@ const PulseDashboard: React.FC = () => {
               </p>
             </div>
           </motion.div>
+        </div>
+
+        {/* Behavioral Theater - Shows the WHY behind emotions */}
+        <div className="mb-6">
+          <BehavioralNarrator />
         </div>
 
         {/* Broadcast Streams */}

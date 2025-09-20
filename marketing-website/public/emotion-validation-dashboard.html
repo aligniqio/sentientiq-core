@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SentientIQ Emotion Validation Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .dashboard {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            color: white;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2.5rem;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        }
+
+        .controls {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 15px;
+        }
+
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #5a67d8;
+            transform: translateY(-2px);
+        }
+
+        .btn-pattern {
+            background: #48bb78;
+            color: white;
+        }
+
+        .btn-pattern:hover {
+            background: #38a169;
+        }
+
+        .btn-danger {
+            background: #f56565;
+            color: white;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .panel {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .panel h2 {
+            color: #2d3748;
+            margin-bottom: 15px;
+            font-size: 1.3rem;
+            border-bottom: 2px solid #e2e8f0;
+            padding-bottom: 10px;
+        }
+
+        .emotion-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .emotion-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            border-radius: 8px;
+            background: #f7fafc;
+            transition: all 0.3s ease;
+        }
+
+        .emotion-item.detected {
+            background: linear-gradient(135deg, #667eea20, #764ba220);
+            border-left: 4px solid #667eea;
+        }
+
+        .emotion-name {
+            font-weight: 600;
+            color: #2d3748;
+        }
+
+        .emotion-confidence {
+            font-size: 14px;
+            color: #718096;
+            font-weight: 500;
+        }
+
+        .event-log {
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+        }
+
+        .event-entry {
+            padding: 8px;
+            border-bottom: 1px solid #e2e8f0;
+            color: #4a5568;
+        }
+
+        .event-entry.emotion {
+            background: #f0fff4;
+            font-weight: bold;
+            color: #22543d;
+        }
+
+        .event-entry.intervention {
+            background: #fef5e7;
+            font-weight: bold;
+            color: #744210;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 10px;
+        }
+
+        .status-connected {
+            background: #48bb78;
+            animation: pulse 2s infinite;
+        }
+
+        .status-disconnected {
+            background: #f56565;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .pattern-status {
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+            background: #edf2f7;
+        }
+
+        .pattern-running {
+            background: #bee3f8;
+            border-left: 4px solid #3182ce;
+        }
+
+        .pattern-complete {
+            background: #c6f6d5;
+            border-left: 4px solid #48bb78;
+        }
+
+        .metrics {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .metric {
+            text-align: center;
+            padding: 15px;
+            background: #f7fafc;
+            border-radius: 8px;
+        }
+
+        .metric-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .metric-label {
+            font-size: 0.9rem;
+            color: #718096;
+            margin-top: 5px;
+        }
+
+        .virtual-mouse {
+            position: fixed;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: radial-gradient(circle, #667eea, #764ba2);
+            pointer-events: none;
+            z-index: 9999;
+            box-shadow: 0 0 20px rgba(102, 126, 234, 0.6);
+            transition: all 0.1s linear;
+            display: none;
+        }
+
+        .virtual-mouse.active {
+            display: block;
+        }
+
+        @media (max-width: 768px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
+            .metrics {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="virtual-mouse" id="virtualMouse"></div>
+
+    <div class="dashboard">
+        <h1>🧠 SentientIQ Emotion Validation Dashboard</h1>
+
+        <div class="controls">
+            <div class="btn-group">
+                <button class="btn-primary" onclick="dashboard.runDemoMode()">
+                    🎬 Run Demo Mode
+                </button>
+                <button class="btn-primary" onclick="dashboard.runAllPatterns()">
+                    🔬 Run All Tests
+                </button>
+                <button class="btn-danger" onclick="dashboard.stop()">
+                    ⏹️ Stop
+                </button>
+                <button class="btn-primary" onclick="dashboard.clearLog()">
+                    🗑️ Clear Log
+                </button>
+            </div>
+
+            <div class="btn-group">
+                <button class="btn-pattern" onclick="dashboard.runPattern('price_shock')">
+                    💰 Price Shock
+                </button>
+                <button class="btn-pattern" onclick="dashboard.runPattern('frustration')">
+                    😤 Frustration
+                </button>
+                <button class="btn-pattern" onclick="dashboard.runPattern('confusion')">
+                    🤔 Confusion
+                </button>
+                <button class="btn-pattern" onclick="dashboard.runPattern('engagement')">
+                    📖 Engagement
+                </button>
+                <button class="btn-pattern" onclick="dashboard.runPattern('comparison_shopping')">
+                    🔍 Comparison
+                </button>
+                <button class="btn-pattern" onclick="dashboard.runPattern('hesitation')">
+                    ⏸️ Hesitation
+                </button>
+                <button class="btn-pattern" onclick="dashboard.runPattern('exit_intent')">
+                    🚪 Exit Intent
+                </button>
+            </div>
+
+            <div class="pattern-status" id="patternStatus">
+                <span class="status-indicator status-disconnected" id="wsStatus"></span>
+                <span id="statusText">Ready to test</span>
+            </div>
+        </div>
+
+        <div class="grid">
+            <div class="panel">
+                <h2>🎭 Detected Emotions</h2>
+                <div class="emotion-list" id="emotionList">
+                    <div class="emotion-item">
+                        <span class="emotion-name">Waiting for data...</span>
+                        <span class="emotion-confidence">--</span>
+                    </div>
+                </div>
+
+                <div class="metrics">
+                    <div class="metric">
+                        <div class="metric-value" id="emotionCount">0</div>
+                        <div class="metric-label">Emotions Detected</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-value" id="avgConfidence">-</div>
+                        <div class="metric-label">Avg Confidence</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-value" id="interventionCount">0</div>
+                        <div class="metric-label">Interventions</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel">
+                <h2>📊 Event Stream</h2>
+                <div class="event-log" id="eventLog"></div>
+            </div>
+        </div>
+
+        <div class="panel">
+            <h2>🎯 Test Results</h2>
+            <div id="testResults">
+                <p style="color: #718096;">Run patterns to see validation results...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Load SentientIQ first -->
+    <script src="sentientiq-unified.js"></script>
+    <script>window.SENTIENTIQ_TEST_MODE = true;</script>
+    <script src="behavioral-test-harness.js"></script>
+
+    <script>
+        class ValidationDashboard {
+            constructor() {
+                this.emotions = {};
+                this.events = [];
+                this.interventions = new Set();
+                this.testHarness = null;
+                this.ws = null;
+                this.virtualMouse = document.getElementById('virtualMouse');
+
+                this.init();
+            }
+
+            init() {
+                // Initialize test harness
+                this.testHarness = new BehavioralTestHarness();
+
+                // Connect to emotion stream
+                this.connectToEmotions();
+
+                // Track virtual mouse
+                this.trackVirtualMouse();
+
+                // Update UI
+                this.updateStatus('Ready to test', false);
+            }
+
+            connectToEmotions() {
+                const wsUrl = 'ws://localhost:9222'; // Local WebSocket bridge
+
+                try {
+                    this.ws = new WebSocket(wsUrl);
+
+                    this.ws.onopen = () => {
+                        console.log('Connected to emotion stream');
+                        this.updateStatus('Connected to emotion stream', true);
+
+                        // Subscribe to emotions
+                        this.ws.send(JSON.stringify({
+                            type: 'subscribe',
+                            subject: 'EMOTIONS.state'
+                        }));
+                    };
+
+                    this.ws.onmessage = (event) => {
+                        try {
+                            const msg = JSON.parse(event.data);
+
+                            if (msg.type === 'message' && msg.data) {
+                                this.handleEmotionEvent(msg.data);
+                            }
+                        } catch (e) {
+                            console.error('Parse error:', e);
+                        }
+                    };
+
+                    this.ws.onclose = () => {
+                        console.log('Disconnected from emotion stream');
+                        this.updateStatus('Disconnected - using local only', false);
+                    };
+
+                } catch (e) {
+                    console.log('WebSocket not available, using local tracking only');
+                    this.updateStatus('Local tracking mode', false);
+                }
+            }
+
+            handleEmotionEvent(data) {
+                // Update emotion state
+                const emotion = data.emotion || data.dominant_emotion;
+                const confidence = data.confidence || 0;
+
+                this.emotions[emotion] = confidence;
+
+                // Log event
+                this.addEvent(`🎭 ${emotion} (${confidence}%)`, 'emotion');
+
+                // Check for interventions
+                if (data.interventions) {
+                    data.interventions.forEach(int => {
+                        if (!this.interventions.has(int)) {
+                            this.interventions.add(int);
+                            this.addEvent(`💡 Intervention: ${int}`, 'intervention');
+                        }
+                    });
+                }
+
+                // Update UI
+                this.updateEmotions();
+                this.updateMetrics();
+            }
+
+            trackVirtualMouse() {
+                // Override test harness mouse injection to show virtual cursor
+                const originalInject = this.testHarness.injectMouseEvent;
+                this.testHarness.injectMouseEvent = (x, y, velocity) => {
+                    // Show virtual mouse
+                    this.virtualMouse.style.left = `${x}px`;
+                    this.virtualMouse.style.top = `${y}px`;
+                    this.virtualMouse.classList.add('active');
+
+                    // Call original
+                    originalInject.call(this.testHarness, x, y, velocity);
+                };
+            }
+
+            async runPattern(patternName) {
+                this.clearEmotions();
+                this.updateStatus(`Running pattern: ${patternName}`, true);
+                this.virtualMouse.classList.add('active');
+
+                const result = await this.testHarness.runPattern(patternName);
+
+                this.virtualMouse.classList.remove('active');
+                this.validateResults(result);
+                this.updateStatus(`Pattern complete: ${patternName}`, true);
+            }
+
+            async runAllPatterns() {
+                this.updateStatus('Running all test patterns...', true);
+                const results = await this.testHarness.runAllPatterns();
+                this.displayTestResults(results);
+                this.updateStatus('All tests complete!', true);
+            }
+
+            async runDemoMode() {
+                this.updateStatus('Demo mode running...', true);
+                await this.testHarness.runDemoMode(1);
+                this.updateStatus('Demo complete!', true);
+            }
+
+            stop() {
+                this.testHarness.stop();
+                this.virtualMouse.classList.remove('active');
+                this.updateStatus('Stopped', false);
+            }
+
+            validateResults(result) {
+                const detected = Object.keys(this.emotions);
+                const expected = result.expected;
+
+                const matches = expected.filter(e => detected.includes(e));
+                const accuracy = (matches.length / expected.length) * 100;
+
+                const html = `
+                    <div style="padding: 15px; background: ${accuracy >= 75 ? '#c6f6d5' : '#fed7d7'}; border-radius: 8px; margin-bottom: 10px;">
+                        <h3>${result.pattern}</h3>
+                        <p><strong>Expected:</strong> ${expected.join(', ')}</p>
+                        <p><strong>Detected:</strong> ${detected.join(', ') || 'none'}</p>
+                        <p><strong>Accuracy:</strong> ${accuracy.toFixed(0)}%</p>
+                    </div>
+                `;
+
+                document.getElementById('testResults').innerHTML = html;
+            }
+
+            displayTestResults(results) {
+                let html = '<div style="display: grid; gap: 10px;">';
+
+                results.forEach(result => {
+                    const detected = Object.keys(this.emotions);
+                    const matches = result.expected.filter(e => detected.includes(e));
+                    const accuracy = (matches.length / result.expected.length) * 100;
+
+                    html += `
+                        <div style="padding: 10px; background: ${accuracy >= 75 ? '#c6f6d5' : '#fed7d7'}; border-radius: 8px;">
+                            <strong>${result.pattern}:</strong> ${accuracy.toFixed(0)}% accurate
+                        </div>
+                    `;
+                });
+
+                html += '</div>';
+                document.getElementById('testResults').innerHTML = html;
+            }
+
+            updateEmotions() {
+                const list = document.getElementById('emotionList');
+                const sortedEmotions = Object.entries(this.emotions)
+                    .sort((a, b) => b[1] - a[1])
+                    .slice(0, 5);
+
+                if (sortedEmotions.length === 0) {
+                    list.innerHTML = `
+                        <div class="emotion-item">
+                            <span class="emotion-name">No emotions detected</span>
+                            <span class="emotion-confidence">--</span>
+                        </div>
+                    `;
+                    return;
+                }
+
+                list.innerHTML = sortedEmotions.map(([emotion, confidence]) => `
+                    <div class="emotion-item detected">
+                        <span class="emotion-name">${this.getEmotionEmoji(emotion)} ${emotion}</span>
+                        <span class="emotion-confidence">${confidence}%</span>
+                    </div>
+                `).join('');
+            }
+
+            updateMetrics() {
+                document.getElementById('emotionCount').textContent = Object.keys(this.emotions).length;
+                document.getElementById('interventionCount').textContent = this.interventions.size;
+
+                const confidences = Object.values(this.emotions);
+                const avgConfidence = confidences.length > 0
+                    ? (confidences.reduce((a, b) => a + b, 0) / confidences.length).toFixed(0)
+                    : '-';
+                document.getElementById('avgConfidence').textContent = avgConfidence;
+            }
+
+            updateStatus(text, connected) {
+                document.getElementById('statusText').textContent = text;
+                const indicator = document.getElementById('wsStatus');
+                indicator.className = `status-indicator ${connected ? 'status-connected' : 'status-disconnected'}`;
+
+                const statusDiv = document.getElementById('patternStatus');
+                statusDiv.className = text.includes('Running') ? 'pattern-status pattern-running' :
+                                     text.includes('complete') ? 'pattern-status pattern-complete' :
+                                     'pattern-status';
+            }
+
+            addEvent(text, type = '') {
+                const log = document.getElementById('eventLog');
+                const entry = document.createElement('div');
+                entry.className = `event-entry ${type}`;
+                entry.textContent = `${new Date().toLocaleTimeString()} - ${text}`;
+                log.insertBefore(entry, log.firstChild);
+
+                // Keep log size limited
+                while (log.children.length > 50) {
+                    log.removeChild(log.lastChild);
+                }
+            }
+
+            clearLog() {
+                document.getElementById('eventLog').innerHTML = '';
+                this.addEvent('Log cleared');
+            }
+
+            clearEmotions() {
+                this.emotions = {};
+                this.interventions.clear();
+                this.updateEmotions();
+                this.updateMetrics();
+            }
+
+            getEmotionEmoji(emotion) {
+                const emojis = {
+                    'engagement': '📖',
+                    'frustration': '😤',
+                    'confusion': '🤔',
+                    'price_shock': '💰',
+                    'sticker_shock': '😱',
+                    'comparison_shopping': '🔍',
+                    'hesitation': '⏸️',
+                    'abandonment_intent': '🚪',
+                    'exit_risk': '🚨',
+                    'curiosity': '👀',
+                    'skeptical': '🤨',
+                    'evaluation': '🧐',
+                    'anxiety': '😰',
+                    'cart_hesitation': '🛒',
+                    'cart_review': '🛍️'
+                };
+                return emojis[emotion] || '🎭';
+            }
+        }
+
+        // Initialize dashboard
+        const dashboard = new ValidationDashboard();
+        console.log('Dashboard ready! Use dashboard.runPattern(name) or dashboard.runDemoMode()');
+    </script>
+</body>
+</html>
